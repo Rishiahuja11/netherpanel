@@ -40,6 +40,8 @@ async function startServer() {
     next();
   });
 
+  app.use(express.static(path.join(__dirname, 'public')));
+
   const authRoutes = require('./src/routes/auth');
   const serverRoutes = require('./src/routes/servers');
   const adminRoutes = require('./src/routes/admin');
@@ -61,6 +63,10 @@ async function startServer() {
         client: '/api/client'
       }
     });
+  });
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
   });
 
   const ServerService = require('./src/services/ServerService');
