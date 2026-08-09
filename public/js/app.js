@@ -20,6 +20,7 @@ const NetherApp = {
 
   init() {
     this.token = localStorage.getItem('token');
+    this.authToken = this.token;
     this.user = JSON.parse(localStorage.getItem('user') || 'null');
 
     if (!this.token || !this.user) {
