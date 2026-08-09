@@ -42,7 +42,7 @@ const NetherServer = {
       document.getElementById('server-addr-text').textContent = addr;
 
       const versionBadge = document.getElementById('server-version-badge');
-      versionBadge.textContent = `${server.software || 'Paper'} ${server.mc_version || '1.21.4'}`;
+      versionBadge.textContent = `${server.server_type || server.software || 'Paper'} ${server.version || server.mc_version || '1.21.4'}`;
 
       const statusBadge = document.getElementById('server-status-badge');
       statusBadge.className = `server-status-badge ${server.status}`;
@@ -565,8 +565,8 @@ aliases: now-hierarchical-by-default
     this.modOffset = 0;
     this.modLimit = 20;
 
-    const isModded = this.serverData && ['fabric', 'forge', 'quilt', 'neoforge'].includes(this.serverData.software);
-    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.software);
+    const isModded = this.serverData && ['fabric', 'forge', 'quilt', 'neoforge'].includes(this.serverData.server_type || this.serverData.software);
+    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
     const modTab = document.querySelector('.server-tab[data-tab="mods"]');
     if (modTab) {
       const label = isPlugin ? 'Plugins' : 'Mods';
@@ -690,7 +690,7 @@ aliases: now-hierarchical-by-default
       const loaderFilter = document.getElementById('mod-loader');
       let loader = loaderFilter?.value;
       if (!loader && this.serverData) {
-        const sw = this.serverData.software?.toLowerCase();
+        const sw = (this.serverData.server_type || this.serverData.software || '').toLowerCase();
         if (['fabric', 'forge', 'quilt', 'neoforge'].includes(sw)) loader = sw;
         else if (['paper', 'spigot', 'purpur', 'bukkit'].includes(sw)) loader = 'paper';
       }
