@@ -120,17 +120,36 @@ const NetherApp = {
         </div>
       </label>
     `).join('');
+    grid.querySelectorAll('input[name="software"]').forEach(input => {
+      input.addEventListener('change', () => {
+        this.selectedSoftware = input.value;
+        this.updateVersionOptions();
+      });
+    });
+    this.selectedSoftware = Object.keys(sw)[0];
     this.updateVersionOptions();
     this.initLucideIcons();
   },
 
-  updateVersionOptions() {
+  async updateVersionOptions() {
     const sel = document.getElementById('server-version');
     if (!sel) return;
-    const v = this.selectedGameType === 'bedrock'
-      ? ['1.21.50', '1.21.40', '1.21.30', '1.21.0', '1.20.80']
-      : ['1.21.4', '1.21.3', '1.21.2', '1.21.1', '1.20.4', '1.20.1'];
-    sel.innerHTML = v.map(x => `<option value="${x}">${x}</option>`).join('');
+    sel.innerHTML = '<option value="">Loading versions...</option>';
+    try {
+      const software = this.selectedSoftware || 'paper';
+      const res = await fetch(`/api/servers/versions?software=${software}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      const versions = await res.json();
+      if (Array.isArray(versions) && versions.length > 0) {
+        sel.innerHTML = versions.map(x => `<option value="${x}">${x}</option>`).join('');
+      } else {
+        sel.innerHTML = '<option value="1.21.4">1.21.4 (fallback)</option>';
+      }
+    } catch (err) {
+      console.error('Failed to fetch versions:', err);
+      sel.innerHTML = '<option value="1.21.4">1.21.4 (fallback)</option>';
+    }
   },
 
   updatePort() {

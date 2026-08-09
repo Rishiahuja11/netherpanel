@@ -9,8 +9,11 @@ const NetherServer = {
   ws: null,
 
   init() {
+    this.serverId = new URLSearchParams(window.location.search).get('id') || '1';
+    this.authToken = localStorage.getItem('netherpanel_token') || null;
     this.initLucideIcons();
     this.initUserMenu();
+    this.loadServerInfo();
     this.initServerTabs();
     this.initConsole();
     this.initPowerControls();
@@ -20,6 +23,50 @@ const NetherServer = {
     this.initSettingsActions();
     this.initScheduleActions();
     this.initBackupActions();
+  },
+
+  async loadServerInfo() {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to load server');
+      const server = await res.json();
+      this.serverData = server;
+
+      document.getElementById('server-title').textContent = server.name;
+
+      const addr = server.subdomain
+        ? `${server.subdomain}.smp45.qzz.io`
+        : `localhost:${server.port}`;
+      document.getElementById('server-addr-text').textContent = addr;
+
+      const versionBadge = document.getElementById('server-version-badge');
+      versionBadge.textContent = `${server.software || 'Paper'} ${server.mc_version || '1.21.4'}`;
+
+      const statusBadge = document.getElementById('server-status-badge');
+      statusBadge.className = `server-status-badge ${server.status}`;
+      statusBadge.querySelector('span:last-child').textContent =
+        server.status === 'running' ? 'Running' : server.status === 'starting' ? 'Starting' : 'Stopped';
+
+      const userAvatar = document.querySelector('.avatar-circle');
+      if (userAvatar) {
+        const userRes = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${this.authToken}` }
+        });
+        if (userRes.ok) {
+          const user = await userRes.json();
+          const initials = (user.username || 'U').slice(0, 2).toUpperCase();
+          document.querySelectorAll('.avatar-circle').forEach(el => el.textContent = initials);
+          const nameEl = document.querySelector('.dropdown-user-name');
+          const emailEl = document.querySelector('.dropdown-user-email');
+          if (nameEl) nameEl.textContent = user.username;
+          if (emailEl) emailEl.textContent = user.email || '';
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load server info:', err);
+    }
   },
 
   initLucideIcons() {
@@ -360,14 +407,23 @@ const NetherServer = {
       this.term.writeln(`${colors[action]}[NetherPanel] ${cfg.toast[1]}\x1b[0m`);
     }
 
-    setTimeout(() => {
+    fetch(`/api/servers/${this.serverId}/${action}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' }
+    }).then(res => res.json()).then(data => {
+      if (data.error) {
+        NetherServer.showToast('Error', data.error, 'error');
+        return;
+      }
+      const finalStatus = (action === 'start' || action === 'restart') ? 'running' : 'stopped';
       if (badge) {
-        const finalStatus = (action === 'start' || action === 'restart') ? 'running' : 'stopped';
         badge.className = `server-status-badge ${finalStatus}`;
         badge.innerHTML = `<span class="status-dot"></span><span>${finalStatus === 'running' ? 'Running' : 'Stopped'}</span>`;
       }
-      NetherServer.showToast('Done', `Server ${action} completed`, 'success');
-    }, 3000);
+      if (this.serverData) this.serverData.status = finalStatus;
+    }).catch(() => {
+      NetherServer.showToast('Error', 'Failed to communicate with server', 'error');
+    });
   },
 
   initFileManager() {
@@ -506,10 +562,16 @@ aliases: now-hierarchical-by-default
   },
 
   initModManager() {
-    this.authToken = localStorage.getItem('netherpanel_token') || null;
-    this.serverId = new URLSearchParams(window.location.search).get('id') || '1';
     this.modOffset = 0;
     this.modLimit = 20;
+
+    const isModded = this.serverData && ['fabric', 'forge', 'quilt', 'neoforge'].includes(this.serverData.software);
+    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.software);
+    const modTab = document.querySelector('.server-tab[data-tab="mods"]');
+    if (modTab) {
+      const label = isPlugin ? 'Plugins' : 'Mods';
+      modTab.querySelector('span').textContent = label;
+    }
 
     const tabs = document.querySelectorAll('.mods-tab');
     tabs.forEach(tab => {
@@ -625,7 +687,13 @@ aliases: now-hierarchical-by-default
       });
 
       const category = document.getElementById('mod-category')?.value;
-      const loader = document.getElementById('mod-loader')?.value;
+      const loaderFilter = document.getElementById('mod-loader');
+      let loader = loaderFilter?.value;
+      if (!loader && this.serverData) {
+        const sw = this.serverData.software?.toLowerCase();
+        if (['fabric', 'forge', 'quilt', 'neoforge'].includes(sw)) loader = sw;
+        else if (['paper', 'spigot', 'purpur', 'bukkit'].includes(sw)) loader = 'paper';
+      }
       if (category) params.append('facets', `[["categories:${category}"]]`);
       if (loader) params.append('facets', `[["categories:${loader}"]]`);
 
@@ -835,6 +903,15 @@ const NetherMods = {
     NetherServer.installMod(btn);
   }
 };
+
+function copyAddress() {
+  const text = document.getElementById('server-addr-text')?.textContent;
+  if (text) {
+    navigator.clipboard.writeText(text).then(() => {
+      NetherServer.showToast('Copied', 'Address copied to clipboard', 'success');
+    });
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   NetherServer.init();

@@ -33,6 +33,7 @@ const SERVER_TYPES = {
 };
 
 const serverProcesses = new Map();
+const tunnelProcesses = new Map();
 const consoleBuffers = new Map();
 
 class ServerService {
@@ -275,6 +276,10 @@ class ServerService {
     serverProcesses.set(serverId, child);
     db.prepare('UPDATE servers SET status = ?, pid = ? WHERE id = ?').run('running', child.pid, serverId);
 
+    if (server.subdomain) {
+      this.startTunnel(serverId, server.port, server.subdomain);
+    }
+
     const bufferConsole = (data) => {
       const line = data.toString();
       const buffer = consoleBuffers.get(serverId) || [];
@@ -334,6 +339,8 @@ class ServerService {
     db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
     serverProcesses.delete(serverId);
 
+    this.stopTunnel(serverId);
+
     UserService.logActivity(userId, 'server_stop', 'server', serverId, 'Server stopped');
     return this.getServer(serverId);
   }
@@ -356,11 +363,56 @@ class ServerService {
       proc.kill('SIGKILL');
     }
 
+    this.stopTunnel(serverId);
+
     db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
     serverProcesses.delete(serverId);
 
     UserService.logActivity(userId, 'server_kill', 'server', serverId, 'Server force killed');
     return this.getServer(serverId);
+  }
+
+  static startTunnel(serverId, port, subdomain) {
+    const tunnelProc = tunnelProcesses.get(serverId);
+    if (tunnelProc && !tunnelProc.killed) return;
+
+    try {
+      const child = spawn('cloudflared', [
+        'tunnel', '--url', `http://localhost:${port}`,
+        '--no-autoupdate'
+      ], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      tunnelProcesses.set(serverId, child);
+
+      const buffer = consoleBuffers.get(serverId) || [];
+      child.stdout.on('data', (data) => {
+        const line = data.toString();
+        buffer.push({ timestamp: new Date().toISOString(), line: `[tunnel] ${line}` });
+      });
+      child.stderr.on('data', (data) => {
+        const line = data.toString();
+        buffer.push({ timestamp: new Date().toISOString(), line: `[tunnel] ${line}` });
+      });
+      consoleBuffers.set(serverId, buffer);
+
+      child.on('exit', () => {
+        tunnelProcesses.delete(serverId);
+      });
+
+      console.log(`[Tunnel] Started for server ${serverId} on port ${port}`);
+    } catch (err) {
+      console.error(`[Tunnel] Failed to start: ${err.message}`);
+    }
+  }
+
+  static stopTunnel(serverId) {
+    const tunnelProc = tunnelProcesses.get(serverId);
+    if (tunnelProc && !tunnelProc.killed) {
+      tunnelProc.kill('SIGTERM');
+      tunnelProcesses.delete(serverId);
+    }
   }
 
   static getConsole(serverId) {
@@ -560,6 +612,93 @@ class ServerService {
           try {
             const versions = JSON.parse(data);
             resolve(versions.versions || []);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getPurpurVersions() {
+    return new Promise((resolve, reject) => {
+      https.get(`${PURPUR_API}/versions`, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const versions = JSON.parse(data);
+            resolve(versions.versions || []);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getFabricVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://meta.fabricmc.net/v2/versions/game', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const versions = JSON.parse(data);
+            resolve(versions.filter(v => v.stable).map(v => v.version));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getForgeVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://files.minecraftforge.net/maven/net/minecraftforge/forge/promotions_slim.json', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            const versions = Object.keys(json.promos || {}).map(v => v.replace('-latest', '')).filter((v, i, a) => a.indexOf(v) === i);
+            resolve(versions);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getSpigotVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://hub.spigotmc.org/versions/', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const matches = data.match(/<a[^>]*>(\d+\.\d+(\.\d+)?)<\/a>/g) || [];
+            const versions = matches.map(m => m.replace(/<[^>]+>/g, '')).filter((v, i, a) => a.indexOf(v) === i);
+            resolve(versions);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getBedrockVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://raw.githubusercontent.com/nicholasgasior/mcbe-versions/master/versions.json', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json.versions || []);
           } catch (err) {
             reject(err);
           }

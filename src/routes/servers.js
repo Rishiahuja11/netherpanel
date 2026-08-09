@@ -38,7 +38,32 @@ router.get('/types', (req, res) => {
 
 router.get('/versions', async (req, res) => {
   try {
-    const versions = await ServerService.getPaperVersions();
+    const software = req.query.software || 'paper';
+    let versions = [];
+    switch (software.toLowerCase()) {
+      case 'paper':
+        versions = await ServerService.getPaperVersions();
+        break;
+      case 'purpur':
+        versions = await ServerService.getPurpurVersions();
+        break;
+      case 'fabric':
+        versions = await ServerService.getFabricVersions();
+        break;
+      case 'forge':
+        versions = await ServerService.getForgeVersions();
+        break;
+      case 'spigot':
+        versions = await ServerService.getSpigotVersions();
+        break;
+      case 'bedrock':
+      case 'pocketmine':
+      case 'nukkit':
+        versions = await ServerService.getBedrockVersions();
+        break;
+      default:
+        versions = await ServerService.getPaperVersions();
+    }
     res.json(versions);
   } catch (err) {
     res.status(500).json({ error: err.message });
