@@ -9,7 +9,7 @@ const CloudflareService = require('./CloudflareService');
 
 const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
-const JAVA_PATH = '/usr/bin/java';
+const JAVA_PATH = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', 'java') : '/data/data/com.termux/files/usr/bin/java';
 
 const PAPER_API = 'https://fill.papermc.io/v3/projects/paper';
 const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
@@ -124,13 +124,87 @@ class ServerService {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
-    if (serverType === 'paper') {
-      return this.downloadFromPaperApi(serverId, version, serverDir);
-    } else if (serverType === 'purpur') {
-      return this.downloadFromPurpurApi(serverId, version, serverDir);
-    } else {
-      return this.downloadFromPaperApi(serverId, version, serverDir);
+    switch (serverType) {
+      case 'paper':
+        return this.downloadFromPaperApi(serverId, version, serverDir);
+      case 'purpur':
+        return this.downloadFromPurpurApi(serverId, version, serverDir);
+      case 'fabric':
+        return this.downloadFabricServer(version, serverDir);
+      case 'forge':
+        return this.downloadForgeServer(version, serverDir);
+      case 'spigot':
+        return this.downloadFromPaperApi(serverId, version, serverDir);
+      case 'vanilla':
+        return this.downloadVanillaServer(version, serverDir);
+      default:
+        return this.downloadFromPaperApi(serverId, version, serverDir);
     }
+  }
+
+  static async downloadFabricServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const installerUrl = `https://meta.fabricmc.net/v2/versions/loader/${version}/latest/1/server/jar`;
+    return this.downloadFileTo(installerUrl, jarPath);
+  }
+
+  static async downloadForgeServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const installerUrl = `https://maven.minecraftforge.net/net/minecraftforge/forge/${version}-${version}/forge-${version}-${version}-installer.jar`;
+    const installerPath = path.join(serverDir, 'forge-installer.jar');
+
+    await this.downloadFileTo(installerUrl, installerPath);
+
+    return new Promise((resolve, reject) => {
+      const { execFile } = require('child_process');
+      execFile(JAVA_PATH, ['-jar', installerPath, '--installServer'], { cwd: serverDir }, (err) => {
+        if (err) {
+          reject(new Error(`Forge installer failed: ${err.message}`));
+          return;
+        }
+        const forgeJar = fs.readdirSync(serverDir).find(f => f.startsWith('forge-') && f.endsWith('.jar') && !f.includes('installer'));
+        if (forgeJar) {
+          fs.renameSync(path.join(serverDir, forgeJar), jarPath);
+        }
+        resolve(jarPath);
+      });
+    });
+  }
+
+  static async downloadVanillaServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const manifestUrl = 'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json';
+    return new Promise((resolve, reject) => {
+      https.get(manifestUrl, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const manifest = JSON.parse(data);
+            const verInfo = manifest.versions.find(v => v.id === version);
+            if (!verInfo) throw new Error(`Version ${version} not found in Mojang manifest`);
+            https.get(verInfo.url, (res2) => {
+              let data2 = '';
+              res2.on('data', (chunk) => data2 += chunk);
+              res2.on('end', () => {
+                try {
+                  const verData = JSON.parse(data2);
+                  const serverUrl = verData.downloads?.server?.url;
+                  if (!serverUrl) throw new Error(`No server download for ${version}`);
+                  this.downloadFileTo(serverUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
+                } catch (e) { reject(e); }
+              });
+            }).on('error', reject);
+          } catch (e) { reject(e); }
+        });
+      }).on('error', reject);
+    });
   }
 
   static async downloadFromPaperApi(serverId, version, serverDir) {
@@ -241,6 +315,7 @@ class ServerService {
         process.kill(server.pid, 0);
         throw new Error('Server is already running');
       } catch (e) {
+        if (e.message === 'Server is already running') throw e;
         db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
       }
     }
@@ -297,9 +372,12 @@ class ServerService {
       db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
 
       if (code !== 0 || signal) {
-        this.logCrash(serverId, code, signal, bufferConsole.toString());
+        const buffer = consoleBuffers.get(serverId) || [];
+        const crashOutput = buffer.slice(-50).map(b => b.line).join('');
+        this.logCrash(serverId, code, signal, crashOutput);
       }
 
+      this.stopTunnel(serverId);
       UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
     });
 

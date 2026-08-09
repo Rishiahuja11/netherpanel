@@ -113,8 +113,8 @@ class ScheduleService {
     }
 
     const result = db.prepare(
-      'INSERT INTO schedules (server_id, name, cron_expression, action, user_id) VALUES (?, ?, ?, ?, ?)'
-    ).run(server_id, name, cron_expression, action, user_id);
+      'INSERT INTO schedules (server_id, name, cron_expression, action, command) VALUES (?, ?, ?, ?, ?)'
+    ).run(server_id, name, cron_expression, action, command);
 
     const schedule = db.prepare('SELECT * FROM schedules WHERE id = ?').get(result.lastInsertRowid);
 

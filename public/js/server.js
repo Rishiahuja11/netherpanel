@@ -8,12 +8,12 @@ const NetherServer = {
   autoScroll: true,
   ws: null,
 
-  init() {
+  async init() {
     this.serverId = new URLSearchParams(window.location.search).get('id') || '1';
-    this.authToken = localStorage.getItem('netherpanel_token') || null;
+    this.authToken = localStorage.getItem('token') || null;
     this.initLucideIcons();
     this.initUserMenu();
-    this.loadServerInfo();
+    await this.loadServerInfo();
     this.initServerTabs();
     this.initConsole();
     this.initPowerControls();
@@ -271,91 +271,58 @@ const NetherServer = {
   },
 
   printServerLog() {
-    const logs = [
-      { time: '15:42:01', msg: '[Server] Starting Minecraft server version 1.21.4', color: 'cyan' },
-      { time: '15:42:02', msg: '[Server] Loading properties', color: 'default' },
-      { time: '15:42:02', msg: '[Server] Default game type: SURVIVAL', color: 'default' },
-      { time: '15:42:03', msg: '[Server] Generating keypair', color: 'default' },
-      { time: '15:42:04', msg: '[Server] Preparing level "world"', color: 'default' },
-      { time: '15:42:10', msg: '[Server] Preparing spawn area: 45%', color: 'yellow' },
-      { time: '15:42:15', msg: '[Server] Preparing spawn area: 89%', color: 'yellow' },
-      { time: '15:42:18', msg: '[Server] Done (16.234s)! For help, type "help"', color: 'green' },
-      { time: '15:42:20', msg: '[Server] Timings Reset', color: 'dim' },
-      { time: '15:43:01', msg: '[Essentials] EssentialsX v2.20.1 enabled', color: 'cyan' },
-      { time: '15:43:01', msg: '[LuckPerms] LuckPerms v5.4.121 enabled', color: 'cyan' },
-      { time: '15:43:02', msg: '[WorldEdit] WorldEdit v7.3.0 enabled', color: 'cyan' },
-      { time: '15:43:05', msg: '[Auth] Server fully started and ready for connections', color: 'green' },
-    ];
-
-    const colorMap = {
-      cyan: '\x1b[38;2;6;182;212m',
-      green: '\x1b[38;2;34;197;94m',
-      yellow: '\x1b[38;2;234;179;8m',
-      red: '\x1b[38;2;239;68;68m',
-      dim: '\x1b[38;2;100;116;139m',
-      default: '\x1b[38;2;148;163;184m'
-    };
-
-    logs.forEach((log, i) => {
-      setTimeout(() => {
+    fetch(`/api/servers/${this.serverId}/console`, {
+      headers: { 'Authorization': `Bearer ${this.authToken}` }
+    }).then(r => r.json()).then(logs => {
+      if (!Array.isArray(logs) || logs.length === 0) {
         if (this.term) {
-          const color = colorMap[log.color] || colorMap.default;
-          this.term.writeln(`${color}[${log.time}] ${log.msg}\x1b[0m`);
+          this.term.writeln('\x1b[38;2;100;116;139m[Console] No logs yet. Start the server to see output.\x1b[0m');
         }
-      }, i * 150);
+        return;
+      }
+      logs.forEach(entry => {
+        if (this.term) {
+          const line = entry.line || entry.message || JSON.stringify(entry);
+          this.term.writeln(line);
+        }
+      });
+    }).catch(() => {
+      if (this.term) {
+        this.term.writeln('\x1b[38;2;239;68;68m[Console] Failed to load server logs\x1b[0m');
+      }
     });
   },
 
   processCommand(cmd) {
     const lower = cmd.toLowerCase().trim();
 
-    const responses = {
-      'help': [
-        'Available commands:',
-        '  help        - Show this help message',
-        '  list        - List online players',
-        '  say <msg>   - Broadcast a message',
-        '  tp          - Teleport commands',
-        '  gamemode    - Change game mode',
-        '  give        - Give items',
-        '  ban         - Ban a player',
-        '  kick        - Kick a player',
-        '  whitelist   - Whitelist commands',
-        '  save-all    - Save all worlds',
-        '  stop        - Stop the server',
-        '  plugins     - List plugins'
-      ],
-      'list': ['Connected players (18/50): Steve, Alex, Notch, Herobrine, jeb_, Dinnerbone, CaptainSparklez, antvenom'],
-      'plugins': ['Plugins (3): EssentialsX v2.20.1, LuckPerms v5.4.121, WorldEdit v7.3.0'],
-      'save-all': ['[Server] Saving...',
-                    '[Server] Saved the game'],
-      'stop': ['[Server] Stopping the server...', '[Server] Server stopped'],
-    };
-
-    if (lower === 'help' || lower === '?') {
-      responses.help.forEach(line => {
-        this.term.writeln(`\x1b[38;2;148;163;184m${line}\x1b[0m`);
-      });
-    } else if (lower === 'list') {
-      this.term.writeln('\x1b[38;2;34;197;94mConnected players (18/50):\x1b[0m');
-      this.term.writeln('\x1b[38;2;148;163;184mSteve, Alex, Notch, Herobrine, jeb_, Dinnerbone, CaptainSparklez, antvenom\x1b[0m');
-    } else if (lower === 'plugins') {
-      this.term.writeln('\x1b[38;2;6;182;212mPlugins (3): EssentialsX v2.20.1, LuckPerms v5.4.121, WorldEdit v7.3.0\x1b[0m');
-    } else if (lower === 'save-all') {
-      this.term.writeln('\x1b[38;2;234;179;8m[Server] Saving...\x1b[0m');
-      setTimeout(() => {
-        this.term.writeln('\x1b[38;2;34;197;94m[Server] Saved the game\x1b[0m');
-      }, 800);
-    } else if (lower === 'stop') {
-      this.term.writeln('\x1b[38;2;239;68;68m[Server] Stopping the server...\x1b[0m');
-    } else if (lower.startsWith('say ')) {
-      const msg = cmd.substring(4);
-      this.term.writeln(`\x1b[38;2;6;182;212m[Server] ${msg}\x1b[0m`);
-    } else if (lower === 'clear') {
+    if (lower === 'clear') {
       this.term.clear();
-    } else {
-      this.term.writeln(`\x1b[38;2;239;68;68mUnknown command: "${cmd}". Type "help" for a list of commands.\x1b[0m`);
+      return;
     }
+
+    if (!cmd) return;
+
+    this.term.writeln(`\x1b[38;2;148;163;184m> ${cmd}\x1b[0m`);
+
+    fetch(`/api/servers/${this.serverId}/command`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ command: cmd })
+    }).then(r => r.json()).then(data => {
+      if (data.error) {
+        this.term.writeln(`\x1b[38;2;239;68;68m${data.error}\x1b[0m`);
+      } else if (data.output) {
+        data.output.split('\n').forEach(line => {
+          this.term.writeln(`\x1b[38;2;148;163;184m${line}\x1b[0m`);
+        });
+      }
+    }).catch(() => {
+      this.term.writeln('\x1b[38;2;239;68;68mFailed to send command. Is the server running?\x1b[0m');
+    });
   },
 
   initPowerControls() {
@@ -694,8 +661,10 @@ aliases: now-hierarchical-by-default
         if (['fabric', 'forge', 'quilt', 'neoforge'].includes(sw)) loader = sw;
         else if (['paper', 'spigot', 'purpur', 'bukkit'].includes(sw)) loader = 'paper';
       }
-      if (category) params.append('facets', `[["categories:${category}"]]`);
-      if (loader) params.append('facets', `[["categories:${loader}"]]`);
+      const facets = [];
+      if (category) facets.push(`categories:${category}`);
+      if (loader) facets.push(`categories:${loader}`);
+      if (facets.length > 0) params.append('facets', JSON.stringify([facets]));
 
       const res = await fetch(`https://api.modrinth.com/v2/search?${params}`);
       const data = await res.json();
