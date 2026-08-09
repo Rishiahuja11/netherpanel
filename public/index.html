@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetherPanel - Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dashboard-page">
+  <nav class="top-nav">
+    <div class="nav-left">
+      <a href="index.html" class="nav-logo">
+        <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
+          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#navGrad)" stroke-width="1.5" fill="none"/>
+          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#navGrad)"/>
+          <defs>
+            <linearGradient id="navGrad" x1="2" y1="2" x2="30" y2="30">
+              <stop stop-color="#f97316"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">NetherPanel</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="index.html" class="nav-link active">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#servers" class="nav-link" data-section="servers">
+          <i data-lucide="server"></i>
+          <span>Servers</span>
+        </a>
+        <a href="#" class="nav-link">
+          <i data-lucide="users"></i>
+          <span>Team</span>
+        </a>
+        <a href="#" class="nav-link">
+          <i data-lucide="credit-card"></i>
+          <span>Billing</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <button class="nav-icon-btn" id="search-toggle" title="Search">
+        <i data-lucide="search"></i>
+      </button>
+      <button class="nav-icon-btn notification-btn" id="notifications-btn">
+        <i data-lucide="bell"></i>
+        <span class="notification-badge">3</span>
+      </button>
+      <div class="user-menu" id="user-menu">
+        <button class="user-avatar" id="user-menu-toggle">
+          <div class="avatar-circle">JD</div>
+          <span class="user-name">John Doe</span>
+          <i data-lucide="chevron-down" class="chevron"></i>
+        </button>
+        <div class="dropdown-menu" id="user-dropdown">
+          <div class="dropdown-header">
+            <div class="avatar-circle large">JD</div>
+            <div>
+              <div class="dropdown-user-name">John Doe</div>
+              <div class="dropdown-user-email">john@example.com</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item"><i data-lucide="settings"></i> Settings</a>
+          <a href="#" class="dropdown-item"><i data-lucide="key"></i> API Keys</a>
+          <a href="#" class="dropdown-item"><i data-lucide="shield"></i> Security</a>
+          <div class="dropdown-divider"></div>
+          <a href="login.html" class="dropdown-item danger"><i data-lucide="log-out"></i> Sign Out</a>
+        </div>
+      </div>
+      <button class="nav-icon-btn mobile-menu-btn" id="mobile-menu-btn">
+        <i data-lucide="menu"></i>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="index.html" class="mobile-nav-link active">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+    <a href="#servers" class="mobile-nav-link">
+      <i data-lucide="server"></i>
+      <span>Servers</span>
+    </a>
+    <a href="#" class="mobile-nav-link">
+      <i data-lucide="users"></i>
+      <span>Team</span>
+    </a>
+    <a href="#" class="mobile-nav-link">
+      <i data-lucide="credit-card"></i>
+      <span>Billing</span>
+    </a>
+  </div>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Welcome back, John</h1>
+        <p class="page-subtitle">Here's what's happening with your servers</p>
+      </div>
+      <button class="btn-primary" id="create-server-btn">
+        <i data-lucide="plus"></i>
+        <span>New Server</span>
+      </button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon orange"><i data-lucide="server"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="5">0</span>
+          <span class="stat-label">Total Servers</span>
+        </div>
+        <div class="stat-trend up">
+          <i data-lucide="trending-up"></i>
+          <span>+2 this month</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon cyan"><i data-lucide="cpu"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="67" data-suffix="%">0%</span>
+          <span class="stat-label">Avg CPU Usage</span>
+        </div>
+        <div class="stat-trend down">
+          <i data-lucide="trending-down"></i>
+          <span>-5% from last week</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i data-lucide="hard-drive"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="42" data-suffix=" GB">0 GB</span>
+          <span class="stat-label">Storage Used</span>
+        </div>
+        <div class="stat-trend neutral">
+          <i data-lucide="minus"></i>
+          <span>128 GB available</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple"><i data-lucide="users"></i></div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="24">0</span>
+          <span class="stat-label">Online Players</span>
+        </div>
+        <div class="stat-trend up">
+          <i data-lucide="trending-up"></i>
+          <span>+8 now</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="content-main">
+        <div class="section-header" id="servers">
+          <h2>Your Servers</h2>
+          <div class="section-actions">
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="running">Running</button>
+              <button class="filter-btn" data-filter="stopped">Stopped</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="servers-grid" id="servers-grid">
+          <div class="server-card" data-status="running" onclick="window.location.href='server.html?id=1'">
+            <div class="server-card-header">
+              <div class="server-info">
+                <h3 class="server-name">Survival World</h3>
+                <span class="server-version">Paper 1.21.4</span>
+              </div>
+              <div class="server-status running">
+                <span class="status-dot"></span>
+                <span>Running</span>
+              </div>
+            </div>
+            <div class="server-card-body">
+              <div class="server-metrics">
+                <div class="metric">
+                  <i data-lucide="cpu"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 45%" data-color="orange"></div>
+                  </div>
+                  <span class="metric-value">45%</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="hard-drive"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 62%" data-color="cyan"></div>
+                  </div>
+                  <span class="metric-value">12.4 GB</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="wifi"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 30%" data-color="green"></div>
+                  </div>
+                  <span class="metric-value">3.2 GB</span>
+                </div>
+              </div>
+              <div class="server-players">
+                <i data-lucide="users"></i>
+                <span><strong>18</strong> / 50 players</span>
+              </div>
+            </div>
+            <div class="server-card-footer">
+              <span class="server-ip">play.netherpanel.dev</span>
+              <div class="server-actions">
+                <button class="action-btn-sm" title="Restart" onclick="event.stopPropagation()">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+                <button class="action-btn-sm danger" title="Stop" onclick="event.stopPropagation()">
+                  <i data-lucide="square"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="server-card" data-status="running" onclick="window.location.href='server.html?id=2'">
+            <div class="server-card-header">
+              <div class="server-info">
+                <h3 class="server-name">Creative Hub</h3>
+                <span class="server-version">Spigot 1.21.4</span>
+              </div>
+              <div class="server-status running">
+                <span class="status-dot"></span>
+                <span>Running</span>
+              </div>
+            </div>
+            <div class="server-card-body">
+              <div class="server-metrics">
+                <div class="metric">
+                  <i data-lucide="cpu"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 28%" data-color="orange"></div>
+                  </div>
+                  <span class="metric-value">28%</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="hard-drive"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 35%" data-color="cyan"></div>
+                  </div>
+                  <span class="metric-value">7.0 GB</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="wifi"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 18%" data-color="green"></div>
+                  </div>
+                  <span class="metric-value">1.8 GB</span>
+                </div>
+              </div>
+              <div class="server-players">
+                <i data-lucide="users"></i>
+                <span><strong>6</strong> / 30 players</span>
+              </div>
+            </div>
+            <div class="server-card-footer">
+              <span class="server-ip">creative.netherpanel.dev</span>
+              <div class="server-actions">
+                <button class="action-btn-sm" title="Restart" onclick="event.stopPropagation()">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+                <button class="action-btn-sm danger" title="Stop" onclick="event.stopPropagation()">
+                  <i data-lucide="square"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="server-card" data-status="stopped" onclick="window.location.href='server.html?id=3'">
+            <div class="server-card-header">
+              <div class="server-info">
+                <h3 class="server-name">Modded Adventures</h3>
+                <span class="server-version">Forge 1.20.1</span>
+              </div>
+              <div class="server-status stopped">
+                <span class="status-dot"></span>
+                <span>Stopped</span>
+              </div>
+            </div>
+            <div class="server-card-body">
+              <div class="server-metrics">
+                <div class="metric">
+                  <i data-lucide="cpu"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 0%" data-color="orange"></div>
+                  </div>
+                  <span class="metric-value">0%</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="hard-drive"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 78%" data-color="cyan"></div>
+                  </div>
+                  <span class="metric-value">15.6 GB</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="wifi"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 0%" data-color="green"></div>
+                  </div>
+                  <span class="metric-value">0 B</span>
+                </div>
+              </div>
+              <div class="server-players">
+                <i data-lucide="users"></i>
+                <span><strong>0</strong> / 20 players</span>
+              </div>
+            </div>
+            <div class="server-card-footer">
+              <span class="server-ip">modded.netherpanel.dev</span>
+              <div class="server-actions">
+                <button class="action-btn-sm" title="Start" onclick="event.stopPropagation()">
+                  <i data-lucide="play"></i>
+                </button>
+                <button class="action-btn-sm danger" title="Delete" onclick="event.stopPropagation()">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="server-card" data-status="running" onclick="window.location.href='server.html?id=4'">
+            <div class="server-card-header">
+              <div class="server-info">
+                <h3 class="server-name">Bedrock Edition</h3>
+                <span class="server-version">Bedrock 1.21.50</span>
+              </div>
+              <div class="server-status running">
+                <span class="status-dot"></span>
+                <span>Running</span>
+              </div>
+            </div>
+            <div class="server-card-body">
+              <div class="server-metrics">
+                <div class="metric">
+                  <i data-lucide="cpu"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 52%" data-color="orange"></div>
+                  </div>
+                  <span class="metric-value">52%</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="hard-drive"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 22%" data-color="cyan"></div>
+                  </div>
+                  <span class="metric-value">4.4 GB</span>
+                </div>
+                <div class="metric">
+                  <i data-lucide="wifi"></i>
+                  <div class="metric-bar">
+                    <div class="metric-fill" style="width: 42%" data-color="green"></div>
+                  </div>
+                  <span class="metric-value">4.2 GB</span>
+                </div>
+              </div>
+              <div class="server-players">
+                <i data-lucide="users"></i>
+                <span><strong>0</strong> / 100 players</span>
+              </div>
+            </div>
+            <div class="server-card-footer">
+              <span class="server-ip">bedrock.netherpanel.dev</span>
+              <div class="server-actions">
+                <button class="action-btn-sm" title="Restart" onclick="event.stopPropagation()">
+                  <i data-lucide="refresh-cw"></i>
+                </button>
+                <button class="action-btn-sm danger" title="Stop" onclick="event.stopPropagation()">
+                  <i data-lucide="square"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top: 2rem;">
+          <h2>Quick Actions</h2>
+        </div>
+        <div class="quick-actions">
+          <button class="quick-action-card" id="create-server-btn-2">
+            <div class="qa-icon orange"><i data-lucide="plus-circle"></i></div>
+            <span class="qa-label">Create Server</span>
+          </button>
+          <button class="quick-action-card">
+            <div class="qa-icon cyan"><i data-lucide="download"></i></div>
+            <span class="qa-label">Install Mods</span>
+          </button>
+          <button class="quick-action-card">
+            <div class="qa-icon green"><i data-lucide="save"></i></div>
+            <span class="qa-label">Backup All</span>
+          </button>
+          <button class="quick-action-card">
+            <div class="qa-icon purple"><i data-lucide="terminal"></i></div>
+            <span class="qa-label">Terminal</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">
+            <h3>Activity</h3>
+            <a href="#" class="view-all-link">View All</a>
+          </div>
+          <div class="activity-timeline">
+            <div class="activity-item">
+              <div class="activity-dot green"></div>
+              <div class="activity-content">
+                <p class="activity-text"><strong>Survival World</strong> server started</p>
+                <span class="activity-time">2 minutes ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot orange"></div>
+              <div class="activity-content">
+                <p class="activity-text">New backup created for <strong>Creative Hub</strong></p>
+                <span class="activity-time">15 minutes ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot cyan"></div>
+              <div class="activity-content">
+                <p class="activity-text">Mod <strong>EssentialsX</strong> updated to 2.20.1</p>
+                <span class="activity-time">1 hour ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot red"></div>
+              <div class="activity-content">
+                <p class="activity-text"><strong>Modded Adventures</strong> server stopped</p>
+                <span class="activity-time">3 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot green"></div>
+              <div class="activity-content">
+                <p class="activity-text">New player <strong>Steve</strong> joined Survival World</p>
+                <span class="activity-time">5 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-dot cyan"></div>
+              <div class="activity-content">
+                <p class="activity-text">Scheduled task <strong>Daily Backup</strong> completed</p>
+                <span class="activity-time">8 hours ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">
+            <h3>System Status</h3>
+          </div>
+          <div class="system-status">
+            <div class="status-item">
+              <div class="status-label">
+                <i data-lucide="cpu"></i>
+                <span>CPU</span>
+              </div>
+              <div class="status-bar-container">
+                <div class="status-bar" style="width: 42%" data-color="orange"></div>
+              </div>
+              <span class="status-value">42%</span>
+            </div>
+            <div class="status-item">
+              <div class="status-label">
+                <i data-lucide="memory-stick"></i>
+                <span>Memory</span>
+              </div>
+              <div class="status-bar-container">
+                <div class="status-bar" style="width: 68%" data-color="cyan"></div>
+              </div>
+              <span class="status-value">13.6 / 20 GB</span>
+            </div>
+            <div class="status-item">
+              <div class="status-label">
+                <i data-lucide="hard-drive"></i>
+                <span>Disk</span>
+              </div>
+              <div class="status-bar-container">
+                <div class="status-bar" style="width: 33%" data-color="green"></div>
+              </div>
+              <span class="status-value">106 / 320 GB</span>
+            </div>
+            <div class="status-item">
+              <div class="status-label">
+                <i data-lucide="network"></i>
+                <span>Network</span>
+              </div>
+              <div class="status-bar-container">
+                <div class="status-bar" style="width: 12%" data-color="purple"></div>
+              </div>
+              <span class="status-value">24 / 200 Mbps</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="create-server-modal">
+    <div class="modal create-server-modal">
+      <div class="modal-header">
+        <h2>Create New Server</h2>
+        <button class="modal-close" id="close-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="wizard-steps">
+          <div class="wizard-step active" data-step="1">
+            <div class="step-number">1</div>
+            <span>Basics</span>
+          </div>
+          <div class="wizard-step" data-step="2">
+            <div class="step-number">2</div>
+            <span>Software</span>
+          </div>
+          <div class="wizard-step" data-step="3">
+            <div class="step-number">3</div>
+            <span>Resources</span>
+          </div>
+          <div class="wizard-step" data-step="4">
+            <div class="step-number">4</div>
+            <span>Review</span>
+          </div>
+        </div>
+
+        <div class="wizard-content">
+          <div class="wizard-panel active" data-panel="1">
+            <div class="form-group">
+              <label for="server-name">Server Name</label>
+              <input type="text" id="server-name" placeholder="My Awesome Server" class="form-input">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="server-game">Game Type</label>
+                <select id="server-game" class="form-select">
+                  <option value="java">Java Edition</option>
+                  <option value="bedrock">Bedrock Edition</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="server-location">Location</label>
+                <select id="server-location" class="form-select">
+                  <option value="us-east">US East (Virginia)</option>
+                  <option value="us-west">US West (Oregon)</option>
+                  <option value="eu-west">EU West (Frankfurt)</option>
+                  <option value="asia">Asia (Singapore)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-panel" data-panel="2">
+            <div class="form-group">
+              <label for="server-software">Server Software</label>
+              <div class="software-grid">
+                <label class="software-option">
+                  <input type="radio" name="software" value="paper" checked>
+                  <div class="software-card">
+                    <strong>Paper</strong>
+                    <span>High performance, plugin support</span>
+                  </div>
+                </label>
+                <label class="software-option">
+                  <input type="radio" name="software" value="spigot">
+                  <div class="software-card">
+                    <strong>Spigot</strong>
+                    <span>Modified server with plugin API</span>
+                  </div>
+                </label>
+                <label class="software-option">
+                  <input type="radio" name="software" value="purpur">
+                  <div class="software-card">
+                    <strong>Purpur</strong>
+                    <span>Enhanced Paper with extra features</span>
+                  </div>
+                </label>
+                <label class="software-option">
+                  <input type="radio" name="software" value="fabric">
+                  <div class="software-card">
+                    <strong>Fabric</strong>
+                    <span>Lightweight mod loader</span>
+                  </div>
+                </label>
+                <label class="software-option">
+                  <input type="radio" name="software" value="forge">
+                  <div class="software-card">
+                    <strong>Forge</strong>
+                    <span>Classic modding platform</span>
+                  </div>
+                </label>
+                <label class="software-option">
+                  <input type="radio" name="software" value="vanilla">
+                  <div class="software-card">
+                    <strong>Vanilla</strong>
+                    <span>Official Minecraft server</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="server-version">Version</label>
+              <select id="server-version" class="form-select">
+                <option>1.21.4</option>
+                <option>1.21.3</option>
+                <option>1.21.2</option>
+                <option>1.21.1</option>
+                <option>1.20.4</option>
+                <option>1.20.1</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="wizard-panel" data-panel="3">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="server-cpu">CPU Cores</label>
+                <div class="slider-group">
+                  <input type="range" id="server-cpu" min="1" max="8" value="2" class="form-range">
+                  <span class="slider-value" id="cpu-value">2 cores</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="server-ram">Memory</label>
+                <div class="slider-group">
+                  <input type="range" id="server-ram" min="1" max="32" value="4" class="form-range">
+                  <span class="slider-value" id="ram-value">4 GB</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="server-disk">Storage</label>
+              <div class="slider-group">
+                <input type="range" id="server-disk" min="5" max="500" value="20" step="5" class="form-range">
+                <span class="slider-value" id="disk-value">20 GB</span>
+              </div>
+            </div>
+            <div class="resource-info">
+              <div class="resource-item">
+                <i data-lucide="zap"></i>
+                <span>Estimated cost: <strong>$5.00/mo</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-panel" data-panel="4">
+            <div class="review-summary">
+              <div class="review-item">
+                <span class="review-label">Server Name</span>
+                <span class="review-value" id="review-name">-</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Software</span>
+                <span class="review-value" id="review-software">Paper</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Version</span>
+                <span class="review-value" id="review-version">1.21.4</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">CPU</span>
+                <span class="review-value" id="review-cpu">2 cores</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Memory</span>
+                <span class="review-value" id="review-ram">4 GB</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Storage</span>
+                <span class="review-value" id="review-disk">20 GB</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Location</span>
+                <span class="review-value" id="review-location">US East (Virginia)</span>
+              </div>
+              <div class="review-cost">
+                <span>Estimated Monthly Cost</span>
+                <strong>$5.00/mo</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="wizard-prev" style="display:none;">Previous</button>
+        <button class="btn-primary" id="wizard-next">Next Step <i data-lucide="arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

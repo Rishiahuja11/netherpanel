@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetherPanel - Server Console</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+</head>
+<body class="server-page">
+  <nav class="top-nav">
+    <div class="nav-left">
+      <a href="index.html" class="nav-logo">
+        <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
+          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#navGrad2)" stroke-width="1.5" fill="none"/>
+          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#navGrad2)"/>
+          <defs>
+            <linearGradient id="navGrad2" x1="2" y1="2" x2="30" y2="30">
+              <stop stop-color="#f97316"/>
+              <stop offset="1" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">NetherPanel</span>
+      </a>
+      <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i> Dashboard</a>
+    </div>
+    <div class="nav-center">
+      <div class="server-header-info">
+        <h1 class="server-page-title" id="server-title">Survival World</h1>
+        <span class="server-page-version">Paper 1.21.4</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="power-controls">
+        <button class="power-btn start" id="btn-start" title="Start Server">
+          <i data-lucide="play"></i>
+        </button>
+        <button class="power-btn restart" id="btn-restart" title="Restart Server">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <button class="power-btn stop" id="btn-stop" title="Stop Server">
+          <i data-lucide="square"></i>
+        </button>
+        <button class="power-btn kill" id="btn-kill" title="Kill Server">
+          <i data-lucide="power"></i>
+        </button>
+      </div>
+      <div class="server-status-badge running" id="server-status-badge">
+        <span class="status-dot"></span>
+        <span>Running</span>
+      </div>
+      <div class="user-menu">
+        <button class="user-avatar" id="user-menu-toggle">
+          <div class="avatar-circle">JD</div>
+          <i data-lucide="chevron-down" class="chevron"></i>
+        </button>
+        <div class="dropdown-menu" id="user-dropdown">
+          <div class="dropdown-header">
+            <div class="avatar-circle large">JD</div>
+            <div>
+              <div class="dropdown-user-name">John Doe</div>
+              <div class="dropdown-user-email">john@example.com</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item"><i data-lucide="settings"></i> Settings</a>
+          <div class="dropdown-divider"></div>
+          <a href="login.html" class="dropdown-item danger"><i data-lucide="log-out"></i> Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="server-tabs-container">
+    <div class="server-tabs">
+      <button class="server-tab active" data-tab="console">
+        <i data-lucide="terminal"></i>
+        <span>Console</span>
+      </button>
+      <button class="server-tab" data-tab="files">
+        <i data-lucide="folder-tree"></i>
+        <span>Files</span>
+      </button>
+      <button class="server-tab" data-tab="mods">
+        <i data-lucide="puzzle"></i>
+        <span>Mods</span>
+      </button>
+      <button class="server-tab" data-tab="backups">
+        <i data-lucide="database"></i>
+        <span>Backups</span>
+      </button>
+      <button class="server-tab" data-tab="schedules">
+        <i data-lucide="calendar-clock"></i>
+        <span>Schedules</span>
+      </button>
+      <button class="server-tab" data-tab="settings">
+        <i data-lucide="settings"></i>
+        <span>Settings</span>
+      </button>
+    </div>
+  </div>
+
+  <main class="server-main">
+    <div class="server-tab-content active" id="tab-console">
+      <div class="console-wrapper">
+        <div class="console-toolbar">
+          <div class="console-toolbar-left">
+            <span class="console-label"><i data-lucide="terminal"></i> Server Console</span>
+            <span class="console-status" id="console-status">Connected</span>
+          </div>
+          <div class="console-toolbar-right">
+            <button class="btn-sm" id="console-clear" title="Clear Console">
+              <i data-lucide="trash-2"></i> Clear
+            </button>
+            <button class="btn-sm" id="console-scroll-toggle" title="Auto-scroll">
+              <i data-lucide="arrow-down-to-line"></i> Auto-scroll
+            </button>
+          </div>
+        </div>
+        <div id="xterm-container" class="xterm-container"></div>
+        <div class="console-input-wrapper">
+          <div class="console-input-prefix">❯</div>
+          <input type="text" id="console-input" class="console-input" placeholder="Type a command..." autocomplete="off">
+          <button class="console-send-btn" id="console-send">
+            <i data-lucide="send"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="server-tab-content" id="tab-files">
+      <div class="files-layout">
+        <div class="file-sidebar">
+          <div class="file-sidebar-header">
+            <h3>Files</h3>
+            <div class="file-sidebar-actions">
+              <button class="btn-sm" id="file-upload-btn" title="Upload"><i data-lucide="upload"></i></button>
+              <button class="btn-sm" id="file-new-btn" title="New File"><i data-lucide="file-plus"></i></button>
+              <button class="btn-sm" id="file-folder-btn" title="New Folder"><i data-lucide="folder-plus"></i></button>
+            </div>
+          </div>
+          <div class="file-tree" id="file-tree">
+            <div class="file-tree-item folder open" data-path="/">
+              <i data-lucide="folder-open" class="tree-icon"></i>
+              <span>server</span>
+            </div>
+            <div class="file-tree-children">
+              <div class="file-tree-item folder" data-path="/plugins">
+                <i data-lucide="folder" class="tree-icon"></i>
+                <span>plugins</span>
+              </div>
+              <div class="file-tree-item folder" data-path="/world">
+                <i data-lucide="folder" class="tree-icon"></i>
+                <span>world</span>
+              </div>
+              <div class="file-tree-item folder" data-path="/world_nether">
+                <i data-lucide="folder" class="tree-icon"></i>
+                <span>world_nether</span>
+              </div>
+              <div class="file-tree-item folder" data-path="/logs">
+                <i data-lucide="folder" class="tree-icon"></i>
+                <span>logs</span>
+              </div>
+              <div class="file-tree-item file" data-path="/server.jar">
+                <i data-lucide="file" class="tree-icon"></i>
+                <span>server.jar</span>
+                <span class="file-size">42.1 MB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/server.properties">
+                <i data-lucide="file-text" class="tree-icon"></i>
+                <span>server.properties</span>
+                <span class="file-size">1.2 KB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/bukkit.yml">
+                <i data-lucide="file-text" class="tree-icon"></i>
+                <span>bukkit.yml</span>
+                <span class="file-size">3.4 KB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/spigot.yml">
+                <i data-lucide="file-text" class="tree-icon"></i>
+                <span>spigot.yml</span>
+                <span class="file-size">5.1 KB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/paper.yml">
+                <i data-lucide="file-text" class="tree-icon"></i>
+                <span>paper.yml</span>
+                <span class="file-size">8.2 KB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/whitelist.json">
+                <i data-lucide="file-json" class="tree-icon"></i>
+                <span>whitelist.json</span>
+                <span class="file-size">0.5 KB</span>
+              </div>
+              <div class="file-tree-item file" data-path="/ops.json">
+                <i data-lucide="file-json" class="tree-icon"></i>
+                <span>ops.json</span>
+                <span class="file-size">1.8 KB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="file-content">
+          <div class="file-content-header" id="file-content-header">
+            <div class="file-breadcrumb">
+              <span class="breadcrumb-item" data-path="/">server</span>
+              <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
+              <span class="breadcrumb-item" id="current-file-name">server.properties</span>
+            </div>
+            <div class="file-actions">
+              <button class="btn-sm" id="file-save-btn"><i data-lucide="save"></i> Save</button>
+              <button class="btn-sm" id="file-download-btn"><i data-lucide="download"></i> Download</button>
+              <button class="btn-sm danger" id="file-delete-btn"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+          <div class="file-editor" id="file-editor">
+            <div class="editor-placeholder">
+              <i data-lucide="file-code"></i>
+              <p>Select a file to view or edit</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="server-tab-content" id="tab-mods">
+      <div class="mods-layout">
+        <div class="mods-header">
+          <div class="mods-search">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="mod-search" placeholder="Search mods on Modrinth..." class="mods-search-input">
+          </div>
+          <div class="mods-filters">
+            <select class="form-select-sm" id="mod-category">
+              <option value="">All Categories</option>
+              <option value="technology">Technology</option>
+              <option value="magic">Magic</option>
+              <option value="adventure">Adventure</option>
+              <option value="optimization">Optimization</option>
+              <option value="utility">Utility</option>
+              <option value="decoration">Decoration</option>
+            </select>
+            <select class="form-select-sm" id="mod-version">
+              <option value="">All Versions</option>
+              <option value="1.21.4" selected>1.21.4</option>
+              <option value="1.21.3">1.21.3</option>
+              <option value="1.20.4">1.20.4</option>
+              <option value="1.20.1">1.20.1</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mods-section">
+          <h3>Installed Mods</h3>
+          <div class="mods-list" id="installed-mods">
+            <div class="mod-card installed">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">EssentialsX</h4>
+                <p class="mod-desc">Essential commands, kits, and features for your server</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v2.20.1</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 15.2M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
+                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="mod-card installed">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">WorldEdit</h4>
+                <p class="mod-desc">In-game map editor for fast building and editing</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v7.3.0</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 28.4M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
+                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="mod-card installed">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">LuckPerms</h4>
+                <p class="mod-desc">Advanced permissions system for Minecraft servers</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v5.4.121</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 12.8M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
+                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mods-section">
+          <h3>Available Mods</h3>
+          <div class="mods-list" id="available-mods">
+            <div class="mod-card">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">Vault</h4>
+                <p class="mod-desc">Economy/Permission API for plugins</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v1.7.3</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 22.1M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
+              </div>
+            </div>
+            <div class="mod-card">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">CoreProtect</h4>
+                <p class="mod-desc">Fast, efficient block logging and rollback</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v23.0.0</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 8.9M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
+              </div>
+            </div>
+            <div class="mod-card">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">WorldGuard</h4>
+                <p class="mod-desc">Protect areas of your world</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v7.0.9</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 19.5M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
+              </div>
+            </div>
+            <div class="mod-card">
+              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+              <div class="mod-info">
+                <h4 class="mod-name">GriefPrevention</h4>
+                <p class="mod-desc">Prevent griefing with land claims</p>
+                <div class="mod-meta">
+                  <span class="mod-version-badge">v16.18.2</span>
+                  <span class="mod-downloads"><i data-lucide="download"></i> 6.2M</span>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="server-tab-content" id="tab-backups">
+      <div class="backups-layout">
+        <div class="backups-header">
+          <h3>Server Backups</h3>
+          <button class="btn-primary" id="create-backup-btn">
+            <i data-lucide="plus"></i>
+            <span>Create Backup</span>
+          </button>
+        </div>
+
+        <div class="backups-settings">
+          <div class="backup-setting-card">
+            <div class="setting-header">
+              <i data-lucide="hard-drive"></i>
+              <span>Automatic Backups</span>
+            </div>
+            <div class="setting-body">
+              <div class="setting-row">
+                <span>Enable automatic backups</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="auto-backup-toggle" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <span>Backup interval</span>
+                <select class="form-select-sm" id="backup-interval">
+                  <option value="6">Every 6 hours</option>
+                  <option value="12">Every 12 hours</option>
+                  <option value="24" selected>Daily</option>
+                  <option value="168">Weekly</option>
+                </select>
+              </div>
+              <div class="setting-row">
+                <span>Keep backups for</span>
+                <select class="form-select-sm" id="backup-retention">
+                  <option value="3">3 days</option>
+                  <option value="7" selected>7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="backups-list" id="backups-list">
+          <div class="backup-card">
+            <div class="backup-info">
+              <div class="backup-icon"><i data-lucide="database"></i></div>
+              <div>
+                <h4 class="backup-name">Automatic Backup - Aug 9, 2026 02:00</h4>
+                <div class="backup-meta">
+                  <span><i data-lucide="hard-drive"></i> 2.4 GB</span>
+                  <span><i data-lucide="clock"></i> Completed in 45s</span>
+                  <span><i data-lucide="calendar"></i> Aug 9, 2026 02:00</span>
+                </div>
+              </div>
+            </div>
+            <div class="backup-actions">
+              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
+              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
+              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+          <div class="backup-card">
+            <div class="backup-info">
+              <div class="backup-icon"><i data-lucide="database"></i></div>
+              <div>
+                <h4 class="backup-name">Automatic Backup - Aug 8, 2026 02:00</h4>
+                <div class="backup-meta">
+                  <span><i data-lucide="hard-drive"></i> 2.3 GB</span>
+                  <span><i data-lucide="clock"></i> Completed in 42s</span>
+                  <span><i data-lucide="calendar"></i> Aug 8, 2026 02:00</span>
+                </div>
+              </div>
+            </div>
+            <div class="backup-actions">
+              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
+              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
+              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+          <div class="backup-card">
+            <div class="backup-info">
+              <div class="backup-icon"><i data-lucide="database"></i></div>
+              <div>
+                <h4 class="backup-name">Manual Backup - Aug 7, 2026 15:30</h4>
+                <div class="backup-meta">
+                  <span><i data-lucide="hard-drive"></i> 2.2 GB</span>
+                  <span><i data-lucide="clock"></i> Completed in 38s</span>
+                  <span><i data-lucide="calendar"></i> Aug 7, 2026 15:30</span>
+                </div>
+              </div>
+            </div>
+            <div class="backup-actions">
+              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
+              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
+              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="server-tab-content" id="tab-schedules">
+      <div class="schedules-layout">
+        <div class="schedules-header">
+          <h3>Scheduled Tasks</h3>
+          <button class="btn-primary" id="create-schedule-btn">
+            <i data-lucide="plus"></i>
+            <span>New Schedule</span>
+          </button>
+        </div>
+
+        <div class="schedules-list" id="schedules-list">
+          <div class="schedule-card">
+            <div class="schedule-header">
+              <div class="schedule-info">
+                <h4>Daily Restart</h4>
+                <span class="schedule-cron">Every day at 04:00 UTC</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="schedule-body">
+              <div class="schedule-action">
+                <i data-lucide="refresh-cw"></i>
+                <span>Action: Restart Server</span>
+              </div>
+              <div class="schedule-next">
+                <i data-lucide="clock"></i>
+                <span>Next run: Aug 10, 2026 04:00 UTC</span>
+              </div>
+            </div>
+            <div class="schedule-footer">
+              <span class="schedule-last">Last run: Aug 9, 2026 04:00 - Success</span>
+              <div class="schedule-actions">
+                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
+                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
+                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="schedule-card">
+            <div class="schedule-header">
+              <div class="schedule-info">
+                <h4>World Save</h4>
+                <span class="schedule-cron">Every 30 minutes</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="schedule-body">
+              <div class="schedule-action">
+                <i data-lucide="save"></i>
+                <span>Action: Run Command - save-all</span>
+              </div>
+              <div class="schedule-next">
+                <i data-lucide="clock"></i>
+                <span>Next run: Aug 9, 2026 16:30 UTC</span>
+              </div>
+            </div>
+            <div class="schedule-footer">
+              <span class="schedule-last">Last run: Aug 9, 2026 16:00 - Success</span>
+              <div class="schedule-actions">
+                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
+                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
+                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="schedule-card disabled">
+            <div class="schedule-header">
+              <div class="schedule-info">
+                <h4>Weekly Backup Cleanup</h4>
+                <span class="schedule-cron">Every Sunday at 03:00 UTC</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="schedule-body">
+              <div class="schedule-action">
+                <i data-lucide="trash-2"></i>
+                <span>Action: Delete backups older than 7 days</span>
+              </div>
+              <div class="schedule-next">
+                <i data-lucide="clock"></i>
+                <span>Next run: Aug 10, 2026 03:00 UTC</span>
+              </div>
+            </div>
+            <div class="schedule-footer">
+              <span class="schedule-last">Last run: Aug 3, 2026 03:00 - Success</span>
+              <div class="schedule-actions">
+                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
+                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
+                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="server-tab-content" id="tab-settings">
+      <div class="settings-layout">
+        <div class="settings-sidebar">
+          <button class="settings-nav-item active" data-section="general">
+            <i data-lucide="settings"></i>
+            <span>General</span>
+          </button>
+          <button class="settings-nav-item" data-section="startup">
+            <i data-lucide="power"></i>
+            <span>Startup</span>
+          </button>
+          <button class="settings-nav-item" data-section="network">
+            <i data-lucide="network"></i>
+            <span>Network</span>
+          </button>
+          <button class="settings-nav-item" data-section="players">
+            <i data-lucide="users"></i>
+            <span>Players</span>
+          </button>
+          <button class="settings-nav-item" data-section="minecraft">
+            <i data-lucide="blocks"></i>
+            <span>Minecraft</span>
+          </button>
+          <button class="settings-nav-item danger" data-section="danger">
+            <i data-lucide="alert-triangle"></i>
+            <span>Danger Zone</span>
+          </button>
+        </div>
+        <div class="settings-content">
+          <div class="settings-section active" id="settings-general">
+            <h3>General Settings</h3>
+            <div class="settings-group">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Server Name</label>
+                  <p class="setting-description">Display name for your server</p>
+                </div>
+                <input type="text" class="form-input" value="Survival World">
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Server Description</label>
+                  <p class="setting-description">Brief description of your server</p>
+                </div>
+                <textarea class="form-textarea" rows="2">A friendly survival multiplayer server</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" id="settings-startup">
+            <h3>Startup Settings</h3>
+            <div class="settings-group">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Startup Command</label>
+                  <p class="setting-description">Custom startup command (leave empty for default)</p>
+                </div>
+                <input type="text" class="form-input mono" value="java -Xms4G -Xmx4G -jar server.jar nogui">
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Java Version</label>
+                  <p class="setting-description">Java version to use for the server</p>
+                </div>
+                <select class="form-select">
+                  <option>Java 21 (Latest)</option>
+                  <option>Java 17</option>
+                  <option>Java 11</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Docker Image</label>
+                  <p class="setting-description">Docker image to use for the container</p>
+                </div>
+                <input type="text" class="form-input mono" value="ghcr.io/pterodactyl/yolks:java_21">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" id="settings-network">
+            <h3>Network Settings</h3>
+            <div class="settings-group">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Server Port</label>
+                  <p class="setting-description">Port the server listens on</p>
+                </div>
+                <input type="number" class="form-input" value="25565">
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Query Port</label>
+                  <p class="setting-description">Port for server query (usually port + 1)</p>
+                </div>
+                <input type="number" class="form-input" value="25566">
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Allow Query</label>
+                  <p class="setting-description">Enable server list query</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" id="settings-players">
+            <h3>Player Settings</h3>
+            <div class="settings-group">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Max Players</label>
+                  <p class="setting-description">Maximum number of players allowed</p>
+                </div>
+                <input type="number" class="form-input" value="50">
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Online Mode</label>
+                  <p class="setting-description">Verify players with Mojang authentication</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>White List</label>
+                  <p class="setting-description">Only allow whitelisted players to join</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>View Distance</label>
+                  <p class="setting-description">Server render distance in chunks</p>
+                </div>
+                <input type="number" class="form-input" value="10" min="2" max="32">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" id="settings-minecraft">
+            <h3>Minecraft Settings</h3>
+            <div class="settings-group">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Game Mode</label>
+                  <p class="setting-description">Default game mode for new players</p>
+                </div>
+                <select class="form-select">
+                  <option>Survival</option>
+                  <option>Creative</option>
+                  <option>Adventure</option>
+                  <option>Spectator</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Difficulty</label>
+                  <p class="setting-description">World difficulty level</p>
+                </div>
+                <select class="form-select">
+                  <option>Peaceful</option>
+                  <option>Easy</option>
+                  <option selected>Normal</option>
+                  <option>Hard</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Allow PvP</label>
+                  <p class="setting-description">Allow player vs player combat</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <label>Spawn Protection</label>
+                  <p class="setting-description">Radius of spawn protection in blocks</p>
+                </div>
+                <input type="number" class="form-input" value="16" min="0" max="100">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" id="settings-danger">
+            <h3 class="danger-title">Danger Zone</h3>
+            <div class="settings-group">
+              <div class="setting-item danger-setting">
+                <div class="setting-info">
+                  <label>Reinstall Server</label>
+                  <p class="setting-description">This will delete all files and reinstall the server software. Worlds and backups are preserved.</p>
+                </div>
+                <button class="btn-danger-outline">Reinstall</button>
+              </div>
+              <div class="setting-item danger-setting">
+                <div class="setting-info">
+                  <label>Delete Server</label>
+                  <p class="setting-description">Permanently delete this server and all its data. This action cannot be undone.</p>
+                </div>
+                <button class="btn-danger">Delete Server</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-save-bar">
+            <button class="btn-primary" id="save-settings">
+              <i data-lucide="save"></i>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/server.js"></script>
+</body>
+</html>

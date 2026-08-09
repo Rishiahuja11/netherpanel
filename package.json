@@ -1,0 +1,23 @@
+{
+  "name": "netherpanel",
+  "version": "3.0.0",
+  "description": "NetherPanel - Modern Minecraft Server Manager for Termux",
+  "main": "server.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "bash start.sh",
+    "dev": "node server.js",
+    "create-admin": "node create-admin.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "sql.js": "^1.9.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "archiver": "^6.0.1",
+    "node-cron": "^3.0.3",
+    "uuid": "^9.0.0"
+  }
+}
