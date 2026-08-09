@@ -39,10 +39,11 @@ fi
 echo ""
 echo "━━━ Step 3: Installing Java ━━━"
 if command -v java &> /dev/null; then
-    echo "  [✓] Java already installed"
+    JAVA_VER=$(java -version 2>&1 | head -1)
+    echo "  [✓] Java already installed: $JAVA_VER"
 else
-    pkg install -y openjdk-17
-    echo "  [✓] Java 17 installed"
+    pkg install -y openjdk-25
+    echo "  [✓] Java 25 installed"
 fi
 
 # Step 4: Install build tools and utilities

@@ -11,7 +11,7 @@ const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
 const JAVA_PATH = '/usr/bin/java';
 
-const PAPER_API = 'https://api.papermc.io/v2/projects/paper';
+const PAPER_API = 'https://fill.papermc.io/v3/projects/paper';
 const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
 const FABRIC_API = 'https://meta.fabricmc.net/v2/versions';
 const BEDROCK_API = 'https://api.github.com/repos/BedrockServer/Bedrockserver/releases';
@@ -138,19 +138,20 @@ class ServerService {
     if (fs.existsSync(jarPath)) return jarPath;
 
     return new Promise((resolve, reject) => {
-      const apiUrl = `${PAPER_API}/versions/${version}/builds`;
-      https.get(apiUrl, (res) => {
+      const apiUrl = `${PAPER_API}/versions/${version}/builds/latest`;
+      const options = new URL(apiUrl);
+      options.headers = { 'User-Agent': 'NetherPanel/1.0' };
+      https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
-            const builds = JSON.parse(data);
-            if (!builds.builds || builds.builds.length === 0) {
-              throw new Error(`No builds found for version ${version}`);
+            const build = JSON.parse(data);
+            const dl = build.downloads && build.downloads['server:default'];
+            if (!dl || !dl.url) {
+              throw new Error(`No download found for version ${version}`);
             }
-            const latestBuild = builds.builds[builds.builds.length - 1];
-            const downloadUrl = `${PAPER_API}/versions/${version}/builds/${latestBuild.build}/downloads/paper-${version}-${latestBuild.build}.jar`;
-            this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
+            this.downloadFileTo(dl.url, jarPath).then(() => resolve(jarPath)).catch(reject);
           } catch (err) { reject(err); }
         });
       }).on('error', reject);
@@ -605,13 +606,22 @@ class ServerService {
 
   static async getPaperVersions() {
     return new Promise((resolve, reject) => {
-      https.get(PAPER_API, (res) => {
+      https.get(PAPER_API, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
-            const versions = JSON.parse(data);
-            resolve(versions.versions || []);
+            const json = JSON.parse(data);
+            const versionsObj = json.versions || {};
+            const allVersions = [];
+            for (const group of Object.keys(versionsObj)) {
+              for (const v of versionsObj[group]) {
+                if (!v.includes('rc') && !v.includes('pre') && !v.includes('-dev')) {
+                  allVersions.push(v);
+                }
+              }
+            }
+            resolve(allVersions);
           } catch (err) {
             reject(err);
           }
@@ -622,13 +632,13 @@ class ServerService {
 
   static async getPurpurVersions() {
     return new Promise((resolve, reject) => {
-      https.get(`${PURPUR_API}/versions`, (res) => {
+      https.get(`${PURPUR_API}`, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
-            const versions = JSON.parse(data);
-            resolve(versions.versions || []);
+            const json = JSON.parse(data);
+            resolve(json.versions || []);
           } catch (err) {
             reject(err);
           }
@@ -679,8 +689,10 @@ class ServerService {
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
-            const matches = data.match(/<a[^>]*>(\d+\.\d+(\.\d+)?)<\/a>/g) || [];
-            const versions = matches.map(m => m.replace(/<[^>]+>/g, '')).filter((v, i, a) => a.indexOf(v) === i);
+            const matches = data.match(/<a[^>]*href="(\d+\.\d+(?:\.\d+)?)\.json">/g) || [];
+            const versions = matches
+              .map(m => m.match(/href="(\d+\.\d+(?:\.\d+)?)\.json"/)[1])
+              .filter((v, i, a) => a.indexOf(v) === i);
             resolve(versions);
           } catch (err) {
             reject(err);
