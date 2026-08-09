@@ -164,6 +164,7 @@ async function initDatabase() {
       pid INTEGER,
       path TEXT NOT NULL,
       java_args TEXT,
+      subdomain TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

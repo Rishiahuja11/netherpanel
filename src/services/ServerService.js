@@ -47,7 +47,7 @@ class ServerService {
 
   static async createServer(userId, data) {
     const db = this.getDb();
-    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port = 25565, ramMin = 1024, ramMax = 2048 } = data;
+    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port = 25565, ramMin = 1024, ramMax = 2048, subdomain = null } = data;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const existing = db.prepare('SELECT id FROM servers WHERE slug = ?').get(slug);
@@ -65,8 +65,8 @@ class ServerService {
     const actualPort = port || defaultPort;
 
     const result = db.prepare(
-      'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(userId, name, slug, version, serverType, gameType, actualPort, ramMin, ramMax, '');
+      'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path, subdomain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, name, slug, version, serverType, gameType, actualPort, ramMin, ramMax, '', subdomain || null);
 
     const serverId = result.lastInsertRowid;
     const serverDir = this.getServerDir(serverId);
