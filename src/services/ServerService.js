@@ -5,6 +5,7 @@ const http = require('http');
 const https = require('https');
 const { getDb } = require('../database');
 const UserService = require('./UserService');
+const CloudflareService = require('./CloudflareService');
 
 const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
@@ -91,6 +92,22 @@ class ServerService {
     fs.writeFileSync(path.join(serverDir, 'server.properties'), propsContent);
 
     UserService.logActivity(userId, 'create_server', 'server', serverId, `Created server "${name}" (${serverType} ${version})`);
+
+    if (subdomain) {
+      try {
+        const cf = CloudflareService.fromSettings(db);
+        if (cf) {
+          const dns = await cf.createSubdomain(subdomain);
+          if (dns.success) {
+            console.log(`[Cloudflare] DNS record created: ${subdomain}.smp45.qzz.io -> ${cf.serverIp}`);
+          } else {
+            console.error('[Cloudflare] Failed to create DNS record:', dns);
+          }
+        }
+      } catch (e) {
+        console.error('[Cloudflare] Error creating DNS:', e.message);
+      }
+    }
 
     return this.getServer(serverId);
   }
@@ -394,6 +411,19 @@ class ServerService {
     const serverDir = this.getServerDir(id);
     if (fs.existsSync(serverDir)) {
       fs.rmSync(serverDir, { recursive: true, force: true });
+    }
+
+    if (server.subdomain) {
+      try {
+        const cf = CloudflareService.fromSettings(db);
+        if (cf) {
+          cf.deleteSubdomain(server.subdomain).then(dns => {
+            if (dns.success) console.log(`[Cloudflare] DNS record deleted: ${server.subdomain}.smp45.qzz.io`);
+          }).catch(e => console.error('[Cloudflare] Error deleting DNS:', e.message));
+        }
+      } catch (e) {
+        console.error('[Cloudflare] Error:', e.message);
+      }
     }
 
     db.prepare('DELETE FROM servers WHERE id = ?').run(id);

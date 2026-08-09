@@ -6,6 +6,7 @@ const BackupService = require('../services/BackupService');
 const ScheduleService = require('../services/ScheduleService');
 const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
+const CloudflareService = require('../services/CloudflareService');
 const { getDb } = require('../database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
@@ -194,6 +195,20 @@ router.delete('/crashes/:id', (req, res) => {
     res.json({ message: 'Crash report deleted', crash });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/cloudflare/test', async (req, res) => {
+  try {
+    const db = getDb();
+    const cf = CloudflareService.fromSettings(db);
+    if (!cf) {
+      return res.status(400).json({ error: 'Cloudflare not configured. Save API token, Zone ID, and Server IP first.' });
+    }
+    const result = await cf.testConnection();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
