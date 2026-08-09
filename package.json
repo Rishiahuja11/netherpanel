@@ -4,7 +4,7 @@
   "description": "NetherPanel - Modern Minecraft Server Manager for Termux",
   "main": "server.js",
   "scripts": {
-    "setup": "node setup.js",
+    "setup": "bash setup.sh",
     "start": "bash start.sh",
     "dev": "node server.js",
     "create-admin": "node create-admin.js"

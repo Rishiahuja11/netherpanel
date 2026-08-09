@@ -1,5 +1,8 @@
 #!/bin/bash
-# NetherPanel Setup Script for proot-distro Ubuntu
+# NetherPanel Setup Script for Termux
+# Run this directly: bash setup.sh
+
+set -e
 
 echo ""
 echo "  ╔═══════════════════════════════════════════════╗"
@@ -8,79 +11,106 @@ echo "  ║     Minecraft Server Manager for Termux        ║"
 echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
 
-# Detect environment
-if [ -d "/data/data/com.termux" ]; then
-    echo "[*] Detected Termux environment"
-    IS_TERMUX=1
-else
-    echo "[*] Detected Linux environment"
-    IS_TERMUX=0
+# Check if running in Termux
+if [ ! -d "/data/data/com.termux" ]; then
+    echo "  [!] This script must be run in Termux"
+    echo "  [!] Download Termux from F-Droid or GitHub"
+    exit 1
 fi
 
-# Check if running in proot-distro
-if grep -q "proot" /proc/1/cmdline 2>/dev/null || [ -f /.proot.* ]; then
-    echo "[*] Detected proot-distro environment"
-    IN_PROOT=1
-elif command -v proot-distro &> /dev/null; then
-    echo "[*] proot-distro available (run inside Ubuntu for best results)"
-    IN_PROOT=0
-else
-    IN_PROOT=0
-fi
-
-# Install Node.js if not present
-if ! command -v node &> /dev/null; then
-    echo "[*] Installing Node.js..."
-    if [ "$IS_TERMUX" = "1" ] && [ "$IN_PROOT" = "0" ]; then
-        pkg install -y nodejs
-    else
-        apt-get update && apt-get install -y nodejs npm
-    fi
-fi
-echo "[✓] Node.js $(node --version 2>/dev/null || echo 'installed')"
-
-# Install Java if not present
-if ! command -v java &> /dev/null; then
-    echo "[*] Installing Java 17 (required for Minecraft)..."
-    if [ "$IS_TERMUX" = "1" ] && [ "$IN_PROOT" = "0" ]; then
-        pkg install -y openjdk-17
-    else
-        apt-get update && apt-get install -y openjdk-17-jre-headless
-    fi
-fi
-echo "[✓] Java installed"
-
-# Install build tools if needed
-if ! command -v gcc &> /dev/null; then
-    echo "[*] Installing build tools..."
-    if [ "$IS_TERMUX" = "1" ] && [ "$IN_PROOT" = "0" ]; then
-        pkg install -y build-essential
-    else
-        apt-get update && apt-get install -y build-essential python3
-    fi
-fi
-
-# Install npm dependencies
-echo "[*] Installing npm dependencies..."
 cd "$(dirname "$0")"
-npm install --production 2>/dev/null || npm install
-echo "[✓] Dependencies installed"
 
-# Create data directories
+# Step 1: Install proot-distro
+echo "━━━ Step 1: Installing proot-distro ━━━"
+if command -v proot-distro &> /dev/null; then
+    echo "  [✓] proot-distro already installed"
+else
+    echo "  [*] Installing proot-distro..."
+    pkg update -y
+    pkg install -y proot-distro
+    echo "  [✓] proot-distro installed"
+fi
+
+# Step 2: Check if Ubuntu is installed
+echo ""
+echo "━━━ Step 2: Installing Ubuntu ━━━"
+if proot-distro list 2>/dev/null | grep -qi ubuntu && [ -d "/data/data/com.termux/files/home/ubuntu" ]; then
+    echo "  [✓] Ubuntu already installed"
+else
+    echo "  [*] Available distributions:"
+    proot-distro list 2>/dev/null || true
+    echo ""
+    read -p "  Install Ubuntu? (Y/n): " choice
+    if [ "$choice" = "n" ] || [ "$choice" = "N" ]; then
+        echo "  [!] Skipping Ubuntu installation"
+        echo "  [!] Panel requires Ubuntu to run"
+        exit 1
+    fi
+    echo "  [*] Installing Ubuntu (this may take a few minutes)..."
+    proot-distro remove ubuntu 2>/dev/null || true
+    proot-distro install ubuntu
+    echo "  [✓] Ubuntu installed"
+fi
+
+# Step 3: Install dependencies inside Ubuntu
+echo ""
+echo "━━━ Step 3: Installing dependencies in Ubuntu ━━━"
+echo "  [*] Running setup inside Ubuntu..."
+
+proot-distro login ubuntu -- bash -c '
+    set -e
+    export HOME=/root
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    echo "  [*] Updating packages..."
+    apt-get update -qq 2>/dev/null || true
+
+    echo "  [*] Installing Node.js..."
+    apt-get install -y -qq curl ca-certificates 2>/dev/null || true
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>/dev/null || true
+    apt-get install -y -qq nodejs 2>/dev/null || {
+        apt-get install -y -qq nodejs npm 2>/dev/null || true
+    }
+
+    echo "  [*] Installing Java..."
+    apt-get install -y -qq openjdk-17-jre-headless 2>/dev/null || {
+        apt-get install -y -qq default-jre 2>/dev/null || true
+    }
+
+    echo "  [*] Installing build tools..."
+    apt-get install -y -qq build-essential python3 git 2>/dev/null || true
+
+    echo "  [✓] Ubuntu dependencies installed"
+'
+
+# Step 4: Install npm dependencies
+echo ""
+echo "━━━ Step 4: Installing npm dependencies ━━━"
+proot-distro login ubuntu -- bash -c '
+    export HOME=/root
+    cd /data/data/com.termux/files/home/panel
+    npm install --production 2>/dev/null || npm install
+'
+echo "  [✓] npm dependencies installed"
+
+# Step 5: Create data directories
+echo ""
+echo "━━━ Step 5: Creating directories ━━━"
 mkdir -p data/servers data/backups data/uploads data/eggs data/crashes
-echo "[✓] Data directories created"
+echo "  [✓] Directories created"
 
-# Make scripts executable
-chmod +x start.sh 2>/dev/null
-
+# Done
 echo ""
-echo "  ═══════════════════════════════════════════════"
-echo "  Setup complete!"
+echo "  ╔═══════════════════════════════════════════════╗"
+echo "  ║     Setup Complete!                            ║"
+echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
-echo "  Start the panel:  ./start.sh"
-echo "  Default login:    admin / admin123"
-echo "  Panel URL:        http://localhost:3000"
+echo "  Next steps:"
+echo "    1. Create an admin user:"
+echo "       npm run create-admin -- <username> <password>"
 echo ""
-echo "  No FQDN required - just install and run!"
-echo "  ═══════════════════════════════════════════════"
+echo "    2. Start the panel:"
+echo "       npm start"
+echo ""
+echo "  Panel URL: http://localhost:3000"
 echo ""

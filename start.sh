@@ -2,6 +2,8 @@
 # NetherPanel Start Script
 # Logs into proot-distro Ubuntu and starts the panel
 
+set -e
+
 cd "$(dirname "$0")"
 
 echo ""
@@ -11,25 +13,37 @@ echo "  ║     Minecraft Server Manager for Termux        ║"
 echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
 
+# Check if running in Termux
+if [ ! -d "/data/data/com.termux" ]; then
+    echo "  [!] This script must be run in Termux"
+    exit 1
+fi
+
 # Check if proot-distro is installed
 if ! command -v proot-distro &> /dev/null; then
-    echo "[!] proot-distro not found."
-    echo "[*] Run setup first: npm run setup"
+    echo "  [!] proot-distro not found"
+    echo "  [!] Run setup first: bash setup.sh"
     exit 1
 fi
 
 # Check if Ubuntu is installed
-UBUNTU_ROOT="/data/data/com.termux/files/home/ubuntu"
-if [ ! -d "$UBUNTU_ROOT" ]; then
-    echo "[!] Ubuntu not installed."
-    echo "[*] Run setup first: npm run setup"
+if ! proot-distro list 2>/dev/null | grep -qi ubuntu; then
+    echo "  [!] Ubuntu not installed"
+    echo "  [!] Run setup first: bash setup.sh"
     exit 1
 fi
 
-# Create the startup script inside Ubuntu
-STARTUP_SCRIPT="/data/data/com.termux/files/home/panel/data/.ubuntu-start.sh"
+if [ ! -d "/data/data/com.termux/files/home/ubuntu" ]; then
+    echo "  [!] Ubuntu not properly installed"
+    echo "  [!] Run setup first: bash setup.sh"
+    exit 1
+fi
 
-cat > "$STARTUP_SCRIPT" << 'STARTUP'
+# Create startup script
+STARTUP_SCRIPT="/data/data/com.termux/files/home/panel/data/.start.sh"
+mkdir -p data
+
+cat > "$STARTUP_SCRIPT" << 'EOF'
 #!/bin/bash
 export HOME=/root
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -39,7 +53,7 @@ cd /data/data/com.termux/files/home/panel
 
 # Install deps if needed
 if [ ! -d "node_modules" ]; then
-    echo "[*] Installing dependencies..."
+    echo "  [*] Installing dependencies..."
     npm install --production 2>/dev/null || npm install
 fi
 
@@ -53,19 +67,17 @@ echo "  ║     Running inside Ubuntu (proot)             ║"
 echo "  ║     http://localhost:3000                     ║"
 echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
-echo "  Default login: admin / admin123"
+echo "  Login: admin / admin123"
 echo ""
 
-# Start the panel
 exec node server.js
-STARTUP
+EOF
 
 chmod +x "$STARTUP_SCRIPT"
 
-echo "[*] Starting NetherPanel inside Ubuntu..."
-echo "[*] Panel will be available at: http://localhost:3000"
-echo "[*] Default login: admin / admin123"
+echo "  [*] Starting NetherPanel inside Ubuntu..."
+echo "  [*] Panel URL: http://localhost:3000"
 echo ""
 
-# Login to Ubuntu and run the startup script
+# Login to Ubuntu and start
 exec proot-distro login ubuntu -- bash "$STARTUP_SCRIPT"
