@@ -544,14 +544,37 @@
               <label for="server-name">Server Name</label>
               <input type="text" id="server-name" placeholder="My Awesome Server" class="form-input">
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="server-game">Game Type</label>
-                <select id="server-game" class="form-select">
-                  <option value="java">Java Edition</option>
-                  <option value="bedrock">Bedrock Edition</option>
-                </select>
+            <div class="form-group">
+              <label>Game Type</label>
+              <div class="game-type-grid">
+                <label class="game-type-option">
+                  <input type="radio" name="game-type" value="java" checked>
+                  <div class="game-type-card">
+                    <div class="game-type-icon java">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                      </svg>
+                    </div>
+                    <strong>Java Edition</strong>
+                    <span>PC servers with mods & plugins</span>
+                  </div>
+                </label>
+                <label class="game-type-option">
+                  <input type="radio" name="game-type" value="bedrock">
+                  <div class="game-type-card">
+                    <div class="game-type-icon bedrock">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                        <path d="M9 9h6v6H9z"/>
+                      </svg>
+                    </div>
+                    <strong>Bedrock Edition</strong>
+                    <span>Mobile, Console & Windows</span>
+                  </div>
+                </label>
               </div>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label for="server-location">Location</label>
                 <select id="server-location" class="form-select">
@@ -566,11 +589,18 @@
 
           <div class="wizard-panel" data-panel="2">
             <div class="form-group">
-              <label for="server-software">Server Software</label>
-              <div class="software-grid">
+              <label>Server Software</label>
+              <div class="software-grid" id="software-grid">
                 <label class="software-option">
                   <input type="radio" name="software" value="paper" checked>
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                      </svg>
+                    </div>
                     <strong>Paper</strong>
                     <span>High performance, plugin support</span>
                   </div>
@@ -578,6 +608,12 @@
                 <label class="software-option">
                   <input type="radio" name="software" value="spigot">
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                      </svg>
+                    </div>
                     <strong>Spigot</strong>
                     <span>Modified server with plugin API</span>
                   </div>
@@ -585,6 +621,11 @@
                 <label class="software-option">
                   <input type="radio" name="software" value="purpur">
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                    </div>
                     <strong>Purpur</strong>
                     <span>Enhanced Paper with extra features</span>
                   </div>
@@ -592,6 +633,12 @@
                 <label class="software-option">
                   <input type="radio" name="software" value="fabric">
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M2 12h20"/>
+                        <circle cx="12" cy="12" r="4"/>
+                      </svg>
+                    </div>
                     <strong>Fabric</strong>
                     <span>Lightweight mod loader</span>
                   </div>
@@ -599,6 +646,11 @@
                 <label class="software-option">
                   <input type="radio" name="software" value="forge">
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                      </svg>
+                    </div>
                     <strong>Forge</strong>
                     <span>Classic modding platform</span>
                   </div>
@@ -606,6 +658,13 @@
                 <label class="software-option">
                   <input type="radio" name="software" value="vanilla">
                   <div class="software-card">
+                    <div class="software-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="3" y1="9" x2="21" y2="9"/>
+                        <line x1="9" y1="21" x2="9" y2="9"/>
+                      </svg>
+                    </div>
                     <strong>Vanilla</strong>
                     <span>Official Minecraft server</span>
                   </div>
@@ -615,12 +674,12 @@
             <div class="form-group">
               <label for="server-version">Version</label>
               <select id="server-version" class="form-select">
-                <option>1.21.4</option>
-                <option>1.21.3</option>
-                <option>1.21.2</option>
-                <option>1.21.1</option>
-                <option>1.20.4</option>
-                <option>1.20.1</option>
+                <option value="1.21.4">1.21.4</option>
+                <option value="1.21.3">1.21.3</option>
+                <option value="1.21.2">1.21.2</option>
+                <option value="1.21.1">1.21.1</option>
+                <option value="1.20.4">1.20.4</option>
+                <option value="1.20.1">1.20.1</option>
               </select>
             </div>
           </div>
@@ -628,32 +687,24 @@
           <div class="wizard-panel" data-panel="3">
             <div class="form-row">
               <div class="form-group">
-                <label for="server-cpu">CPU Cores</label>
+                <label for="server-ram-min">Minimum RAM</label>
                 <div class="slider-group">
-                  <input type="range" id="server-cpu" min="1" max="8" value="2" class="form-range">
-                  <span class="slider-value" id="cpu-value">2 cores</span>
+                  <input type="range" id="server-ram-min" min="512" max="16384" value="1024" step="512" class="form-range">
+                  <span class="slider-value" id="ram-min-value">1024 MB</span>
                 </div>
               </div>
               <div class="form-group">
-                <label for="server-ram">Memory</label>
+                <label for="server-ram-max">Maximum RAM</label>
                 <div class="slider-group">
-                  <input type="range" id="server-ram" min="1" max="32" value="4" class="form-range">
-                  <span class="slider-value" id="ram-value">4 GB</span>
+                  <input type="range" id="server-ram-max" min="1024" max="32768" value="2048" step="512" class="form-range">
+                  <span class="slider-value" id="ram-max-value">2048 MB</span>
                 </div>
               </div>
             </div>
             <div class="form-group">
-              <label for="server-disk">Storage</label>
-              <div class="slider-group">
-                <input type="range" id="server-disk" min="5" max="500" value="20" step="5" class="form-range">
-                <span class="slider-value" id="disk-value">20 GB</span>
-              </div>
-            </div>
-            <div class="resource-info">
-              <div class="resource-item">
-                <i data-lucide="zap"></i>
-                <span>Estimated cost: <strong>$5.00/mo</strong></span>
-              </div>
+              <label for="server-port">Server Port</label>
+              <input type="number" id="server-port" class="form-input" value="25565" min="1" max="65535">
+              <span class="form-hint" id="port-hint">Default port for Java Edition</span>
             </div>
           </div>
 
@@ -664,6 +715,10 @@
                 <span class="review-value" id="review-name">-</span>
               </div>
               <div class="review-item">
+                <span class="review-label">Game Type</span>
+                <span class="review-value" id="review-game">Java Edition</span>
+              </div>
+              <div class="review-item">
                 <span class="review-label">Software</span>
                 <span class="review-value" id="review-software">Paper</span>
               </div>
@@ -672,24 +727,12 @@
                 <span class="review-value" id="review-version">1.21.4</span>
               </div>
               <div class="review-item">
-                <span class="review-label">CPU</span>
-                <span class="review-value" id="review-cpu">2 cores</span>
+                <span class="review-label">RAM</span>
+                <span class="review-value" id="review-ram">1024-2048 MB</span>
               </div>
               <div class="review-item">
-                <span class="review-label">Memory</span>
-                <span class="review-value" id="review-ram">4 GB</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Storage</span>
-                <span class="review-value" id="review-disk">20 GB</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Location</span>
-                <span class="review-value" id="review-location">US East (Virginia)</span>
-              </div>
-              <div class="review-cost">
-                <span>Estimated Monthly Cost</span>
-                <strong>$5.00/mo</strong>
+                <span class="review-label">Port</span>
+                <span class="review-value" id="review-port">25565</span>
               </div>
             </div>
           </div>

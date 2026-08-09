@@ -11,11 +11,32 @@ const SERVERS_DIR = path.join(DATA_DIR, 'servers');
 const JAVA_PATH = '/usr/bin/java';
 
 const PAPER_API = 'https://api.papermc.io/v2/projects/paper';
+const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
+const FABRIC_API = 'https://meta.fabricmc.net/v2/versions';
+const BEDROCK_API = 'https://api.github.com/repos/BedrockServer/Bedrockserver/releases';
+
+const SERVER_TYPES = {
+  java: {
+    paper: { name: 'Paper', desc: 'High performance, plugin support', loader: 'paper' },
+    spigot: { name: 'Spigot', desc: 'Modified server with plugin API', loader: 'spigot' },
+    purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features', loader: 'purpur' },
+    fabric: { name: 'Fabric', desc: 'Lightweight mod loader', loader: 'fabric' },
+    forge: { name: 'Forge', desc: 'Classic modding platform', loader: 'forge' },
+    vanilla: { name: 'Vanilla', desc: 'Official Minecraft server', loader: 'vanilla' }
+  },
+  bedrock: {
+    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server software', loader: 'pocketmine' },
+    nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software', loader: 'nukkit' },
+    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server', loader: 'bedrock' }
+  }
+};
 
 const serverProcesses = new Map();
 const consoleBuffers = new Map();
 
 class ServerService {
+  static SERVER_TYPES = SERVER_TYPES;
+
   static getDb() {
     return getDb();
   }
@@ -26,7 +47,7 @@ class ServerService {
 
   static async createServer(userId, data) {
     const db = this.getDb();
-    const { name, version = '1.20.4', serverType = 'paper', port = 25565, ramMin = 1024, ramMax = 2048 } = data;
+    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port = 25565, ramMin = 1024, ramMax = 2048 } = data;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const existing = db.prepare('SELECT id FROM servers WHERE slug = ?').get(slug);
@@ -40,9 +61,12 @@ class ServerService {
       throw new Error(`Maximum server limit (${maxServers}) reached`);
     }
 
+    const defaultPort = gameType === 'bedrock' ? 19132 : 25565;
+    const actualPort = port || defaultPort;
+
     const result = db.prepare(
-      'INSERT INTO servers (user_id, name, slug, version, server_type, port, ram_min, ram_max, path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(userId, name, slug, version, serverType, port, ramMin, ramMax, '');
+      'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, name, slug, version, serverType, gameType, actualPort, ramMin, ramMax, '');
 
     const serverId = result.lastInsertRowid;
     const serverDir = this.getServerDir(serverId);
@@ -50,13 +74,13 @@ class ServerService {
 
     db.prepare('UPDATE servers SET path = ? WHERE id = ?').run(serverDir, serverId);
 
-    await this.downloadServerJar(serverId, serverType, version, serverDir);
+    await this.downloadServerSoftware(serverId, serverType, gameType, version, serverDir);
 
     const eulaContent = `eula=true\n`;
     fs.writeFileSync(path.join(serverDir, 'eula.txt'), eulaContent);
 
     const propsContent = [
-      `server-port=${port}`,
+      `server-port=${actualPort}`,
       `motd=${name}`,
       `level-name=world`,
       `online-mode=true`,
@@ -71,16 +95,32 @@ class ServerService {
     return this.getServer(serverId);
   }
 
-  static async downloadServerJar(serverId, serverType, version, serverDir) {
-    const jarPath = path.join(serverDir, 'server.jar');
-
-    if (fs.existsSync(jarPath)) {
-      return jarPath;
+  static async downloadServerSoftware(serverId, serverType, gameType, version, serverDir) {
+    if (gameType === 'bedrock') {
+      return this.downloadBedrockServer(serverId, serverType, version, serverDir);
     }
+    return this.downloadJavaServer(serverId, serverType, version, serverDir);
+  }
+
+  static async downloadJavaServer(serverId, serverType, version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    if (serverType === 'paper') {
+      return this.downloadFromPaperApi(serverId, version, serverDir);
+    } else if (serverType === 'purpur') {
+      return this.downloadFromPurpurApi(serverId, version, serverDir);
+    } else {
+      return this.downloadFromPaperApi(serverId, version, serverDir);
+    }
+  }
+
+  static async downloadFromPaperApi(serverId, version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
 
     return new Promise((resolve, reject) => {
       const apiUrl = `${PAPER_API}/versions/${version}/builds`;
-
       https.get(apiUrl, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
@@ -90,37 +130,73 @@ class ServerService {
             if (!builds.builds || builds.builds.length === 0) {
               throw new Error(`No builds found for version ${version}`);
             }
-
             const latestBuild = builds.builds[builds.builds.length - 1];
             const downloadUrl = `${PAPER_API}/versions/${version}/builds/${latestBuild.build}/downloads/paper-${version}-${latestBuild.build}.jar`;
-
-            const file = fs.createWriteStream(jarPath);
-            https.get(downloadUrl, (jarRes) => {
-              if (jarRes.statusCode === 302 || jarRes.statusCode === 301) {
-                https.get(jarRes.headers.location, (redirectRes) => {
-                  redirectRes.pipe(file);
-                  file.on('finish', () => {
-                    file.close();
-                    this.logCrash(serverId, null, null, `Downloaded server jar for ${version}`);
-                    resolve(jarPath);
-                  });
-                }).on('error', reject);
-              } else {
-                jarRes.pipe(file);
-                file.on('finish', () => {
-                  file.close();
-                  resolve(jarPath);
-                });
-              }
-            }).on('error', (err) => {
-              fs.unlink(jarPath, () => {});
-              reject(err);
-            });
-          } catch (err) {
-            reject(err);
-          }
+            this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
+          } catch (err) { reject(err); }
         });
       }).on('error', reject);
+    });
+  }
+
+  static async downloadFromPurpurApi(serverId, version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    return new Promise((resolve, reject) => {
+      const apiUrl = `${PURPUR_API}/versions/${version}`;
+      https.get(apiUrl, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const info = JSON.parse(data);
+            const latestBuild = info.builds?.latest || '1';
+            const downloadUrl = `${PURPUR_API}/versions/${version}/builds/${latestBuild}/download`;
+            this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async downloadBedrockServer(serverId, serverType, version, serverDir) {
+    const exePath = path.join(serverDir, 'bedrock_server');
+    const zipPath = path.join(serverDir, 'bedrock_server.zip');
+
+    if (fs.existsSync(exePath)) return exePath;
+
+    const downloadUrl = 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server.zip';
+
+    return new Promise((resolve, reject) => {
+      this.downloadFileTo(downloadUrl, zipPath).then(() => {
+        try {
+          const AdmZip = require('adm-zip');
+          const zip = new AdmZip(zipPath);
+          zip.extractAllTo(serverDir, true);
+          fs.unlinkSync(zipPath);
+          resolve(exePath);
+        } catch (err) {
+          reject(err);
+        }
+      }).catch(reject);
+    });
+  }
+
+  static async downloadFileTo(url, destPath) {
+    return new Promise((resolve, reject) => {
+      const followRedirect = (downloadUrl) => {
+        https.get(downloadUrl, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            followRedirect(res.headers.location);
+            return;
+          }
+          const file = fs.createWriteStream(destPath);
+          res.pipe(file);
+          file.on('finish', () => { file.close(); resolve(); });
+        }).on('error', reject);
+      };
+      followRedirect(url);
     });
   }
 
@@ -151,22 +227,33 @@ class ServerService {
     }
 
     const serverDir = this.getServerDir(serverId);
-    const jarPath = path.join(serverDir, 'server.jar');
-
-    if (!fs.existsSync(jarPath)) {
-      throw new Error('Server jar not found. Please reinstall server.');
-    }
-
-    const javaArgs = server.java_args || `-Xmx${server.ram_max}M -Xms${server.ram_min}M`;
-    const args = javaArgs.split(' ').filter(a => a);
-    args.push('-jar', jarPath, 'nogui');
+    const isBedrock = server.game_type === 'bedrock';
 
     consoleBuffers.set(serverId, []);
 
-    const child = spawn(JAVA_PATH, args, {
-      cwd: serverDir,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    let child;
+    if (isBedrock) {
+      const exePath = path.join(serverDir, 'bedrock_server');
+      if (!fs.existsSync(exePath)) {
+        throw new Error('Bedrock server not found. Please reinstall server.');
+      }
+      child = spawn(exePath, [], {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+    } else {
+      const jarPath = path.join(serverDir, 'server.jar');
+      if (!fs.existsSync(jarPath)) {
+        throw new Error('Server jar not found. Please reinstall server.');
+      }
+      const javaArgs = server.java_args || `-Xmx${server.ram_max}M -Xms${server.ram_min}M`;
+      const args = javaArgs.split(' ').filter(a => a);
+      args.push('-jar', jarPath, 'nogui');
+      child = spawn(JAVA_PATH, args, {
+        cwd: serverDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+    }
 
     serverProcesses.set(serverId, child);
     db.prepare('UPDATE servers SET status = ?, pid = ? WHERE id = ?').run('running', child.pid, serverId);

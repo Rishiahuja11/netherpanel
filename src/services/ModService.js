@@ -133,7 +133,8 @@ class ModService {
     }
 
     const serverDir = ServerService.getServerDir(serverId);
-    const modsDir = path.join(serverDir, 'mods');
+    const modFolder = this.getModFolder(server);
+    const modsDir = path.join(serverDir, modFolder);
 
     if (!fs.existsSync(modsDir)) {
       fs.mkdirSync(modsDir, { recursive: true });
@@ -188,8 +189,10 @@ class ModService {
       throw new Error('Mod not found');
     }
 
+    const server = ServerService.getServer(mod.server_id);
     const serverDir = ServerService.getServerDir(mod.server_id);
-    const filePath = path.join(serverDir, 'mods', mod.filename);
+    const modFolder = this.getModFolder(server);
+    const filePath = path.join(serverDir, modFolder, mod.filename);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -215,8 +218,10 @@ class ModService {
 
     db.prepare('UPDATE mods SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, modId);
 
+    const server = ServerService.getServer(mod.server_id);
     const serverDir = ServerService.getServerDir(mod.server_id);
-    const modsDir = path.join(serverDir, 'mods');
+    const modFolder = this.getModFolder(server);
+    const modsDir = path.join(serverDir, modFolder);
     const filePath = path.join(modsDir, mod.filename);
     const disabledPath = path.join(modsDir, `${mod.filename}.disabled`);
 
@@ -262,18 +267,21 @@ class ModService {
   }
 
   static getServerLoader(server) {
-    if (server.server_type === 'paper' || server.server_type === 'spigot') {
-      return 'paper';
-    } else if (server.server_type === 'forge') {
-      return 'forge';
-    } else if (server.server_type === 'fabric') {
-      return 'fabric';
-    } else if (server.server_type === 'quilt') {
-      return 'quilt';
-    } else if (server.server_type === 'bukkit') {
-      return 'bukkit';
-    }
-    return 'paper';
+    const typeMap = {
+      paper: 'paper', spigot: 'paper', purpur: 'paper',
+      forge: 'forge', fabric: 'fabric', quilt: 'quilt',
+      bukkit: 'bukkit', pocketmine: 'pocketmine', nukkit: 'spigot'
+    };
+    return typeMap[server.server_type] || 'paper';
+  }
+
+  static isPluginServer(server) {
+    return ['paper', 'spigot', 'purpur', 'bukkit'].includes(server.server_type);
+  }
+
+  static getModFolder(server) {
+    if (this.isPluginServer(server)) return 'plugins';
+    return 'mods';
   }
 
   static getModStats() {

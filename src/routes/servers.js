@@ -18,6 +18,24 @@ router.get('/', (req, res) => {
   }
 });
 
+router.get('/types', (req, res) => {
+  res.json(ServerService.SERVER_TYPES || {
+    java: {
+      paper: { name: 'Paper', desc: 'High performance, plugin support' },
+      spigot: { name: 'Spigot', desc: 'Modified server with plugin API' },
+      purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features' },
+      fabric: { name: 'Fabric', desc: 'Lightweight mod loader' },
+      forge: { name: 'Forge', desc: 'Classic modding platform' },
+      vanilla: { name: 'Vanilla', desc: 'Official Minecraft server' }
+    },
+    bedrock: {
+      pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server software' },
+      nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software' },
+      bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' }
+    }
+  });
+});
+
 router.get('/versions', async (req, res) => {
   try {
     const versions = await ServerService.getPaperVersions();
@@ -47,7 +65,7 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, version, server_type, port, ram_min, ram_max } = req.body;
+    const { name, version, server_type, game_type, port, ram_min, ram_max } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Server name is required' });
@@ -56,10 +74,11 @@ router.post('/', async (req, res) => {
     const server = await ServerService.createServer(req.user.id, {
       name,
       version,
-      server_type,
+      serverType: server_type,
+      gameType: game_type || 'java',
       port,
-      ram_min,
-      ram_max
+      ramMin: ram_min,
+      ramMax: ram_max
     });
 
     res.status(201).json(server);

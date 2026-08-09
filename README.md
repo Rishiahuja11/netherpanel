@@ -1,22 +1,25 @@
 # NetherPanel
 
-A modern Minecraft server management panel built for Termux with proot-distro Ubuntu. No Docker, no FQDN required - just install and run.
+A modern Minecraft server management panel for Termux. No Docker, no proot-distro, no FQDN required - just install and run natively.
 
-![NetherPanel](https://img.shields.io/badge/NetherPanel-v3.0-orange) ![License](https://img.shields.io/badge/License-MIT-blue) ![Platform](https://img.shub.io/badge/Platform-Termux-purple)
+![NetherPanel](https://img.shields.io/badge/NetherPanel-v4.0-orange) ![License](https://img.shields.io/badge/License-MIT-blue) ![Platform](https://img.shields.io/badge/Platform-Termux-purple)
 
 ## Features
 
 ### Core Features
-- **One-click setup** - Installs proot-distro and Ubuntu automatically
-- **No Docker required** - Runs servers directly via Java process
+- **Native Termux** - Runs directly in Termux without proot-distro or Docker
+- **One-click setup** - Installs all dependencies automatically
 - **No FQDN needed** - Works on localhost out of the box
-- **Real-time console** - WebSocket-based terminal with history
+- **Real-time console** - Terminal-based console with history
 - **File manager** - Browse, edit, upload, delete server files
 - **Backup system** - Create and restore server backups
 - **Crash detection** - Automatic crash analysis and reporting
 - **Activity logging** - Track all server actions
 
 ### Server Management
+- Java and Bedrock server support
+- Paper, Spigot, Purpur, Fabric, Forge, Vanilla
+- PocketMine-MP, Nukkit for Bedrock
 - Start, stop, restart, kill servers
 - Live console output with command input
 - Server properties editor
@@ -25,8 +28,9 @@ A modern Minecraft server management panel built for Termux with proot-distro Ub
 
 ### Mod Manager
 - Search mods from Modrinth API
-- Install and remove mods
+- Install and remove mods/plugins
 - Browse popular Minecraft mods
+- Supports Paper, Spigot, Forge, Fabric loaders
 
 ### Schedule System
 - Cron-based task scheduling
@@ -41,46 +45,53 @@ A modern Minecraft server management panel built for Termux with proot-distro Ub
 
 ## Requirements
 
-- **Termux** (Android)
-- **proot-distro** (installed automatically)
-- **Ubuntu** (installed automatically)
-- **Node.js 18+** (installed inside Ubuntu)
-- **Java 17** (installed inside Ubuntu)
+- **Termux** (Android) - Download from F-Droid or GitHub
+- **Node.js** (installed by setup)
+- **Java 17** (installed by setup)
 
 ## Quick Start
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/netherpanel.git
+git clone https://github.com/Rishiahuja11/netherpanel.git
 cd netherpanel
 ```
 
 ### 2. Run setup
 
 ```bash
+bash setup.sh
+```
+
+Or using npm:
+```bash
 npm run setup
 ```
 
 This will:
-- Install proot-distro
-- Install Ubuntu
-- Install Node.js and Java inside Ubuntu
+- Install Node.js, Java, and utilities
 - Install npm dependencies
+- Create data directories
 
 ### 3. Create an admin user
 
 ```bash
-npm run create-admin -- <username> <password> [email]
+node create-admin.js <username> <password> [email]
 ```
 
 Example:
 ```bash
-npm run create-admin -- admin mypassword123 admin@example.com
+node create-admin.js admin mypassword123 admin@example.com
 ```
 
 ### 4. Start the panel
 
+```bash
+bash start.sh
+```
+
+Or using npm:
 ```bash
 npm start
 ```
@@ -102,10 +113,10 @@ Users can register through the login page at http://localhost:3000. They will ha
 ### Managing Servers
 
 1. Login to the panel
-2. Click "Create Server" 
-3. Select server type (Paper, Spigot, Forge, etc.)
-4. Configure memory, disk, and other settings
-5. Upload your `server.jar` to the server directory
+2. Click "Create Server"
+3. Select game type (Java or Bedrock)
+4. Select server software (Paper, Spigot, Forge, etc.)
+5. Configure memory and port settings
 6. Start the server
 
 ### File Management
@@ -125,14 +136,14 @@ Users can register through the login page at http://localhost:3000. They will ha
 
 | Command | Description |
 |---------|-------------|
-| `npm run setup` | Initial setup (installs proot-distro, Ubuntu, dependencies) |
+| `bash setup.sh` | Initial setup (installs dependencies) |
+| `bash start.sh` | Start the panel |
 | `npm start` | Start the panel |
-| `npm run create-admin -- <user> <pass> [email]` | Create an admin user |
-| `npm run dev` | Start in development mode |
+| `node create-admin.js <user> <pass> [email]` | Create an admin user |
 
 ## Configuration
 
-The panel uses a SQLite database stored in `data/panel.db`. Configuration is stored in the database settings table.
+The panel uses a SQLite database stored in `data/netherpanel.db`. Configuration is stored in the database settings table.
 
 ### Default Settings
 
@@ -145,8 +156,9 @@ The panel uses a SQLite database stored in `data/panel.db`. Configuration is sto
 ```
 netherpanel/
 ├── server.js                 # Main Express server
-├── setup.js                  # Setup script (proot-distro + Ubuntu)
-├── start.sh                  # Start script (logs into Ubuntu)
+├── setup.sh                  # Setup script (native Termux)
+├── setup.js                  # Setup script (Node.js version)
+├── start.sh                  # Start script
 ├── create-admin.js           # CLI to create admin users
 ├── package.json
 ├── src/
@@ -178,21 +190,24 @@ netherpanel/
 └── data/
     ├── servers/              # Server files
     ├── backups/              # Backup files
-    └── panel.db              # SQLite database
+    └── netherpanel.db        # SQLite database
 ```
 
 ## How It Works
 
 ### Architecture
 
-1. **Termux Layer**: Runs proot-distro
-2. **Ubuntu Layer**: Runs Node.js server (via proot)
-3. **Panel**: Express.js + Socket.IO server
-4. **Servers**: Java processes spawned directly
+1. **Termux**: Native Android terminal emulator
+2. **Panel**: Express.js server running directly in Termux
+3. **Servers**: Java/Bedrock processes spawned directly
 
 ### No Docker
 
 Unlike Pterodactyl, NetherPanel runs game servers directly as Java processes. This makes it lightweight and easy to set up on Termux.
+
+### No proot-distro
+
+Unlike other solutions, NetherPanel runs natively in Termux without needing Ubuntu or proot-distro. This simplifies setup and improves reliability.
 
 ### No FQDN
 
@@ -204,8 +219,9 @@ The panel works on localhost without any domain configuration. Just install and 
 |---------|-------------|-------------|
 | Docker Required | Yes | No |
 | FQDN Required | Yes | No |
+| proot Required | No | No |
 | Complexity | High | Low |
-| Setup Time | 30+ minutes | 5 minutes |
+| Setup Time | 30+ minutes | 2 minutes |
 | Mod Manager | No | Yes |
 | Crash Detection | No | Yes |
 | Platform | Linux VPS | Termux/Android |
@@ -215,21 +231,18 @@ The panel works on localhost without any domain configuration. Just install and 
 ### Java not found
 
 ```bash
-proot-distro login ubuntu
-apt install openjdk-17-jre-headless
+pkg install openjdk-17
 ```
 
 ### Node.js not found
 
 ```bash
-proot-distro login ubuntu
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install nodejs
+pkg install nodejs
 ```
 
 ### Port already in use
 
-Change the port in `.env` or set the PORT environment variable:
+Change the port using environment variable:
 
 ```bash
 PORT=8080 npm start
@@ -245,4 +258,4 @@ Contributions are welcome! Please open an issue or pull request on GitHub.
 
 ## Support
 
-If you have issues, please open a GitHub issue or contact us.
+If you have issues, please open a GitHub issue or contact us at **ahujarishi741@gmail.com**.

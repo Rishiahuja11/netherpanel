@@ -506,36 +506,218 @@ aliases: now-hierarchical-by-default
   },
 
   initModManager() {
-    const searchInput = document.getElementById('mod-search');
-    if (!searchInput) return;
+    this.authToken = localStorage.getItem('netherpanel_token') || null;
+    this.serverId = new URLSearchParams(window.location.search).get('id') || '1';
+    this.modOffset = 0;
+    this.modLimit = 20;
 
-    searchInput.addEventListener('input', () => {
-      const query = searchInput.value.toLowerCase();
-      const modCards = document.querySelectorAll('#available-mods .mod-card');
-
-      modCards.forEach(card => {
-        const name = card.querySelector('.mod-name')?.textContent.toLowerCase() || '';
-        const desc = card.querySelector('.mod-desc')?.textContent.toLowerCase() || '';
-        card.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+    const tabs = document.querySelectorAll('.mods-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.mods-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(`mods-${tab.dataset.modsTab}-panel`);
+        if (panel) panel.classList.add('active');
       });
     });
+
+    const searchInput = document.getElementById('mod-search');
+    let searchTimeout;
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          this.modOffset = 0;
+          this.searchMods(searchInput.value);
+        }, 400);
+      });
+    }
+
+    const categoryFilter = document.getElementById('mod-category');
+    const loaderFilter = document.getElementById('mod-loader');
+    const versionFilter = document.getElementById('mod-version');
+
+    [categoryFilter, loaderFilter, versionFilter].forEach(el => {
+      if (el) {
+        el.addEventListener('change', () => {
+          this.modOffset = 0;
+          this.searchMods(document.getElementById('mod-search')?.value || '');
+        });
+      }
+    });
+
+    const loadMoreBtn = document.getElementById('mods-load-more');
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => {
+        this.modOffset += this.modLimit;
+        this.searchMods(document.getElementById('mod-search')?.value || '', true);
+      });
+    }
+
+    this.loadInstalledMods();
   },
 
-  installMod(btn) {
-    const card = btn.closest('.mod-card');
-    const name = card?.querySelector('.mod-name')?.textContent || 'Mod';
+  async loadInstalledMods() {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/mods`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) return;
+      const mods = await res.json();
+      this.renderInstalledMods(mods);
+    } catch (err) {
+      console.error('Failed to load installed mods:', err);
+    }
+  },
 
-    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
-    btn.disabled = true;
+  renderInstalledMods(mods) {
+    const container = document.getElementById('installed-mods');
+    const count = document.getElementById('installed-count');
+    if (count) count.textContent = `(${mods.length})`;
 
-    setTimeout(() => {
-      card.classList.add('installed');
-      btn.innerHTML = '<i data-lucide="check-circle"></i> Installed';
-      btn.disabled = true;
-      btn.classList.remove('btn-install');
-      lucide.createIcons({ nodes: [card] });
-      NetherServer.showToast('Installed', `${name} has been installed`, 'success');
-    }, 2000);
+    if (!mods.length) {
+      container.innerHTML = `
+        <div class="mods-empty-state">
+          <i data-lucide="package-open"></i>
+          <p>No mods or plugins installed yet</p>
+          <span>Browse and install mods from Modrinth</span>
+        </div>`;
+      lucide.createIcons({ nodes: [container] });
+      return;
+    }
+
+    container.innerHTML = mods.map(mod => `
+      <div class="mod-card installed" data-mod-id="${mod.id}">
+        <div class="mod-icon"><i data-lucide="puzzle"></i></div>
+        <div class="mod-info">
+          <h4 class="mod-name">${mod.name}</h4>
+          <div class="mod-meta">
+            <span class="mod-version-badge">v${mod.version}</span>
+            <span class="mod-author">${mod.slug || ''}</span>
+          </div>
+        </div>
+        <div class="mod-actions">
+          <button class="btn-sm" disabled><i data-lucide="check-circle"></i> Installed</button>
+          <button class="btn-sm danger" onclick="NetherServer.removeMod(${mod.id})" title="Remove"><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    `).join('');
+
+    lucide.createIcons({ nodes: [container] });
+  },
+
+  async searchMods(query, append = false) {
+    const container = document.getElementById('available-mods');
+    const info = document.getElementById('mods-results-info');
+    const loadMoreBtn = document.getElementById('mods-load-more');
+
+    if (!append) {
+      container.innerHTML = '<div class="mods-loading"><div class="spinner"></div><span>Searching Modrinth...</span></div>';
+    }
+
+    try {
+      const params = new URLSearchParams({
+        query: query || '',
+        limit: this.modLimit.toString(),
+        offset: this.modOffset.toString(),
+        index: 'relevance'
+      });
+
+      const category = document.getElementById('mod-category')?.value;
+      const loader = document.getElementById('mod-loader')?.value;
+      if (category) params.append('facets', `[["categories:${category}"]]`);
+      if (loader) params.append('facets', `[["categories:${loader}"]]`);
+
+      const res = await fetch(`https://api.modrinth.com/v2/search?${params}`);
+      const data = await res.json();
+
+      if (info) {
+        info.textContent = `Showing ${Math.min(this.modOffset + data.hits.length, data.total_hits)} of ${data.total_hits} results`;
+      }
+
+      const cards = data.hits.map(mod => `
+        <div class="mod-card" data-modrinth-id="${mod.project_id}">
+          <div class="mod-icon">
+            ${mod.icon_url ? `<img src="${mod.icon_url}" alt="${mod.title}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'puzzle\\'></i>'">` : '<i data-lucide="puzzle"></i>'}
+          </div>
+          <div class="mod-info">
+            <h4 class="mod-name">${mod.title}</h4>
+            <p class="mod-desc">${mod.description}</p>
+            <div class="mod-meta">
+              <span class="mod-downloads"><i data-lucide="download"></i> ${this.formatNumber(mod.downloads)}</span>
+              <span class="mod-author">by ${mod.author}</span>
+            </div>
+          </div>
+          <div class="mod-actions">
+            <button class="btn-sm btn-install" onclick="NetherServer.installModFromModrinth('${mod.project_id}', '${mod.title.replace(/'/g, "\\'")}')">
+              <i data-lucide="download"></i> Install
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (append) {
+        container.insertAdjacentHTML('beforeend', cards);
+      } else {
+        container.innerHTML = cards || '<div class="mods-empty-state"><p>No mods found</p></div>';
+      }
+
+      if (loadMoreBtn) {
+        loadMoreBtn.style.display = data.hits.length >= this.modLimit ? '' : 'none';
+      }
+
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) {
+      container.innerHTML = '<div class="mods-empty-state"><p>Failed to search Modrinth</p></div>';
+      console.error('Modrinth search error:', err);
+    }
+  },
+
+  async installModFromModrinth(modrinthId, modName) {
+    NetherServer.showToast('Installing', `Installing ${modName}...`, 'info');
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/mods/install`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ mod_id: modrinthId })
+      });
+
+      if (res.ok) {
+        NetherServer.showToast('Installed', `${modName} installed successfully`, 'success');
+        this.loadInstalledMods();
+      } else {
+        const err = await res.json();
+        NetherServer.showToast('Error', err.error || 'Failed to install mod', 'error');
+      }
+    } catch (err) {
+      NetherServer.showToast('Error', 'Failed to install mod', 'error');
+    }
+  },
+
+  async removeMod(modId) {
+    if (!confirm('Are you sure you want to remove this mod?')) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/mods/${modId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (res.ok) {
+        NetherServer.showToast('Removed', 'Mod removed successfully', 'success');
+        this.loadInstalledMods();
+      }
+    } catch (err) {
+      NetherServer.showToast('Error', 'Failed to remove mod', 'error');
+    }
+  },
+
+  formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
   },
 
   initSettingsNav() {
@@ -648,7 +830,6 @@ aliases: now-hierarchical-by-default
   }
 };
 
-// Expose for onclick handlers
 const NetherMods = {
   install(btn) {
     NetherServer.installMod(btn);

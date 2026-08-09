@@ -5,6 +5,23 @@
 const NetherApp = {
   currentWizardStep: 1,
   maxWizardStep: 4,
+  selectedGameType: 'java',
+  authToken: localStorage.getItem('netherpanel_token') || null,
+
+  JAVA_SOFTWARE: {
+    paper: { name: 'Paper', desc: 'High performance, plugin support' },
+    spigot: { name: 'Spigot', desc: 'Modified server with plugin API' },
+    purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features' },
+    fabric: { name: 'Fabric', desc: 'Lightweight mod loader' },
+    forge: { name: 'Forge', desc: 'Classic modding platform' },
+    vanilla: { name: 'Vanilla', desc: 'Official Minecraft server' }
+  },
+
+  BEDROCK_SOFTWARE: {
+    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server software' },
+    nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software' },
+    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' }
+  },
 
   init() {
     this.initLucideIcons();
@@ -17,6 +34,8 @@ const NetherApp = {
     this.initWizardNavigation();
     this.initSliders();
     this.initServerActions();
+    this.initGameTypeSelector();
+    this.loadUserServers();
   },
 
   initLucideIcons() {
@@ -65,7 +84,6 @@ const NetherApp = {
 
   initFilters() {
     const filterBtns = document.querySelectorAll('.filter-btn');
-    const serverCards = document.querySelectorAll('.server-card');
 
     filterBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -73,6 +91,7 @@ const NetherApp = {
         btn.classList.add('active');
 
         const filter = btn.dataset.filter;
+        const serverCards = document.querySelectorAll('.server-card');
 
         serverCards.forEach(card => {
           if (filter === 'all' || card.dataset.status === filter) {
@@ -155,6 +174,69 @@ const NetherApp = {
     }
   },
 
+  initGameTypeSelector() {
+    const gameTypeInputs = document.querySelectorAll('input[name="game-type"]');
+    gameTypeInputs.forEach(input => {
+      input.addEventListener('change', () => {
+        NetherApp.selectedGameType = input.value;
+        NetherApp.updateSoftwareOptions();
+        NetherApp.updatePort();
+      });
+    });
+  },
+
+  updateSoftwareOptions() {
+    const grid = document.getElementById('software-grid');
+    if (!grid) return;
+
+    const software = this.selectedGameType === 'bedrock' ? this.BEDROCK_SOFTWARE : this.JAVA_SOFTWARE;
+    const entries = Object.entries(software);
+
+    grid.innerHTML = entries.map(([key, val], i) => `
+      <label class="software-option">
+        <input type="radio" name="software" value="${key}" ${i === 0 ? 'checked' : ''}>
+        <div class="software-card">
+          <div class="software-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <strong>${val.name}</strong>
+          <span>${val.desc}</span>
+        </div>
+      </label>
+    `).join('');
+
+    this.updateVersionOptions();
+    lucide.createIcons();
+  },
+
+  updateVersionOptions() {
+    const select = document.getElementById('server-version');
+    if (!select) return;
+
+    const versions = this.selectedGameType === 'bedrock'
+      ? ['1.21.50', '1.21.40', '1.21.30', '1.21.0', '1.20.80', '1.20.70']
+      : ['1.21.4', '1.21.3', '1.21.2', '1.21.1', '1.20.4', '1.20.1'];
+
+    select.innerHTML = versions.map(v => `<option value="${v}">${v}</option>`).join('');
+  },
+
+  updatePort() {
+    const portInput = document.getElementById('server-port');
+    const hint = document.getElementById('port-hint');
+    if (portInput) {
+      portInput.value = this.selectedGameType === 'bedrock' ? 19132 : 25565;
+    }
+    if (hint) {
+      hint.textContent = this.selectedGameType === 'bedrock'
+        ? 'Default port for Bedrock Edition'
+        : 'Default port for Java Edition';
+    }
+  },
+
   initWizardNavigation() {
     const prevBtn = document.getElementById('wizard-prev');
     const nextBtn = document.getElementById('wizard-next');
@@ -217,32 +299,27 @@ const NetherApp = {
     const name = document.getElementById('server-name')?.value || 'My Server';
     const software = document.querySelector('input[name="software"]:checked')?.value || 'paper';
     const version = document.getElementById('server-version')?.value || '1.21.4';
-    const cpu = document.getElementById('server-cpu')?.value || '2';
-    const ram = document.getElementById('server-ram')?.value || '4';
-    const disk = document.getElementById('server-disk')?.value || '20';
-    const location = document.getElementById('server-location');
-    const locationText = location?.options[location.selectedIndex]?.text || 'US East';
+    const ramMin = document.getElementById('server-ram-min')?.value || '1024';
+    const ramMax = document.getElementById('server-ram-max')?.value || '2048';
+    const port = document.getElementById('server-port')?.value || '25565';
 
-    const softwareNames = {
-      paper: 'Paper', spigot: 'Spigot', purpur: 'Purpur',
-      fabric: 'Fabric', forge: 'Forge', vanilla: 'Vanilla'
-    };
+    const allSoftware = { ...this.JAVA_SOFTWARE, ...this.BEDROCK_SOFTWARE };
+    const gameLabel = this.selectedGameType === 'bedrock' ? 'Bedrock Edition' : 'Java Edition';
+    const softwareName = allSoftware[software]?.name || software;
 
     const el = (id) => document.getElementById(id);
     if (el('review-name')) el('review-name').textContent = name;
-    if (el('review-software')) el('review-software').textContent = softwareNames[software] || software;
+    if (el('review-game')) el('review-game').textContent = gameLabel;
+    if (el('review-software')) el('review-software').textContent = softwareName;
     if (el('review-version')) el('review-version').textContent = version;
-    if (el('review-cpu')) el('review-cpu').textContent = `${cpu} cores`;
-    if (el('review-ram')) el('review-ram').textContent = `${ram} GB`;
-    if (el('review-disk')) el('review-disk').textContent = `${disk} GB`;
-    if (el('review-location')) el('review-location').textContent = locationText;
+    if (el('review-ram')) el('review-ram').textContent = `${ramMin}-${ramMax} MB`;
+    if (el('review-port')) el('review-port').textContent = port;
   },
 
   initSliders() {
     const sliders = {
-      'server-cpu': { display: 'cpu-value', suffix: ' cores' },
-      'server-ram': { display: 'ram-value', suffix: ' GB' },
-      'server-disk': { display: 'disk-value', suffix: ' GB' }
+      'server-ram-min': { display: 'ram-min-value', suffix: ' MB' },
+      'server-ram-max': { display: 'ram-max-value', suffix: ' MB' }
     };
 
     Object.entries(sliders).forEach(([id, config]) => {
@@ -257,39 +334,143 @@ const NetherApp = {
     });
   },
 
-  createServer() {
+  async createServer() {
     const modal = document.getElementById('create-server-modal');
     const name = document.getElementById('server-name')?.value || 'My Server';
+    const software = document.querySelector('input[name="software"]:checked')?.value || 'paper';
+    const version = document.getElementById('server-version')?.value || '1.21.4';
+    const ramMin = parseInt(document.getElementById('server-ram-min')?.value || '1024');
+    const ramMax = parseInt(document.getElementById('server-ram-max')?.value || '2048');
+    const port = parseInt(document.getElementById('server-port')?.value || '25565');
 
     NetherApp.showToast('Creating Server', `Setting up "${name}"...`, 'info');
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/servers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({
+          name,
+          version,
+          server_type: software,
+          game_type: this.selectedGameType,
+          port,
+          ram_min: ramMin,
+          ram_max: ramMax
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create server');
+      }
+
       modal.classList.remove('active');
       document.body.style.overflow = '';
       NetherApp.showToast('Server Created', `"${name}" has been created successfully!`, 'success');
 
       NetherApp.currentWizardStep = 1;
       NetherApp.setWizardStep(1);
-    }, 2000);
+      NetherApp.loadUserServers();
+    } catch (err) {
+      NetherApp.showToast('Error', err.message, 'error');
+    }
+  },
+
+  async loadUserServers() {
+    try {
+      const res = await fetch('/api/servers', {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+
+      if (!res.ok) return;
+
+      const servers = await res.json();
+      const grid = document.getElementById('servers-grid');
+      if (!grid || !servers.length) return;
+
+      grid.innerHTML = servers.map(server => `
+        <div class="server-card" data-status="${server.status}" onclick="window.location.href='server.html?id=${server.id}'">
+          <div class="server-card-header">
+            <div class="server-info">
+              <h3 class="server-name">${server.name}</h3>
+              <span class="server-version">${server.server_type} ${server.version}</span>
+            </div>
+            <div class="server-status ${server.status}">
+              <span class="status-dot"></span>
+              <span>${server.status}</span>
+            </div>
+          </div>
+          <div class="server-card-body">
+            <div class="server-metrics">
+              <div class="metric">
+                <i data-lucide="cpu"></i>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: 0%" data-color="orange"></div>
+                </div>
+                <span class="metric-value">0%</span>
+              </div>
+              <div class="metric">
+                <i data-lucide="hard-drive"></i>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: 0%" data-color="cyan"></div>
+                </div>
+                <span class="metric-value">0 GB</span>
+              </div>
+            </div>
+            <div class="server-players">
+              <i data-lucide="users"></i>
+              <span><strong>0</strong> / 20 players</span>
+            </div>
+          </div>
+          <div class="server-card-footer">
+            <span class="server-ip">localhost:${server.port}</span>
+            <div class="server-actions">
+              <button class="action-btn-sm" title="Start" onclick="event.stopPropagation(); NetherApp.serverAction(${server.id}, 'start')">
+                <i data-lucide="play"></i>
+              </button>
+              <button class="action-btn-sm danger" title="Delete" onclick="event.stopPropagation(); NetherApp.serverAction(${server.id}, 'delete')">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    } catch (err) {
+      console.error('Failed to load servers:', err);
+    }
+  },
+
+  async serverAction(id, action) {
+    if (action === 'delete') {
+      if (!confirm('Are you sure you want to delete this server?')) return;
+    }
+
+    try {
+      const res = await fetch(`/api/servers/${id}/${action}`, {
+        method: action === 'delete' ? 'DELETE' : 'POST',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+
+      if (res.ok) {
+        NetherApp.showToast('Success', `Server ${action} completed`, 'success');
+        NetherApp.loadUserServers();
+      }
+    } catch (err) {
+      NetherApp.showToast('Error', err.message, 'error');
+    }
   },
 
   initServerActions() {
     document.querySelectorAll('.action-btn-sm').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const title = btn.title;
-        const card = btn.closest('.server-card');
-        const name = card?.querySelector('.server-name')?.textContent || 'Server';
-
-        if (title === 'Restart') {
-          NetherApp.showToast('Restarting', `Restarting ${name}...`, 'info');
-        } else if (title === 'Stop') {
-          NetherApp.showToast('Stopping', `Stopping ${name}...`, 'warning');
-        } else if (title === 'Start') {
-          NetherApp.showToast('Starting', `Starting ${name}...`, 'success');
-        } else if (title === 'Delete') {
-          NetherApp.showToast('Delete', `Delete request for ${name}`, 'error');
-        }
       });
     });
   },

@@ -1,7 +1,7 @@
 {
   "name": "netherpanel",
-  "version": "3.0.0",
-  "description": "NetherPanel - Modern Minecraft Server Manager for Termux",
+  "version": "4.0.0",
+  "description": "NetherPanel - Modern Minecraft Server Manager for Termux (Native)",
   "main": "server.js",
   "scripts": {
     "setup": "bash setup.sh",

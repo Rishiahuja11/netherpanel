@@ -456,10 +456,31 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .software-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); }
 .software-option { cursor: pointer; }
 .software-option input { display: none; }
-.software-card { padding: var(--spacing-md); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); transition: all var(--transition-fast); }
+.software-card { padding: var(--spacing-md); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); transition: all var(--transition-fast); text-align: center; }
+.software-icon { width: 40px; height: 40px; margin: 0 auto var(--spacing-sm); display: flex; align-items: center; justify-content: center; background: rgba(249, 115, 22, 0.1); border-radius: var(--radius-md); color: var(--accent-orange); }
+.software-icon svg { width: 24px; height: 24px; }
 .software-card strong { display: block; font-size: 0.95rem; margin-bottom: 4px; }
 .software-card span { font-size: 0.8rem; color: var(--text-tertiary); }
 .software-option input:checked + .software-card { border-color: var(--accent-orange); background: rgba(249, 115, 22, 0.05); box-shadow: 0 0 0 3px var(--accent-orange-glow); }
+.software-option input:checked + .software-card .software-icon { background: var(--accent-orange); color: white; }
+
+/* Game Type Grid */
+.game-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); }
+.game-type-option { cursor: pointer; }
+.game-type-option input { display: none; }
+.game-type-card { padding: var(--spacing-xl); background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: var(--radius-xl); transition: all var(--transition-fast); text-align: center; }
+.game-type-icon { width: 64px; height: 64px; margin: 0 auto var(--spacing-md); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-lg); transition: all var(--transition-fast); }
+.game-type-icon.java { background: rgba(249, 115, 22, 0.1); color: var(--accent-orange); }
+.game-type-icon.bedrock { background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan); }
+.game-type-icon svg { width: 32px; height: 32px; }
+.game-type-card strong { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+.game-type-card span { font-size: 0.85rem; color: var(--text-tertiary); }
+.game-type-option input:checked + .game-type-card { border-color: var(--accent-orange); background: rgba(249, 115, 22, 0.03); }
+.game-type-option input:checked + .game-type-card .game-type-icon.java { background: var(--accent-orange); color: white; }
+.game-type-option input[value="bedrock"]:checked + .game-type-card { border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.03); }
+.game-type-option input[value="bedrock"]:checked + .game-type-card .game-type-icon.bedrock { background: var(--accent-cyan); color: white; }
+
+.form-hint { font-size: 0.8rem; color: var(--text-tertiary); margin-top: 4px; }
 
 /* Review */
 .review-summary { display: flex; flex-direction: column; gap: var(--spacing-sm); }
@@ -566,27 +587,46 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
    Mod Manager
    ============================================ */
 .mods-layout { display: flex; flex-direction: column; gap: var(--spacing-xl); }
-.mods-header { display: flex; gap: var(--spacing-md); align-items: center; }
-.mods-search { position: relative; flex: 1; }
+.mods-header { display: flex; flex-wrap: wrap; gap: var(--spacing-md); align-items: center; }
+.mods-tabs { display: flex; gap: 4px; background: var(--bg-card); border-radius: var(--radius-lg); padding: 4px; }
+.mods-tab { padding: 8px 16px; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); transition: all var(--transition-fast); }
+.mods-tab:hover { color: var(--text-primary); }
+.mods-tab.active { background: var(--accent-orange); color: white; }
+.mods-search { position: relative; flex: 1; min-width: 200px; }
 .mods-search .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-tertiary); }
 .mods-search-input { width: 100%; padding: 0.75rem 1rem 0.75rem 2.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); color: var(--text-primary); font-size: 0.9rem; transition: all var(--transition-base); }
 .mods-search-input:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 0 3px var(--accent-cyan-glow); }
-.mods-filters { display: flex; gap: var(--spacing-sm); }
-.mods-section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--spacing-md); }
+.mods-filters { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+
+.mods-panel { display: none; }
+.mods-panel.active { display: block; }
+.mods-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
+.mods-panel-header h3 { font-size: 1.1rem; font-weight: 600; }
+.mods-results-info { font-size: 0.85rem; color: var(--text-tertiary); }
 .mods-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
 .mod-card { display: flex; align-items: center; gap: var(--spacing-lg); padding: var(--spacing-md) var(--spacing-lg); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); transition: all var(--transition-base); }
 .mod-card:hover { border-color: var(--border-color-hover); }
 .mod-card.installed { border-left: 3px solid var(--accent-cyan); }
-.mod-icon { width: 44px; height: 44px; background: rgba(168, 85, 247, 0.1); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: var(--accent-purple); flex-shrink: 0; }
+.mod-icon { width: 44px; height: 44px; background: rgba(168, 85, 247, 0.1); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: var(--accent-purple); flex-shrink: 0; overflow: hidden; }
+.mod-icon img { width: 100%; height: 100%; object-fit: cover; }
 .mod-icon i { width: 22px; height: 22px; }
 .mod-info { flex: 1; min-width: 0; }
 .mod-name { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
 .mod-desc { font-size: 0.85rem; color: var(--text-tertiary); margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mod-meta { display: flex; align-items: center; gap: var(--spacing-md); }
 .mod-version-badge { font-size: 0.75rem; padding: 2px 8px; background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan); border-radius: var(--radius-full); font-weight: 500; }
+.mod-author { font-size: 0.8rem; color: var(--text-muted); }
 .mod-downloads { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
 .mod-downloads i { width: 12px; height: 12px; }
 .mod-actions { display: flex; gap: var(--spacing-xs); flex-shrink: 0; }
+
+.mods-empty-state { text-align: center; padding: var(--spacing-2xl); color: var(--text-tertiary); }
+.mods-empty-state i { width: 48px; height: 48px; margin-bottom: var(--spacing-md); opacity: 0.5; }
+.mods-empty-state p { font-size: 1rem; margin-bottom: 4px; color: var(--text-secondary); }
+.mods-empty-state span { font-size: 0.85rem; }
+
+.mods-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--spacing-2xl); gap: var(--spacing-md); color: var(--text-tertiary); }
+.mods-pagination { display: flex; justify-content: center; padding-top: var(--spacing-md); }
 
 /* ============================================
    Backups
@@ -725,6 +765,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
   .page-header .btn-primary { width: 100%; }
   .form-row { grid-template-columns: 1fr; }
   .software-grid { grid-template-columns: 1fr; }
+  .game-type-grid { grid-template-columns: 1fr; }
   .wizard-steps { gap: var(--spacing-sm); }
   .wizard-step span { display: none; }
   .modal { margin: var(--spacing-md); border-radius: var(--radius-xl); }
@@ -737,6 +778,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
   .server-tab { padding: 0.75rem 0.75rem; font-size: 0.8rem; }
   .server-tab span { display: none; }
   .console-wrapper { height: calc(100vh - var(--nav-height) - 52px - var(--spacing-md) - var(--spacing-md)); }
+  .mods-filters { flex-direction: column; }
 }
 
 /* ============================================

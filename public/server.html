@@ -230,9 +230,13 @@
     <div class="server-tab-content" id="tab-mods">
       <div class="mods-layout">
         <div class="mods-header">
+          <div class="mods-tabs">
+            <button class="mods-tab active" data-mods-tab="installed">Installed</button>
+            <button class="mods-tab" data-mods-tab="browse">Browse</button>
+          </div>
           <div class="mods-search">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="mod-search" placeholder="Search mods on Modrinth..." class="mods-search-input">
+            <input type="text" id="mod-search" placeholder="Search on Modrinth..." class="mods-search-input">
           </div>
           <div class="mods-filters">
             <select class="form-select-sm" id="mod-category">
@@ -243,6 +247,16 @@
               <option value="optimization">Optimization</option>
               <option value="utility">Utility</option>
               <option value="decoration">Decoration</option>
+              <option value="storage">Storage</option>
+              <option value="food">Food</option>
+              <option value="game-mechanics">Game Mechanics</option>
+            </select>
+            <select class="form-select-sm" id="mod-loader">
+              <option value="">All Loaders</option>
+              <option value="paper">Paper/Spigot</option>
+              <option value="forge">Forge</option>
+              <option value="fabric">Fabric</option>
+              <option value="bukkit">Bukkit</option>
             </select>
             <select class="form-select-sm" id="mod-version">
               <option value="">All Versions</option>
@@ -254,116 +268,32 @@
           </div>
         </div>
 
-        <div class="mods-section">
-          <h3>Installed Mods</h3>
+        <div class="mods-panel active" id="mods-installed-panel">
+          <div class="mods-panel-header">
+            <h3>Installed <span id="installed-count">(0)</span></h3>
+          </div>
           <div class="mods-list" id="installed-mods">
-            <div class="mod-card installed">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">EssentialsX</h4>
-                <p class="mod-desc">Essential commands, kits, and features for your server</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v2.20.1</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 15.2M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
-                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
-              </div>
-            </div>
-            <div class="mod-card installed">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">WorldEdit</h4>
-                <p class="mod-desc">In-game map editor for fast building and editing</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v7.3.0</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 28.4M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
-                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
-              </div>
-            </div>
-            <div class="mod-card installed">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">LuckPerms</h4>
-                <p class="mod-desc">Advanced permissions system for Minecraft servers</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v5.4.121</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 12.8M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm" disabled title="Installed"><i data-lucide="check-circle"></i> Installed</button>
-                <button class="btn-sm danger" title="Uninstall"><i data-lucide="trash-2"></i></button>
-              </div>
+            <div class="mods-empty-state">
+              <i data-lucide="package-open"></i>
+              <p>No mods or plugins installed yet</p>
+              <span>Browse and install mods from Modrinth</span>
             </div>
           </div>
         </div>
 
-        <div class="mods-section">
-          <h3>Available Mods</h3>
+        <div class="mods-panel" id="mods-browse-panel">
+          <div class="mods-panel-header">
+            <h3>Browse Mods & Plugins</h3>
+            <div class="mods-results-info" id="mods-results-info"></div>
+          </div>
           <div class="mods-list" id="available-mods">
-            <div class="mod-card">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">Vault</h4>
-                <p class="mod-desc">Economy/Permission API for plugins</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v1.7.3</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 22.1M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
-              </div>
+            <div class="mods-loading">
+              <div class="spinner"></div>
+              <span>Searching Modrinth...</span>
             </div>
-            <div class="mod-card">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">CoreProtect</h4>
-                <p class="mod-desc">Fast, efficient block logging and rollback</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v23.0.0</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 8.9M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
-              </div>
-            </div>
-            <div class="mod-card">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">WorldGuard</h4>
-                <p class="mod-desc">Protect areas of your world</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v7.0.9</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 19.5M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
-              </div>
-            </div>
-            <div class="mod-card">
-              <div class="mod-icon"><i data-lucide="puzzle"></i></div>
-              <div class="mod-info">
-                <h4 class="mod-name">GriefPrevention</h4>
-                <p class="mod-desc">Prevent griefing with land claims</p>
-                <div class="mod-meta">
-                  <span class="mod-version-badge">v16.18.2</span>
-                  <span class="mod-downloads"><i data-lucide="download"></i> 6.2M</span>
-                </div>
-              </div>
-              <div class="mod-actions">
-                <button class="btn-sm btn-install" onclick="NetherMods.install(this)"><i data-lucide="download"></i> Install</button>
-              </div>
-            </div>
+          </div>
+          <div class="mods-pagination" id="mods-pagination">
+            <button class="btn-sm" id="mods-load-more" style="display:none;">Load More</button>
           </div>
         </div>
       </div>
