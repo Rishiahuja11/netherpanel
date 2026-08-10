@@ -6,7 +6,7 @@ const { getDb } = require('../database');
 const ServerService = require('./ServerService');
 const UserService = require('./UserService');
 
-const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 
 fs.mkdirSync(BACKUPS_DIR, { recursive: true });

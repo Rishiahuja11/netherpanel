@@ -7,7 +7,7 @@ const { initDatabase, getDb } = require('./src/database');
 
 const PORT = process.env.PORT || 3000;
 
-const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
+const DATA_DIR = path.join(__dirname, 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'servers'), { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'backups'), { recursive: true });

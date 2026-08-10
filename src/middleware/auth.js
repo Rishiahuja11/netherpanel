@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SECRET_PATH = path.join(DATA_DIR, '.jwt_secret');
 
 let JWT_SECRET;

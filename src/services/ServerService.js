@@ -7,7 +7,7 @@ const { getDb } = require('../database');
 const UserService = require('./UserService');
 const CloudflareService = require('./CloudflareService');
 
-const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
 const PROOT_DISTRO = 'ubuntu';
 const JAVA_PATH = '/usr/bin/java';
@@ -366,7 +366,7 @@ class ServerService {
       const args = javaArgs.split(' ').filter(a => a);
       args.push('-jar', 'server.jar', 'nogui');
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-        `cd /data/data/com.termux/files/home/panel/data/servers/${serverId} && /usr/bin/java ${args.join(' ')}`], {
+        `cd ${serverDir} && /usr/bin/java ${args.join(' ')}`], {
         cwd: serverDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -691,7 +691,8 @@ class ServerService {
         res.on('end', () => {
           try {
             const json = JSON.parse(data);
-            resolve(json.versions || []);
+            const versions = (json.versions || []).reverse();
+            resolve(versions);
           } catch (err) {
             reject(err);
           }
@@ -763,8 +764,17 @@ class ServerService {
             const matches = data.match(/<a[^>]*href="(\d+\.\d+(?:\.\d+)?)\.json">/g) || [];
             const versions = matches
               .map(m => m.match(/href="(\d+\.\d+(?:\.\d+)?)\.json"/)[1])
-              .filter((v, i, a) => a.indexOf(v) === i);
-            resolve(versions);
+              .filter((v, i, a) => a.indexOf(v) === i)
+              .sort((a, b) => {
+                const pa = a.split('.').map(Number);
+                const pb = b.split('.').map(Number);
+                for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                  const na = pa[i] || 0, nb = pb[i] || 0;
+                  if (na !== nb) return nb - na;
+                }
+                return 0;
+              });
+            resolve(versions.slice(0, 30));
           } catch (err) {
             reject(err);
           }
