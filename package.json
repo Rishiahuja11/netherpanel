@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "setup": "bash setup.sh",
-    "start": "bash start.sh",
+    "start": "concurrently \"node server.js\" \"cloudflared tunnel run --token $(cat ~/.cloudflared/token)\"",
+    "start:panel": "node server.js",
+    "start:tunnel": "cloudflared tunnel run --token $(cat ~/.cloudflared/token)",
     "dev": "node server.js",
     "create-admin": "node create-admin.js"
   },
@@ -13,6 +15,7 @@
     "adm-zip": "^0.6.0",
     "archiver": "^6.0.1",
     "bcryptjs": "^2.4.3",
+    "concurrently": "^10.0.4",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",

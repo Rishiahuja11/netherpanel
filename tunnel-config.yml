@@ -1,0 +1,7 @@
+tunnel: netherpanel
+credentials-file: /data/data/com.termux/files/home/.cloudflared/config.yml
+
+ingress:
+  - hostname: panel.smp45.qzz.io
+    service: http://localhost:3000
+  - service: http_status:404
