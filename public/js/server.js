@@ -535,7 +535,7 @@ const NetherServer = {
 
     try {
       const res = await fetch(`/api/servers/${this.serverId}/files/write`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${this.authToken}`,
           'Content-Type': 'application/json'
@@ -581,11 +581,11 @@ const NetherServer = {
     });
 
     const searchInput = document.getElementById('mod-search');
-    if (searchInput && isPluginServer) {
+    if (searchInput && isPlugin) {
       searchInput.placeholder = 'Search plugins on Modrinth...';
     }
     const browseLabel = document.getElementById('browse-label');
-    if (browseLabel && isPluginServer) {
+    if (browseLabel && isPlugin) {
       browseLabel.textContent = 'Plugins';
     }
     let searchTimeout;
@@ -811,79 +811,198 @@ const NetherServer = {
   },
 
   initSettingsActions() {
+    if (this.serverData) {
+      const nameEl = document.getElementById('setting-name');
+      const javaArgsEl = document.getElementById('setting-java-args');
+      const portEl = document.getElementById('setting-port');
+      const ramMaxEl = document.getElementById('setting-ram-max');
+      const maxPlayersEl = document.getElementById('setting-max-players');
+      if (nameEl) nameEl.value = this.serverData.name || '';
+      if (javaArgsEl) javaArgsEl.value = this.serverData.java_args || `-Xmx${this.serverData.ram_max}M -Xms${this.serverData.ram_min}M`;
+      if (portEl) portEl.value = this.serverData.port || 25565;
+      if (ramMaxEl) ramMaxEl.value = this.serverData.ram_max || 2048;
+      if (maxPlayersEl) maxPlayersEl.value = 20;
+    }
+
     const saveBtn = document.getElementById('save-settings');
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        NetherServer.showToast('Saved', 'Settings saved successfully', 'success');
+      saveBtn.addEventListener('click', async () => {
+        const body = {};
+        const nameEl = document.getElementById('setting-name');
+        const javaArgsEl = document.getElementById('setting-java-args');
+        const portEl = document.getElementById('setting-port');
+        const ramMaxEl = document.getElementById('setting-ram-max');
+        if (nameEl?.value) body.name = nameEl.value;
+        if (javaArgsEl?.value) body.java_args = javaArgsEl.value;
+        if (portEl?.value) body.port = parseInt(portEl.value);
+        if (ramMaxEl?.value) body.ram_max = parseInt(ramMaxEl.value);
+        try {
+          const res = await fetch(`/api/servers/${this.serverId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          if (res.ok) {
+            this.serverData = await res.json();
+            NetherServer.showToast('Saved', 'Settings saved successfully', 'success');
+          }
+        } catch (e) {
+          NetherServer.showToast('Error', 'Failed to save settings', 'error');
+        }
       });
     }
   },
 
-  initScheduleActions() {
-    document.querySelectorAll('.schedule-card .btn-sm').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const text = btn.textContent.trim();
-        const card = btn.closest('.schedule-card');
-        const scheduleId = card?.dataset?.scheduleId;
-        const name = card?.querySelector('h4')?.textContent || 'Task';
-
-        if (text.includes('Run Now') && scheduleId) {
-          NetherServer.showToast('Running', `Running "${name}"...`, 'info');
-          fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}/run`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${this.authToken}` }
-          }).then(r => r.json()).then(d => {
-            if (d.error) NetherServer.showToast('Error', d.error, 'error');
-            else NetherServer.showToast('Done', `"${name}" executed`, 'success');
-          }).catch(() => NetherServer.showToast('Error', 'Failed to run schedule', 'error'));
-        }
+  async initScheduleActions() {
+    const container = document.getElementById('schedules-list');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/schedules`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
-    });
+      if (!res.ok) return;
+      const schedules = await res.json();
+      if (!schedules.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="calendar"></i><p>No schedules configured</p><span>Create schedules to automate server tasks</span></div>';
+        lucide.createIcons({ nodes: [container] });
+        return;
+      }
+      container.innerHTML = schedules.map(s => `
+        <div class="schedule-card" data-schedule-id="${s.id}">
+          <div class="schedule-header">
+            <div class="schedule-info">
+              <h4>${s.name}</h4>
+              <span class="schedule-cron">${s.cron_expression}</span>
+            </div>
+          </div>
+          <div class="schedule-body">
+            <div class="schedule-action">
+              <i data-lucide="play"></i>
+              <span>Action: ${s.action}${s.command ? ' - ' + s.command : ''}</span>
+            </div>
+          </div>
+          <div class="schedule-footer">
+            <div class="schedule-actions">
+              <button class="btn-sm" onclick="NetherServer.runSchedule(${s.id})"><i data-lucide="play"></i> Run Now</button>
+              <button class="btn-sm danger" onclick="NetherServer.deleteSchedule(${s.id})"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) {
+      container.innerHTML = '<div class="mods-empty-state"><p>Failed to load schedules</p></div>';
+    }
   },
 
-  initBackupActions() {
+  async initBackupActions() {
+    const container = document.getElementById('backups-list');
     const createBtn = document.getElementById('create-backup-btn');
     if (createBtn) {
-      createBtn.addEventListener('click', () => {
+      createBtn.addEventListener('click', async () => {
         NetherServer.showToast('Creating Backup', 'Backup is being created...', 'info');
-        fetch(`/api/servers/${this.serverId}/backups`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' }
-        }).then(r => r.json()).then(d => {
-          if (d.error) NetherServer.showToast('Error', d.error, 'error');
-          else NetherServer.showToast('Backup Complete', 'Backup created successfully!', 'success');
-        }).catch(() => NetherServer.showToast('Error', 'Failed to create backup', 'error'));
+        try {
+          const res = await fetch(`/api/servers/${this.serverId}/backups`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: `Backup ${new Date().toLocaleString()}` })
+          });
+          if (res.ok) {
+            NetherServer.showToast('Backup Complete', 'Backup created successfully!', 'success');
+            this.loadBackups();
+          } else {
+            const d = await res.json();
+            NetherServer.showToast('Error', d.error || 'Failed', 'error');
+          }
+        } catch (e) { NetherServer.showToast('Error', 'Failed to create backup', 'error'); }
       });
     }
+    this.loadBackups();
+  },
 
-    document.querySelectorAll('.backup-card .btn-sm').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const icon = btn.querySelector('i');
-        const card = btn.closest('.backup-card');
-        const backupId = card?.dataset?.backupId;
-        const name = card?.querySelector('.backup-name')?.textContent || 'Backup';
-
-        if (icon?.dataset.lucide === 'rotate-ccw' && backupId) {
-          NetherServer.showToast('Restoring', `Restoring from "${name}"...`, 'warning');
-          fetch(`/api/servers/${this.serverId}/backups/${backupId}/restore`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${this.authToken}` }
-          }).then(r => r.json()).then(d => {
-            if (d.error) NetherServer.showToast('Error', d.error, 'error');
-            else NetherServer.showToast('Restored', `"${name}" restored`, 'success');
-          }).catch(() => NetherServer.showToast('Error', 'Failed to restore', 'error'));
-        } else if (icon?.dataset.lucide === 'trash-2' && backupId) {
-          NetherServer.showToast('Deleted', `Backup "${name}" deleted`, 'error');
-          fetch(`/api/servers/${this.serverId}/backups/${backupId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${this.authToken}` }
-          }).then(r => r.json()).then(d => {
-            if (d.error) NetherServer.showToast('Error', d.error, 'error');
-            else card.remove();
-          }).catch(() => NetherServer.showToast('Error', 'Failed to delete', 'error'));
-        }
+  async loadBackups() {
+    const container = document.getElementById('backups-list');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/backups`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
-    });
+      if (!res.ok) return;
+      const backups = await res.json();
+      if (!backups.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="database"></i><p>No backups yet</p><span>Create a backup to protect your server data</span></div>';
+        lucide.createIcons({ nodes: [container] });
+        return;
+      }
+      container.innerHTML = backups.map(b => `
+        <div class="backup-card" data-backup-id="${b.id}">
+          <div class="backup-info">
+            <div class="backup-icon"><i data-lucide="database"></i></div>
+            <div>
+              <h4 class="backup-name">${b.name}</h4>
+              <div class="backup-meta">
+                <span><i data-lucide="calendar"></i> ${new Date(b.created_at).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          <div class="backup-actions">
+            <button class="btn-sm" onclick="NetherServer.restoreBackup(${b.id})" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
+            <button class="btn-sm danger" onclick="NetherServer.deleteBackup(${b.id})" title="Delete"><i data-lucide="trash-2"></i></button>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) {
+      container.innerHTML = '<div class="mods-empty-state"><p>Failed to load backups</p></div>';
+    }
+  },
+
+  async runSchedule(scheduleId) {
+    NetherServer.showToast('Running', 'Executing schedule...', 'info');
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}/run`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      const d = await res.json();
+      if (d.error) NetherServer.showToast('Error', d.error, 'error');
+      else NetherServer.showToast('Done', 'Schedule executed', 'success');
+    } catch (e) { NetherServer.showToast('Error', 'Failed to run schedule', 'error'); }
+  },
+
+  async deleteSchedule(scheduleId) {
+    try {
+      await fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      NetherServer.showToast('Deleted', 'Schedule removed', 'success');
+      this.initScheduleActions();
+    } catch (e) { NetherServer.showToast('Error', 'Failed to delete', 'error'); }
+  },
+
+  async restoreBackup(backupId) {
+    NetherServer.showToast('Restoring', 'Restoring backup...', 'warning');
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/backups/${backupId}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      const d = await res.json();
+      if (d.error) NetherServer.showToast('Error', d.error, 'error');
+      else NetherServer.showToast('Restored', 'Backup restored', 'success');
+    } catch (e) { NetherServer.showToast('Error', 'Failed to restore', 'error'); }
+  },
+
+  async deleteBackup(backupId) {
+    try {
+      await fetch(`/api/servers/${this.serverId}/backups/${backupId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      NetherServer.showToast('Deleted', 'Backup removed', 'success');
+      this.loadBackups();
+    } catch (e) { NetherServer.showToast('Error', 'Failed to delete', 'error'); }
   },
 
   showToast(title, message, type = 'info') {

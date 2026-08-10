@@ -17,6 +17,18 @@ const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
 const FABRIC_API = 'https://meta.fabricmc.net/v2/versions';
 const BEDROCK_API = 'https://api.github.com/repos/BedrockServer/Bedrockserver/releases';
 
+function sortVersionsDesc(versions) {
+  return versions.sort((a, b) => {
+    const pa = a.split(/[-.]/).filter(Boolean).map(x => parseInt(x) || 0);
+    const pb = b.split(/[-.]/).filter(Boolean).map(x => parseInt(x) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const na = pa[i] || 0, nb = pb[i] || 0;
+      if (na !== nb) return nb - na;
+    }
+    return 0;
+  });
+}
+
 const SERVER_TYPES = {
   java: {
     paper: { name: 'Paper', desc: 'High performance, plugin support', loader: 'paper' },
@@ -182,7 +194,7 @@ class ServerService {
 
     return new Promise((resolve, reject) => {
       const { exec } = require('child_process');
-      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd ${serverDir} && java -jar forge-installer.jar --installServer"`;
+      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd '${serverDir}' && java -jar forge-installer.jar --installServer"`;
       exec(cmd, { cwd: serverDir, timeout: 300000 }, (err) => {
         if (err) {
           reject(new Error(`Forge installer failed: ${err.message}`));
@@ -366,7 +378,7 @@ class ServerService {
       const args = javaArgs.split(' ').filter(a => a);
       args.push('-jar', 'server.jar', 'nogui');
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-        `cd ${serverDir} && /usr/bin/java ${args.join(' ')}`], {
+        `cd '${serverDir}' && /usr/bin/java ${args.join(' ')}`], {
         cwd: serverDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -674,7 +686,7 @@ class ServerService {
                 }
               }
             }
-            resolve(allVersions);
+            resolve(sortVersionsDesc(allVersions));
           } catch (err) {
             reject(err);
           }
@@ -691,8 +703,7 @@ class ServerService {
         res.on('end', () => {
           try {
             const json = JSON.parse(data);
-            const versions = (json.versions || []).reverse();
-            resolve(versions);
+            resolve(sortVersionsDesc(json.versions || []));
           } catch (err) {
             reject(err);
           }
@@ -709,7 +720,7 @@ class ServerService {
         res.on('end', () => {
           try {
             const versions = JSON.parse(data);
-            resolve(versions.filter(v => v.stable).map(v => v.version));
+            resolve(sortVersionsDesc(versions.filter(v => v.stable).map(v => v.version)));
           } catch (err) {
             reject(err);
           }
@@ -731,18 +742,9 @@ class ServerService {
           res.on('end', () => {
             try {
               const json = JSON.parse(data);
-              const versions = Object.keys(json.promos || {})
-                .map(v => v.replace('-latest', ''))
-                .filter((v, i, a) => a.indexOf(v) === i)
-                .sort((a, b) => {
-                  const pa = a.split('.').map(Number);
-                  const pb = b.split('.').map(Number);
-                  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-                    const na = pa[i] || 0, nb = pb[i] || 0;
-                    if (na !== nb) return nb - na;
-                  }
-                  return 0;
-                });
+              const versions = sortVersionsDesc(
+                [...new Set(Object.keys(json.promos || {}).map(v => v.replace('-latest', '')))]
+              );
               resolve(versions.slice(0, 50));
             } catch (err) {
               reject(err);
@@ -762,18 +764,9 @@ class ServerService {
         res.on('end', () => {
           try {
             const matches = data.match(/<a[^>]*href="(\d+\.\d+(?:\.\d+)?)\.json">/g) || [];
-            const versions = matches
-              .map(m => m.match(/href="(\d+\.\d+(?:\.\d+)?)\.json"/)[1])
-              .filter((v, i, a) => a.indexOf(v) === i)
-              .sort((a, b) => {
-                const pa = a.split('.').map(Number);
-                const pb = b.split('.').map(Number);
-                for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-                  const na = pa[i] || 0, nb = pb[i] || 0;
-                  if (na !== nb) return nb - na;
-                }
-                return 0;
-              });
+            const versions = sortVersionsDesc(
+              [...new Set(matches.map(m => m.match(/href="(\d+\.\d+(?:\.\d+)?)\.json"/)[1]))]
+            );
             resolve(versions.slice(0, 30));
           } catch (err) {
             reject(err);
@@ -791,7 +784,7 @@ class ServerService {
         res.on('end', () => {
           try {
             const json = JSON.parse(data);
-            resolve(json.versions || []);
+            resolve(sortVersionsDesc(json.versions || []));
           } catch (err) {
             reject(err);
           }

@@ -78,7 +78,7 @@
           <div class="dropdown-divider"></div>
           <a href="#" class="dropdown-item"><i data-lucide="settings"></i> Settings</a>
           <div class="dropdown-divider"></div>
-          <a href="login.html" class="dropdown-item danger"><i data-lucide="log-out"></i> Sign Out</a>
+          <a href="login.html" class="dropdown-item danger" onclick="localStorage.clear()"><i data-lucide="log-out"></i> Sign Out</a>
         </div>
       </div>
     </div>
@@ -285,60 +285,7 @@
         </div>
 
         <div class="backups-list" id="backups-list">
-          <div class="backup-card">
-            <div class="backup-info">
-              <div class="backup-icon"><i data-lucide="database"></i></div>
-              <div>
-                <h4 class="backup-name">Automatic Backup - Aug 9, 2026 02:00</h4>
-                <div class="backup-meta">
-                  <span><i data-lucide="hard-drive"></i> 2.4 GB</span>
-                  <span><i data-lucide="clock"></i> Completed in 45s</span>
-                  <span><i data-lucide="calendar"></i> Aug 9, 2026 02:00</span>
-                </div>
-              </div>
-            </div>
-            <div class="backup-actions">
-              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
-              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
-              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>
-          <div class="backup-card">
-            <div class="backup-info">
-              <div class="backup-icon"><i data-lucide="database"></i></div>
-              <div>
-                <h4 class="backup-name">Automatic Backup - Aug 8, 2026 02:00</h4>
-                <div class="backup-meta">
-                  <span><i data-lucide="hard-drive"></i> 2.3 GB</span>
-                  <span><i data-lucide="clock"></i> Completed in 42s</span>
-                  <span><i data-lucide="calendar"></i> Aug 8, 2026 02:00</span>
-                </div>
-              </div>
-            </div>
-            <div class="backup-actions">
-              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
-              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
-              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>
-          <div class="backup-card">
-            <div class="backup-info">
-              <div class="backup-icon"><i data-lucide="database"></i></div>
-              <div>
-                <h4 class="backup-name">Manual Backup - Aug 7, 2026 15:30</h4>
-                <div class="backup-meta">
-                  <span><i data-lucide="hard-drive"></i> 2.2 GB</span>
-                  <span><i data-lucide="clock"></i> Completed in 38s</span>
-                  <span><i data-lucide="calendar"></i> Aug 7, 2026 15:30</span>
-                </div>
-              </div>
-            </div>
-            <div class="backup-actions">
-              <button class="btn-sm" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
-              <button class="btn-sm" title="Download"><i data-lucide="download"></i></button>
-              <button class="btn-sm danger" title="Delete"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>
+          <div class="mods-loading"><div class="spinner"></div><span>Loading backups...</span></div>
         </div>
       </div>
     </div>
@@ -354,98 +301,7 @@
         </div>
 
         <div class="schedules-list" id="schedules-list">
-          <div class="schedule-card">
-            <div class="schedule-header">
-              <div class="schedule-info">
-                <h4>Daily Restart</h4>
-                <span class="schedule-cron">Every day at 04:00 UTC</span>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" checked>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="schedule-body">
-              <div class="schedule-action">
-                <i data-lucide="refresh-cw"></i>
-                <span>Action: Restart Server</span>
-              </div>
-              <div class="schedule-next">
-                <i data-lucide="clock"></i>
-                <span>Next run: Aug 10, 2026 04:00 UTC</span>
-              </div>
-            </div>
-            <div class="schedule-footer">
-              <span class="schedule-last">Last run: Aug 9, 2026 04:00 - Success</span>
-              <div class="schedule-actions">
-                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
-                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
-                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <div class="schedule-card">
-            <div class="schedule-header">
-              <div class="schedule-info">
-                <h4>World Save</h4>
-                <span class="schedule-cron">Every 30 minutes</span>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" checked>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="schedule-body">
-              <div class="schedule-action">
-                <i data-lucide="save"></i>
-                <span>Action: Run Command - save-all</span>
-              </div>
-              <div class="schedule-next">
-                <i data-lucide="clock"></i>
-                <span>Next run: Aug 9, 2026 16:30 UTC</span>
-              </div>
-            </div>
-            <div class="schedule-footer">
-              <span class="schedule-last">Last run: Aug 9, 2026 16:00 - Success</span>
-              <div class="schedule-actions">
-                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
-                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
-                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <div class="schedule-card disabled">
-            <div class="schedule-header">
-              <div class="schedule-info">
-                <h4>Weekly Backup Cleanup</h4>
-                <span class="schedule-cron">Every Sunday at 03:00 UTC</span>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="schedule-body">
-              <div class="schedule-action">
-                <i data-lucide="trash-2"></i>
-                <span>Action: Delete backups older than 7 days</span>
-              </div>
-              <div class="schedule-next">
-                <i data-lucide="clock"></i>
-                <span>Next run: Aug 10, 2026 03:00 UTC</span>
-              </div>
-            </div>
-            <div class="schedule-footer">
-              <span class="schedule-last">Last run: Aug 3, 2026 03:00 - Success</span>
-              <div class="schedule-actions">
-                <button class="btn-sm"><i data-lucide="play"></i> Run Now</button>
-                <button class="btn-sm"><i data-lucide="edit-3"></i> Edit</button>
-                <button class="btn-sm danger"><i data-lucide="trash-2"></i></button>
-              </div>
-            </div>
-          </div>
+          <div class="mods-loading"><div class="spinner"></div><span>Loading schedules...</span></div>
         </div>
       </div>
     </div>
@@ -487,14 +343,7 @@
                   <label>Server Name</label>
                   <p class="setting-description">Display name for your server</p>
                 </div>
-                <input type="text" class="form-input" value="Survival World">
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Server Description</label>
-                  <p class="setting-description">Brief description of your server</p>
-                </div>
-                <textarea class="form-textarea" rows="2">A friendly survival multiplayer server</textarea>
+                <input type="text" class="form-input" id="setting-name" value="">
               </div>
             </div>
           </div>
@@ -504,19 +353,10 @@
             <div class="settings-group">
               <div class="setting-item">
                 <div class="setting-info">
-                  <label>Startup Command</label>
-                  <p class="setting-description">Custom startup command (leave empty for default)</p>
+                  <label>Java Args</label>
+                  <p class="setting-description">JVM arguments for the server</p>
                 </div>
-                <input type="text" class="form-input mono" value="java -Xms4G -Xmx4G -jar server.jar nogui">
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Java Version</label>
-                  <p class="setting-description">Java version installed on this system</p>
-                </div>
-                <select class="form-select">
-                  <option>Java 25 (Installed)</option>
-                </select>
+                <input type="text" class="form-input mono" id="setting-java-args" value="">
               </div>
             </div>
           </div>
@@ -529,24 +369,7 @@
                   <label>Server Port</label>
                   <p class="setting-description">Port the server listens on</p>
                 </div>
-                <input type="number" class="form-input" value="25565">
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Query Port</label>
-                  <p class="setting-description">Port for server query (usually port + 1)</p>
-                </div>
-                <input type="number" class="form-input" value="25566">
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Allow Query</label>
-                  <p class="setting-description">Enable server list query</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" checked>
-                  <span class="toggle-slider"></span>
-                </label>
+                <input type="number" class="form-input" id="setting-port" value="">
               </div>
             </div>
           </div>
@@ -559,34 +382,14 @@
                   <label>Max Players</label>
                   <p class="setting-description">Maximum number of players allowed</p>
                 </div>
-                <input type="number" class="form-input" value="50">
+                <input type="number" class="form-input" id="setting-max-players" value="20">
               </div>
               <div class="setting-item">
                 <div class="setting-info">
-                  <label>Online Mode</label>
-                  <p class="setting-description">Verify players with Mojang authentication</p>
+                  <label>RAM (MB)</label>
+                  <p class="setting-description">Maximum memory allocation</p>
                 </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>White List</label>
-                  <p class="setting-description">Only allow whitelisted players to join</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>View Distance</label>
-                  <p class="setting-description">Server render distance in chunks</p>
-                </div>
-                <input type="number" class="form-input" value="10" min="2" max="32">
+                <input type="number" class="form-input" id="setting-ram-max" value="">
               </div>
             </div>
           </div>

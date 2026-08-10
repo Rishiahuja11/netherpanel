@@ -972,7 +972,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .file-icon-log { color: var(--accent-cyan); }
 .file-icon-properties { color: var(--success); }
 .file-icon-folder { color: var(--accent-orange); }
-file-icon-folder-open { color: var(--accent-orange); }
+.file-icon-folder-open { color: var(--accent-orange); }
 
 /* Empty State */
 .empty-state {

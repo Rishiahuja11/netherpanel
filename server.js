@@ -66,6 +66,9 @@ async function startServer() {
   });
 
   app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
   });
 
