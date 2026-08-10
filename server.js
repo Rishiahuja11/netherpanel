@@ -70,6 +70,7 @@ async function startServer() {
   });
 
   const ServerService = require('./src/services/ServerService');
+  ServerService.setIo(io);
   const ScheduleService = require('./src/services/ScheduleService');
   const CrashService = require('./src/services/CrashService');
   const UserService = require('./src/services/UserService');

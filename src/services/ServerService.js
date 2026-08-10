@@ -38,6 +38,11 @@ const consoleBuffers = new Map();
 
 class ServerService {
   static SERVER_TYPES = SERVER_TYPES;
+  static io = null;
+
+  static setIo(ioInstance) {
+    this.io = ioInstance;
+  }
 
   static getDb() {
     return getDb();
@@ -359,9 +364,13 @@ class ServerService {
     const bufferConsole = (data) => {
       const line = data.toString();
       const buffer = consoleBuffers.get(serverId) || [];
-      buffer.push({ timestamp: new Date().toISOString(), line });
+      const entry = { timestamp: new Date().toISOString(), line };
+      buffer.push(entry);
       if (buffer.length > 1000) buffer.shift();
       consoleBuffers.set(serverId, buffer);
+      if (this.io) {
+        this.io.to(`console:${serverId}`).emit('console_line', { line: entry });
+      }
     };
 
     child.stdout.on('data', bufferConsole);

@@ -249,6 +249,57 @@ const NetherServer = {
     window.addEventListener('resize', () => {
       if (this.fitAddon) this.fitAddon.fit();
     });
+
+    this.connectSocket();
+  },
+
+  connectSocket() {
+    if (this.socket) return;
+    const token = this.authToken;
+    if (!token) return;
+
+    this.socket = io(window.location.origin, { transports: ['websocket', 'polling'] });
+
+    this.socket.on('connect', () => {
+      this.socket.emit('auth', token);
+    });
+
+    this.socket.on('authenticated', () => {
+      this.socket.emit('subscribe_console', this.serverId);
+    });
+
+    this.socket.on('console_history', (data) => {
+      if (data.lines && this.term) {
+        data.lines.forEach(line => {
+          this.term.writeln(line.line || line);
+        });
+      }
+    });
+
+    this.socket.on('console_line', (data) => {
+      if (data.line && this.term) {
+        this.term.writeln(data.line.line || data.line);
+      }
+    });
+
+    this.socket.on('status_update', (data) => {
+      const badge = document.getElementById('server-status-badge');
+      if (badge) {
+        const status = data.status || 'stopped';
+        badge.className = `server-status-badge ${status}`;
+        badge.innerHTML = `<span class="status-dot"></span><span>${status === 'running' ? 'Running' : status === 'starting' ? 'Starting' : 'Stopped'}</span>`;
+      }
+    });
+
+    this.socket.on('error', (data) => {
+      console.error('Socket error:', data.error);
+    });
+
+    this.socket.on('disconnect', () => {
+      if (this.term) {
+        this.term.writeln('\x1b[38;2;234;179;8m[Console] Disconnected from server. Reconnecting...\x1b[0m');
+      }
+    });
   },
 
   initFallbackConsole() {
