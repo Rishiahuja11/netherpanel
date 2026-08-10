@@ -562,7 +562,7 @@ const NetherServer = {
     this.modLimit = 20;
 
     const isModded = this.serverData && ['fabric', 'forge', 'quilt', 'neoforge'].includes(this.serverData.server_type || this.serverData.software);
-    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
+    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(this.serverData.server_type || this.serverData.software);
     const modTab = document.querySelector('.server-tab[data-tab="mods"]');
     if (modTab) {
       const label = isPlugin ? 'Plugins' : 'Mods';
@@ -581,12 +581,18 @@ const NetherServer = {
     });
 
     const searchInput = document.getElementById('mod-search');
-    if (searchInput && isPlugin) {
-      searchInput.placeholder = 'Search plugins on Modrinth...';
+    const serverType = this.serverData?.server_type || 'paper';
+    const isPoggit = ['pocketmine'].includes(serverType);
+    const isHangar = ['paper', 'spigot', 'purpur', 'folia'].includes(serverType);
+    const searchSource = isPoggit ? 'Poggit' : isHangar ? 'Hangar' : 'Modrinth';
+    const isPlugin = ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(serverType);
+
+    if (searchInput) {
+      searchInput.placeholder = `Search ${isPlugin ? 'plugins' : 'mods'} on ${searchSource}...`;
     }
     const browseLabel = document.getElementById('browse-label');
-    if (browseLabel && isPlugin) {
-      browseLabel.textContent = 'Plugins';
+    if (browseLabel) {
+      browseLabel.textContent = isPlugin ? 'Plugins' : 'Mods';
     }
     let searchTimeout;
     if (searchInput) {
@@ -638,7 +644,7 @@ const NetherServer = {
     const container = document.getElementById('installed-mods');
     const count = document.getElementById('installed-count');
     if (count) count.textContent = `(${mods.length})`;
-    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
+    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(this.serverData.server_type || this.serverData.software);
 
     if (!mods.length) {
       container.innerHTML = `
@@ -675,38 +681,38 @@ const NetherServer = {
     const container = document.getElementById('available-mods');
     const info = document.getElementById('mods-results-info');
     const loadMoreBtn = document.getElementById('mods-load-more');
+    const serverType = this.serverData?.server_type || 'paper';
+
+    const isPlugin = ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(serverType);
+    const isPoggit = ['pocketmine'].includes(serverType);
+    const isHangar = ['paper', 'spigot', 'purpur', 'folia'].includes(serverType);
+
+    const searchSource = isPoggit ? 'Poggit' : isHangar ? 'Hangar' : 'Modrinth';
 
     if (!append) {
-      container.innerHTML = '<div class="mods-loading"><div class="spinner"></div><span>Searching Modrinth...</span></div>';
+      container.innerHTML = `<div class="mods-loading"><div class="spinner"></div><span>Searching ${searchSource}...</span></div>`;
     }
 
     try {
       const params = new URLSearchParams({
-        query: query || '',
-        limit: this.modLimit.toString(),
-        offset: this.modOffset.toString(),
-        index: 'relevance'
+        q: query || '',
+        limit: this.modLimit.toString()
       });
 
-      const category = document.getElementById('mod-category')?.value;
-      const isPluginServer = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
-      const projectType = isPluginServer ? 'plugin' : 'mod';
+      const res = await fetch(`/api/servers/${this.serverId}/mods/search?${params}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
 
-      const facets = [];
-      if (category) facets.push(`categories:${category}`);
-      const typeFacets = [[`project_type:${projectType}`]];
-      if (facets.length > 0) typeFacets.push(facets);
-      params.append('facets', JSON.stringify(typeFacets));
-
-      const res = await fetch(`https://api.modrinth.com/v2/search?${params}`);
+      if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
+      const hits = data.hits || [];
 
       if (info) {
-        info.textContent = `Showing ${Math.min(this.modOffset + data.hits.length, data.total_hits)} of ${data.total_hits} results`;
+        info.textContent = `Showing ${Math.min(this.modOffset + hits.length, data.total_hits)} of ${data.total_hits} results (${searchSource})`;
       }
 
-      const cards = data.hits.map(mod => `
-        <div class="mod-card" data-modrinth-id="${mod.project_id}">
+      const cards = hits.map(mod => `
+        <div class="mod-card" data-mod-id="${mod.id}">
           <div class="mod-icon">
             ${mod.icon_url ? `<img src="${mod.icon_url}" alt="${mod.title}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'puzzle\\'></i>'">` : '<i data-lucide="puzzle"></i>'}
           </div>
@@ -719,7 +725,7 @@ const NetherServer = {
             </div>
           </div>
           <div class="mod-actions">
-            <button class="btn-sm btn-install" onclick="NetherServer.installModFromModrinth('${mod.project_id}', '${mod.title.replace(/'/g, "\\'")}')">
+            <button class="btn-sm btn-install" onclick="NetherServer.installModFromSearch('${mod.id}', '${mod.title.replace(/'/g, "\\'")}')">
               <i data-lucide="download"></i> Install
             </button>
           </div>
@@ -729,17 +735,17 @@ const NetherServer = {
       if (append) {
         container.insertAdjacentHTML('beforeend', cards);
       } else {
-        container.innerHTML = cards || '<div class="mods-empty-state"><p>No mods found</p></div>';
+        container.innerHTML = cards || '<div class="mods-empty-state"><p>No results found</p></div>';
       }
 
       if (loadMoreBtn) {
-        loadMoreBtn.style.display = data.hits.length >= this.modLimit ? '' : 'none';
+        loadMoreBtn.style.display = hits.length >= this.modLimit ? '' : 'none';
       }
 
       lucide.createIcons({ nodes: [container] });
     } catch (err) {
-      container.innerHTML = '<div class="mods-empty-state"><p>Failed to search Modrinth</p></div>';
-      console.error('Modrinth search error:', err);
+      container.innerHTML = `<div class="mods-empty-state"><p>Failed to search ${searchSource}</p></div>`;
+      console.error('Search error:', err);
     }
   },
 
@@ -760,11 +766,15 @@ const NetherServer = {
         this.loadInstalledMods();
       } else {
         const err = await res.json();
-        NetherServer.showToast('Error', err.error || 'Failed to install mod', 'error');
+        NetherServer.showToast('Error', err.error || 'Failed to install', 'error');
       }
     } catch (err) {
-      NetherServer.showToast('Error', 'Failed to install mod', 'error');
+      NetherServer.showToast('Error', 'Failed to install', 'error');
     }
+  },
+
+  async installModFromSearch(modId, modName) {
+    return this.installModFromModrinth(modId, modName);
   },
 
   async removeMod(modId) {

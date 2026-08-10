@@ -6,6 +6,8 @@ const ServerService = require('./ServerService');
 const UserService = require('./UserService');
 
 const MODRINTH_API = 'https://api.modrinth.com/v2';
+const HANGAR_API = 'https://hangar.papermc.io/api/v1';
+const POGGIT_API = 'https://poggit.pmmp.io/ci';
 
 class ModService {
   static getDb() {
@@ -50,11 +52,13 @@ class ModService {
                 versions: mod.versions,
                 server_side: mod.server_side,
                 client_side: mod.client_side,
-                project_type: mod.project_type
+                project_type: mod.project_type,
+                source: 'modrinth'
               })),
               offset: result.offset,
               limit: result.limit,
-              total_hits: result.total_hits
+              total_hits: result.total_hits,
+              source: 'modrinth'
             });
           } catch (err) {
             reject(err);
@@ -62,6 +66,99 @@ class ModService {
         });
       }).on('error', reject);
     });
+  }
+
+  static async searchHangar(query, limit = 20) {
+    return new Promise((resolve, reject) => {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        order: 'RELEVANCE'
+      });
+      if (query) params.append('search', query);
+
+      const url = `${HANGAR_API}/projects?${params}`;
+
+      https.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const result = JSON.parse(data);
+            const hits = (result.result || []).map(p => ({
+              id: p.namespace?.slug || p.name,
+              slug: p.namespace?.slug || p.name,
+              title: p.name,
+              description: p.description || '',
+              author: p.namespace?.owner || 'unknown',
+              downloads: p.stats?.downloads || 0,
+              icon_url: null,
+              categories: [p.category],
+              versions: [],
+              source: 'hangar'
+            }));
+            resolve({
+              hits,
+              offset: result.pagination?.offset || 0,
+              limit: result.pagination?.limit || limit,
+              total_hits: result.pagination?.count || hits.length,
+              source: 'hangar'
+            });
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async searchPoggit(query, limit = 20) {
+    return new Promise((resolve, reject) => {
+      const params = new URLSearchParams({ limit: limit.toString() });
+      if (query) params.append('search', query);
+
+      const url = `${POGGIT_API}/projects?${params}`;
+
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const result = JSON.parse(data);
+            const hits = (result.projects || result || []).map(p => ({
+              id: p.name || p.project_id,
+              slug: p.name || p.project_id,
+              title: p.name || p.project_id,
+              description: p.description || '',
+              author: p.author || 'unknown',
+              downloads: p.downloads || p.stats?.downloads || 0,
+              icon_url: p.icon_url || null,
+              categories: [],
+              versions: [],
+              source: 'poggit'
+            }));
+            resolve({
+              hits,
+              offset: 0,
+              limit,
+              total_hits: hits.length,
+              source: 'poggit'
+            });
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async searchForServer(query, serverType, limit = 20) {
+    const server = { server_type: serverType };
+    const source = this.getSearchSourceType(server);
+
+    switch (source) {
+      case 'hangar':
+        return this.searchHangar(query, limit);
+      case 'poggit':
+        return this.searchPoggit(query, limit);
+      default:
+        return this.searchMods(query, limit, 'relevance', this.isPluginServer(server) ? 'plugin' : 'mod');
+    }
   }
 
   static async getModDetails(modId) {
@@ -280,20 +377,45 @@ class ModService {
 
   static getServerLoader(server) {
     const typeMap = {
-      paper: 'paper', spigot: 'paper', purpur: 'paper',
+      paper: 'paper', spigot: 'paper', purpur: 'paper', folia: 'paper',
       forge: 'forge', fabric: 'fabric', quilt: 'quilt',
-      bukkit: 'bukkit', pocketmine: 'pocketmine', nukkit: 'spigot'
+      neoforge: 'neoforge',
+      bukkit: 'bukkit', pocketmine: 'pocketmine', nukkit: 'spigot', powernukkit: 'spigot'
     };
     return typeMap[server.server_type] || 'paper';
   }
 
   static isPluginServer(server) {
-    return ['paper', 'spigot', 'purpur', 'bukkit'].includes(server.server_type);
+    return ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(server.server_type);
+  }
+
+  static isModServer(server) {
+    return ['forge', 'fabric', 'quilt', 'neoforge'].includes(server.server_type);
+  }
+
+  static isModrinthCompatible(server) {
+    return ['paper', 'spigot', 'purpur', 'folia', 'forge', 'fabric', 'quilt', 'neoforge'].includes(server.server_type);
+  }
+
+  static isHangarCompatible(server) {
+    return ['paper', 'spigot', 'purpur', 'folia'].includes(server.server_type);
+  }
+
+  static isPoggitCompatible(server) {
+    return ['pocketmine'].includes(server.server_type);
   }
 
   static getModFolder(server) {
+    if (this.isPoggitCompatible(server)) return 'plugins';
     if (this.isPluginServer(server)) return 'plugins';
     return 'mods';
+  }
+
+  static getSearchSourceType(server) {
+    if (this.isPoggitCompatible(server)) return 'poggit';
+    if (this.isHangarCompatible(server)) return 'hangar';
+    if (this.isModrinthCompatible(server)) return 'modrinth';
+    return 'modrinth';
   }
 
   static getModStats() {

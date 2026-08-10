@@ -22,16 +22,20 @@ router.get('/types', (req, res) => {
   res.json(ServerService.SERVER_TYPES || {
     java: {
       paper: { name: 'Paper', desc: 'High performance, plugin support' },
+      folia: { name: 'Folia', desc: 'Multithreaded regions for Paper' },
       spigot: { name: 'Spigot', desc: 'Modified server with plugin API' },
       purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features' },
       fabric: { name: 'Fabric', desc: 'Lightweight mod loader' },
       forge: { name: 'Forge', desc: 'Classic modding platform' },
+      neoforge: { name: 'NeoForge', desc: 'Modern Forge fork, active dev' },
+      quilt: { name: 'Quilt', desc: 'Fabric fork with extra features' },
       vanilla: { name: 'Vanilla', desc: 'Official Minecraft server' }
     },
     bedrock: {
+      bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' },
       pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server software' },
       nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software' },
-      bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' }
+      powernukkit: { name: 'PowerNukkit', desc: 'Enhanced Nukkit fork with extra features' }
     }
   });
 });
@@ -44,6 +48,9 @@ router.get('/versions', async (req, res) => {
       case 'paper':
         versions = await ServerService.getPaperVersions();
         break;
+      case 'folia':
+        versions = await ServerService.getFoliaVersions();
+        break;
       case 'purpur':
         versions = await ServerService.getPurpurVersions();
         break;
@@ -53,13 +60,27 @@ router.get('/versions', async (req, res) => {
       case 'forge':
         versions = await ServerService.getForgeVersions();
         break;
+      case 'neoforge':
+        versions = await ServerService.getNeoForgeVersions();
+        break;
+      case 'quilt':
+        versions = await ServerService.getQuiltVersions();
+        break;
       case 'spigot':
         versions = await ServerService.getSpigotVersions();
         break;
+      case 'vanilla':
+        versions = await ServerService.getVanillaVersions();
+        break;
       case 'bedrock':
-      case 'pocketmine':
-      case 'nukkit':
         versions = await ServerService.getBedrockVersions();
+        break;
+      case 'pocketmine':
+        versions = await ServerService.getPocketMineVersions();
+        break;
+      case 'nukkit':
+      case 'powernukkit':
+        versions = await ServerService.getNukkitVersions();
         break;
       default:
         versions = await ServerService.getPaperVersions();
@@ -586,6 +607,25 @@ router.get('/:id/mods', (req, res) => {
 
     const mods = ModService.listMods(server.id);
     res.json(mods);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/mods/search', async (req, res) => {
+  try {
+    const server = ServerService.getServer(parseInt(req.params.id));
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { q, limit } = req.query;
+    const results = await ModService.searchForServer(q || '', server.server_type, parseInt(limit) || 20);
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

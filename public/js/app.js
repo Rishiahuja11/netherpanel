@@ -6,16 +6,20 @@ const NetherApp = {
 
   JAVA_SOFTWARE: {
     paper: { name: 'Paper', desc: 'High performance, plugin support' },
+    folia: { name: 'Folia', desc: 'Multithreaded regions for Paper' },
     spigot: { name: 'Spigot', desc: 'Modified server with plugin API' },
     purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features' },
     fabric: { name: 'Fabric', desc: 'Lightweight mod loader' },
     forge: { name: 'Forge', desc: 'Classic modding platform' },
+    neoforge: { name: 'NeoForge', desc: 'Modern Forge fork, active dev' },
+    quilt: { name: 'Quilt', desc: 'Fabric fork with extra features' },
     vanilla: { name: 'Vanilla', desc: 'Official Minecraft server' }
   },
   BEDROCK_SOFTWARE: {
-    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server' },
-    nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server' },
-    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' }
+    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server' },
+    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock with plugins' },
+    nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software' },
+    powernukkit: { name: 'PowerNukkit', desc: 'Enhanced Nukkit with extra features' }
   },
 
   init() {
@@ -46,6 +50,12 @@ const NetherApp = {
     };
     if (body) opts.body = JSON.stringify(body);
     return fetch(url, opts).then(async r => {
+      if (r.status === 401 || r.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+        return;
+      }
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Request failed');
       return data;
@@ -141,6 +151,12 @@ const NetherApp = {
       const res = await fetch(`/api/servers/versions?software=${software}`, {
         headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+        return;
+      }
       const versions = await res.json();
       if (Array.isArray(versions) && versions.length > 0) {
         sel.innerHTML = versions.map(x => `<option value="${x}">${x}</option>`).join('');

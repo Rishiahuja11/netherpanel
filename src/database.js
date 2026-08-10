@@ -69,12 +69,9 @@ class PreparedStatement {
 
     const changes = this.db.getRowsModified();
 
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      const data = db.db.export();
-      const buffer = Buffer.from(data);
-      fs.writeFileSync(DB_PATH, buffer);
-    }, 100);
+    const data = this.db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(DB_PATH, buffer);
 
     return { lastInsertRowid, changes };
   }
@@ -119,8 +116,6 @@ class PreparedStatement {
     return results;
   }
 }
-
-let saveTimer = null;
 
 async function initDatabase() {
   const SQL = await initSqlJs();

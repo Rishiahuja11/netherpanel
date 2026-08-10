@@ -10,12 +10,14 @@ const CloudflareService = require('./CloudflareService');
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
 const PROOT_DISTRO = 'ubuntu';
-const JAVA_PATH = '/usr/bin/java';
+const JAVA_PATH = '/usr/lib/jvm/java-25-openjdk-arm64/bin/java';
 
 const PAPER_API = 'https://fill.papermc.io/v3/projects/paper';
+const FOLIA_API = 'https://fill.papermc.io/v3/projects/folia';
 const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
 const FABRIC_API = 'https://meta.fabricmc.net/v2/versions';
-const BEDROCK_API = 'https://api.github.com/repos/BedrockServer/Bedrockserver/releases';
+const QUILT_API = 'https://meta.quiltmc.org/v3/versions';
+const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
 
 function sortVersionsDesc(versions) {
   return versions.sort((a, b) => {
@@ -32,16 +34,20 @@ function sortVersionsDesc(versions) {
 const SERVER_TYPES = {
   java: {
     paper: { name: 'Paper', desc: 'High performance, plugin support', loader: 'paper' },
+    folia: { name: 'Folia', desc: 'Paper fork with multithreaded regions', loader: 'folia' },
     spigot: { name: 'Spigot', desc: 'Modified server with plugin API', loader: 'spigot' },
     purpur: { name: 'Purpur', desc: 'Enhanced Paper with extra features', loader: 'purpur' },
     fabric: { name: 'Fabric', desc: 'Lightweight mod loader', loader: 'fabric' },
     forge: { name: 'Forge', desc: 'Classic modding platform', loader: 'forge' },
+    neoforge: { name: 'NeoForge', desc: 'Modern Forge fork, active development', loader: 'neoforge' },
+    quilt: { name: 'Quilt', desc: 'Fabric fork with extra features', loader: 'quilt' },
     vanilla: { name: 'Vanilla', desc: 'Official Minecraft server', loader: 'vanilla' }
   },
   bedrock: {
-    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server software', loader: 'pocketmine' },
+    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server', loader: 'bedrock' },
+    pocketmine: { name: 'PocketMine-MP', desc: 'PHP-based Bedrock server with plugins', loader: 'pocketmine' },
     nukkit: { name: 'Nukkit', desc: 'Java-based Bedrock server software', loader: 'nukkit' },
-    bedrock: { name: 'Bedrock Server', desc: 'Official Bedrock Dedicated Server', loader: 'bedrock' }
+    powernukkit: { name: 'PowerNukkit', desc: 'Enhanced Nukkit fork with extra features', loader: 'powernukkit' }
   }
 };
 
@@ -160,12 +166,18 @@ class ServerService {
     switch (serverType) {
       case 'paper':
         return this.downloadFromPaperApi(serverId, version, serverDir);
+      case 'folia':
+        return this.downloadFromFoliaApi(serverId, version, serverDir);
       case 'purpur':
         return this.downloadFromPurpurApi(serverId, version, serverDir);
       case 'fabric':
         return this.downloadFabricServer(version, serverDir);
       case 'forge':
         return this.downloadForgeServer(version, serverDir);
+      case 'neoforge':
+        return this.downloadNeoForgeServer(version, serverDir);
+      case 'quilt':
+        return this.downloadQuiltServer(version, serverDir);
       case 'spigot':
         return this.downloadFromPaperApi(serverId, version, serverDir);
       case 'vanilla':
@@ -224,6 +236,56 @@ class ServerService {
     });
   }
 
+  static async downloadNeoForgeServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const installerUrl = `${NEOFORGE_MAVEN}/${version}/neoforge-${version}-installer.jar`;
+    const installerPath = path.join(serverDir, 'neoforge-installer.jar');
+
+    await this.downloadFileTo(installerUrl, installerPath);
+
+    return new Promise((resolve, reject) => {
+      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd '${serverDir}' && java -jar neoforge-installer.jar --installServer"`;
+      exec(cmd, { cwd: serverDir, timeout: 300000 }, (err) => {
+        if (err) {
+          reject(new Error(`NeoForge installer failed: ${err.message}`));
+          return;
+        }
+        const neoJar = fs.readdirSync(serverDir).find(f => f.startsWith('neoforge-') && f.endsWith('.jar') && !f.includes('installer'));
+        if (neoJar) {
+          fs.renameSync(path.join(serverDir, neoJar), jarPath);
+        } else {
+          const allJar = fs.readdirSync(serverDir).find(f => f.endsWith('.jar') && !f.includes('installer'));
+          if (allJar) fs.renameSync(path.join(serverDir, allJar), jarPath);
+        }
+        resolve(jarPath);
+      });
+    });
+  }
+
+  static async downloadQuiltServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    return new Promise((resolve, reject) => {
+      https.get(`${QUILT_API}/loader/${version}`, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const loaders = JSON.parse(data);
+            if (!loaders.length) return reject(new Error('No Quilt loader found for ' + version));
+            const latest = loaders[0];
+            const loaderVer = latest.loader.version;
+            const url = `https://meta.quiltmc.org/v3/versions/loader/${version}/${loaderVer}/server/jar`;
+            this.downloadFileTo(url, jarPath).then(() => resolve(jarPath)).catch(reject);
+          } catch (e) { reject(e); }
+        });
+      }).on('error', reject);
+    });
+  }
+
   static async downloadVanillaServer(version, serverDir) {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
@@ -262,8 +324,6 @@ class ServerService {
 
     return new Promise((resolve, reject) => {
       const apiUrl = `${PAPER_API}/versions/${version}/builds/latest`;
-      const options = new URL(apiUrl);
-      options.headers = { 'User-Agent': 'NetherPanel/1.0' };
       https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
@@ -273,6 +333,29 @@ class ServerService {
             const dl = build.downloads && build.downloads['server:default'];
             if (!dl || !dl.url) {
               throw new Error(`No download found for version ${version}`);
+            }
+            this.downloadFileTo(dl.url, jarPath).then(() => resolve(jarPath)).catch(reject);
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async downloadFromFoliaApi(serverId, version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    return new Promise((resolve, reject) => {
+      const apiUrl = `${FOLIA_API}/versions/${version}/builds/latest`;
+      https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const build = JSON.parse(data);
+            const dl = build.downloads && build.downloads['server:default'];
+            if (!dl || !dl.url) {
+              throw new Error(`No Folia download found for version ${version}`);
             }
             this.downloadFileTo(dl.url, jarPath).then(() => resolve(jarPath)).catch(reject);
           } catch (err) { reject(err); }
@@ -292,12 +375,42 @@ class ServerService {
   }
 
   static async downloadBedrockServer(serverId, serverType, version, serverDir) {
+    switch (serverType) {
+      case 'pocketmine':
+        return this.downloadPocketMineServer(version, serverDir);
+      case 'powernukkit':
+        return this.downloadPowerNukkitServer(version, serverDir);
+      case 'nukkit':
+        return this.downloadNukkitServer(version, serverDir);
+      default:
+        return this.downloadOfficialBedrockServer(version, serverDir);
+    }
+  }
+
+  static async downloadOfficialBedrockServer(version, serverDir) {
     const exePath = path.join(serverDir, 'bedrock_server');
     const zipPath = path.join(serverDir, 'bedrock_server.zip');
 
     if (fs.existsSync(exePath)) return exePath;
 
-    const downloadUrl = 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server.zip';
+    let downloadUrl;
+    try {
+      const versionsData = await new Promise((resolve, reject) => {
+        https.get('https://raw.githubusercontent.com/kittizz/bedrock-server-downloads/main/bedrock-server-downloads.json', (res) => {
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
+        }).on('error', reject);
+      });
+      const release = versionsData.release?.[version];
+      if (release?.linux?.url) {
+        downloadUrl = release.linux.url;
+      }
+    } catch (e) {}
+
+    if (!downloadUrl) {
+      downloadUrl = 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server.zip';
+    }
 
     return new Promise((resolve, reject) => {
       this.downloadFileTo(downloadUrl, zipPath).then(() => {
@@ -312,6 +425,38 @@ class ServerService {
         }
       }).catch(reject);
     });
+  }
+
+  static async downloadPocketMineServer(version, serverDir) {
+    const pharPath = path.join(serverDir, 'PocketMine-MP.phar');
+    if (fs.existsSync(pharPath)) return pharPath;
+
+    let downloadUrl;
+    if (version && version !== 'latest') {
+      downloadUrl = `https://github.com/pmmp/PocketMine-MP/releases/download/${version}/PocketMine-MP.phar`;
+    } else {
+      downloadUrl = 'https://github.com/pmmp/PocketMine-MP/releases/latest/download/PocketMine-MP.phar';
+    }
+    await this.downloadFileTo(downloadUrl, pharPath);
+    return pharPath;
+  }
+
+  static async downloadPowerNukkitServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const downloadUrl = `https://github.com/PowerNukkit/PowerNukkit/releases/download/${version}/powernukkit-${version}-shaded.jar`;
+    await this.downloadFileTo(downloadUrl, jarPath);
+    return jarPath;
+  }
+
+  static async downloadNukkitServer(version, serverDir) {
+    const jarPath = path.join(serverDir, 'server.jar');
+    if (fs.existsSync(jarPath)) return jarPath;
+
+    const downloadUrl = `https://github.com/CloudburstMC/Nukkit/releases/download/${version}/Nukkit.jar`;
+    await this.downloadFileTo(downloadUrl, jarPath);
+    return jarPath;
   }
 
   static async downloadFileTo(url, destPath) {
@@ -387,7 +532,7 @@ class ServerService {
       const args = javaArgs.split(' ').filter(a => a);
       args.push('-jar', 'server.jar', 'nogui');
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-        `cd '${serverDir}' && /usr/bin/java ${args.join(' ')}`], {
+        `cd '${serverDir}' && ${JAVA_PATH} ${args.join(' ')}`], {
         cwd: serverDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -788,16 +933,127 @@ class ServerService {
 
   static async getBedrockVersions() {
     return new Promise((resolve, reject) => {
-      https.get('https://raw.githubusercontent.com/nicholasgasior/mcbe-versions/master/versions.json', (res) => {
+      https.get('https://raw.githubusercontent.com/kittizz/bedrock-server-downloads/main/bedrock-server-downloads.json', (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
             const json = JSON.parse(data);
-            resolve(sortVersionsDesc(json.versions || []));
+            const releases = json.release || {};
+            resolve(sortVersionsDesc(Object.keys(releases)));
           } catch (err) {
             reject(err);
           }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getPocketMineVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://api.github.com/repos/pmmp/PocketMine-MP/releases', { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const releases = JSON.parse(data);
+            const versions = releases
+              .filter(r => !r.prerelease && r.assets.some(a => a.name === 'PocketMine-MP.phar'))
+              .map(r => r.tag_name);
+            resolve(versions);
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getNukkitVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://api.github.com/repos/PowerNukkit/PowerNukkit/releases', { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const releases = JSON.parse(data);
+            const versions = releases
+              .filter(r => r.assets.some(a => a.name.includes('shaded.jar')))
+              .map(r => r.tag_name);
+            resolve(versions);
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getVanillaVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const manifest = JSON.parse(data);
+            const versions = manifest.versions
+              .filter(v => v.type === 'release')
+              .map(v => v.id);
+            resolve(sortVersionsDesc(versions).slice(0, 30));
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getFoliaVersions() {
+    return new Promise((resolve, reject) => {
+      https.get(FOLIA_API, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            const versionsObj = json.versions || {};
+            const allVersions = [];
+            for (const group of Object.keys(versionsObj)) {
+              for (const v of versionsObj[group]) {
+                if (!v.includes('rc') && !v.includes('pre') && !v.includes('-dev')) {
+                  allVersions.push(v);
+                }
+              }
+            }
+            resolve(sortVersionsDesc(allVersions));
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getNeoForgeVersions() {
+    return new Promise((resolve, reject) => {
+      https.get('https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const matches = data.match(/<version>([^<]+)<\/version>/g) || [];
+            const versions = matches.map(m => m.replace(/<\/?version>/g, ''))
+              .filter(v => !v.includes('beta') && !v.includes('alpha'));
+            resolve(sortVersionsDesc(versions).slice(0, 50));
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getQuiltVersions() {
+    return new Promise((resolve, reject) => {
+      https.get(`${QUILT_API}/game`, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const versions = JSON.parse(data);
+            resolve(sortVersionsDesc(versions.filter(v => v.stable).map(v => v.version)));
+          } catch (err) { reject(err); }
         });
       }).on('error', reject);
     });

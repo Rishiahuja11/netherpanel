@@ -2,8 +2,6 @@
 # NetherPanel Start Script (Native Termux)
 # Starts the panel + Cloudflare Tunnel
 
-set -e
-
 cd "$(dirname "$0")"
 
 echo ""
@@ -19,7 +17,7 @@ if [ ! -d "/data/data/com.termux" ]; then
 fi
 
 if ! command -v node &> /dev/null; then
-    echo "  [!] Node.js not found. Run: bash setup.sh"
+    echo "  [!] Node.js not found. Run: pkg install nodejs"
     exit 1
 fi
 
@@ -30,24 +28,48 @@ fi
 
 mkdir -p data/servers data/backups data/uploads data/eggs data/crashes
 
-TUNNEL_TOKEN=$(cat ~/.cloudflared/token 2>/dev/null || echo "")
-export TUNNEL_TOKEN
+# Kill any existing panel/tunnel processes on port 3000
+fuser -k 3000/tcp 2>/dev/null
+pkill -f "cloudflared tunnel run" 2>/dev/null
+sleep 1
+
+TUNNEL_TOKEN_FILE="$HOME/.cloudflared/token"
 
 echo "  ╔═══════════════════════════════════════════════╗"
 echo "  ║     NetherPanel v4.0                          ║"
 echo "  ║     Running in Termux                         ║"
 echo "  ║     Panel:    http://localhost:3000            ║"
-if [ -n "$TUNNEL_TOKEN" ]; then
+if [ -f "$TUNNEL_TOKEN_FILE" ]; then
 echo "  ║     Tunnel:   https://panel.smp45.qzz.io      ║"
 fi
 echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
 
-if [ -n "$TUNNEL_TOKEN" ]; then
+if [ -f "$TUNNEL_TOKEN_FILE" ]; then
     echo "  Starting panel + tunnel..."
     echo "  Press Ctrl+C to stop"
     echo ""
-    node node_modules/concurrently/dist/bin/index.js --names "panel,tunnel" --colors "node server.js" "sh -c 'cloudflared tunnel run --token $TUNNEL_TOKEN'"
+
+    # Start panel in background
+    node server.js &
+    PANEL_PID=$!
+
+    # Give panel a moment to bind port
+    sleep 2
+
+    if kill -0 $PANEL_PID 2>/dev/null; then
+        echo "  Panel started (PID: $PANEL_PID)"
+    else
+        echo "  [!] Panel failed to start. Check logs."
+        exit 1
+    fi
+
+    # Start cloudflared tunnel in foreground
+    cloudflared tunnel run --token-file "$TUNNEL_TOKEN_FILE" &
+    TUNNEL_PID=$!
+
+    # Wait for either to exit
+    wait $PANEL_PID $TUNNEL_PID 2>/dev/null
 else
     echo "  No tunnel token found. Starting panel only."
     echo "  Access at http://localhost:3000"
