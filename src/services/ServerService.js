@@ -179,8 +179,23 @@ class ServerService {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
-    const installerUrl = `https://meta.fabricmc.net/v2/versions/loader/${version}/latest/1/server/jar`;
-    return this.downloadFileTo(installerUrl, jarPath);
+    return new Promise((resolve, reject) => {
+      https.get(`https://meta.fabricmc.net/v2/versions/loader/${version}`, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const loaders = JSON.parse(data);
+            if (!loaders.length) return reject(new Error('No Fabric loader found for ' + version));
+            const latest = loaders[0];
+            const loaderVer = latest.loader.version;
+            const installVer = latest.installer ? latest.installer.version : '1.0.1';
+            const url = `https://meta.fabricmc.net/v2/versions/loader/${version}/${loaderVer}/${installVer}/server/jar`;
+            this.downloadFileTo(url, jarPath).then(() => resolve(jarPath)).catch(reject);
+          } catch (e) { reject(e); }
+        });
+      }).on('error', reject);
+    });
   }
 
   static async downloadForgeServer(version, serverDir) {
@@ -271,19 +286,8 @@ class ServerService {
     if (fs.existsSync(jarPath)) return jarPath;
 
     return new Promise((resolve, reject) => {
-      const apiUrl = `${PURPUR_API}/versions/${version}`;
-      https.get(apiUrl, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const info = JSON.parse(data);
-            const latestBuild = info.builds?.latest || '1';
-            const downloadUrl = `${PURPUR_API}/versions/${version}/${latestBuild}/download`;
-            this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
-          } catch (err) { reject(err); }
-        });
-      }).on('error', reject);
+      const downloadUrl = `${PURPUR_API}/${version}/latest/download`;
+      this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
     });
   }
 
@@ -318,9 +322,14 @@ class ServerService {
             followRedirect(res.headers.location);
             return;
           }
+          if (res.statusCode !== 200) {
+            reject(new Error(`Download failed with status ${res.statusCode}`));
+            return;
+          }
           const file = fs.createWriteStream(destPath);
           res.pipe(file);
           file.on('finish', () => { file.close(); resolve(); });
+          file.on('error', (err) => { fs.unlink(destPath, () => {}); reject(err); });
         }).on('error', reject);
       };
       followRedirect(url);
@@ -743,9 +752,10 @@ class ServerService {
             try {
               const json = JSON.parse(data);
               const versions = sortVersionsDesc(
-                [...new Set(Object.keys(json.promos || {}).map(v => v.replace('-latest', '')))]
+                [...new Set(Object.keys(json.promos || {})
+                  .map(v => v.replace(/-(latest|recommended)/g, '')))]
               );
-              resolve(versions.slice(0, 50));
+              resolve(versions.filter(v => /^\d/.test(v)).slice(0, 50));
             } catch (err) {
               reject(err);
             }
@@ -758,7 +768,7 @@ class ServerService {
 
   static async getSpigotVersions() {
     return new Promise((resolve, reject) => {
-      https.get('https://hub.spigotmc.org/versions/', (res) => {
+      https.get('https://hub.spigotmc.org/versions/', { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {

@@ -145,11 +145,11 @@ const NetherApp = {
       if (Array.isArray(versions) && versions.length > 0) {
         sel.innerHTML = versions.map(x => `<option value="${x}">${x}</option>`).join('');
       } else {
-        sel.innerHTML = '<option value="1.21.4">1.21.4 (fallback)</option>';
+        sel.innerHTML = '<option value="">No versions available</option>';
       }
     } catch (err) {
       console.error('Failed to fetch versions:', err);
-      sel.innerHTML = '<option value="1.21.4">1.21.4 (fallback)</option>';
+      sel.innerHTML = '<option value="">Failed to load versions</option>';
     }
   },
 
