@@ -50,13 +50,6 @@ fi
 echo ""
 echo "━━━ Step 4: Installing utilities ━━━"
 pkg install -y git python3 curl wget unzip tar
-
-# Install cloudflared for tunnels
-echo "  [*] Installing cloudflared..."
-if ! command -v cloudflared &> /dev/null; then
-    curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o $PREFIX/bin/cloudflared
-    chmod +x $PREFIX/bin/cloudflared
-fi
 echo "  [✓] Utilities installed"
 
 # Step 5: Install npm dependencies
