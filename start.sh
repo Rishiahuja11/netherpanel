@@ -31,6 +31,7 @@ fi
 mkdir -p data/servers data/backups data/uploads data/eggs data/crashes
 
 TUNNEL_TOKEN=$(cat ~/.cloudflared/token 2>/dev/null || echo "")
+export TUNNEL_TOKEN
 
 echo "  ╔═══════════════════════════════════════════════╗"
 echo "  ║     NetherPanel v4.0                          ║"
@@ -46,7 +47,7 @@ if [ -n "$TUNNEL_TOKEN" ]; then
     echo "  Starting panel + tunnel..."
     echo "  Press Ctrl+C to stop"
     echo ""
-    npx concurrently --names "panel,tunnel" --colors "node server.js" "cloudflared tunnel run --token $TUNNEL_TOKEN"
+    node node_modules/concurrently/dist/bin/index.js --names "panel,tunnel" --colors "node server.js" "sh -c 'cloudflared tunnel run --token $TUNNEL_TOKEN'"
 else
     echo "  No tunnel token found. Starting panel only."
     echo "  Access at http://localhost:3000"
