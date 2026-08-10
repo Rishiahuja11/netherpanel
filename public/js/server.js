@@ -581,6 +581,13 @@ const NetherServer = {
     });
 
     const searchInput = document.getElementById('mod-search');
+    if (searchInput && isPluginServer) {
+      searchInput.placeholder = 'Search plugins on Modrinth...';
+    }
+    const browseLabel = document.getElementById('browse-label');
+    if (browseLabel && isPluginServer) {
+      browseLabel.textContent = 'Plugins';
+    }
     let searchTimeout;
     if (searchInput) {
       searchInput.addEventListener('input', () => {
@@ -593,10 +600,8 @@ const NetherServer = {
     }
 
     const categoryFilter = document.getElementById('mod-category');
-    const loaderFilter = document.getElementById('mod-loader');
-    const versionFilter = document.getElementById('mod-version');
 
-    [categoryFilter, loaderFilter, versionFilter].forEach(el => {
+    [categoryFilter].forEach(el => {
       if (el) {
         el.addEventListener('change', () => {
           this.modOffset = 0;
@@ -633,13 +638,14 @@ const NetherServer = {
     const container = document.getElementById('installed-mods');
     const count = document.getElementById('installed-count');
     if (count) count.textContent = `(${mods.length})`;
+    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
 
     if (!mods.length) {
       container.innerHTML = `
         <div class="mods-empty-state">
           <i data-lucide="package-open"></i>
-          <p>No mods or plugins installed yet</p>
-          <span>Browse and install mods from Modrinth</span>
+          <p>No ${isPlugin ? 'plugins' : 'mods'} installed yet</p>
+          <span>Browse and install ${isPlugin ? 'plugins' : 'mods'} from Modrinth</span>
         </div>`;
       lucide.createIcons({ nodes: [container] });
       return;
@@ -683,17 +689,14 @@ const NetherServer = {
       });
 
       const category = document.getElementById('mod-category')?.value;
-      const loaderFilter = document.getElementById('mod-loader');
-      let loader = loaderFilter?.value;
-      if (!loader && this.serverData) {
-        const sw = (this.serverData.server_type || this.serverData.software || '').toLowerCase();
-        if (['fabric', 'forge', 'quilt', 'neoforge'].includes(sw)) loader = sw;
-        else if (['paper', 'spigot', 'purpur', 'bukkit'].includes(sw)) loader = 'paper';
-      }
+      const isPluginServer = this.serverData && ['paper', 'spigot', 'purpur', 'bukkit'].includes(this.serverData.server_type || this.serverData.software);
+      const projectType = isPluginServer ? 'plugin' : 'mod';
+
       const facets = [];
       if (category) facets.push(`categories:${category}`);
-      if (loader) facets.push(`categories:${loader}`);
-      if (facets.length > 0) params.append('facets', JSON.stringify([facets]));
+      const typeFacets = [[`project_type:${projectType}`]];
+      if (facets.length > 0) typeFacets.push(facets);
+      params.append('facets', JSON.stringify(typeFacets));
 
       const res = await fetch(`https://api.modrinth.com/v2/search?${params}`);
       const data = await res.json();

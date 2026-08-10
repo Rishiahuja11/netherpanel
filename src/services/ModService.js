@@ -12,13 +12,22 @@ class ModService {
     return getDb();
   }
 
-  static async searchMods(query, limit = 20, index = 'relevance') {
+  static async searchMods(query, limit = 20, index = 'relevance', projectType = null) {
     return new Promise((resolve, reject) => {
       const params = new URLSearchParams({
         query: query || '',
         limit: limit.toString(),
         index: index
       });
+
+      const facets = [];
+      if (projectType) {
+        facets.push([`project_type:${projectType}`]);
+      }
+
+      if (facets.length > 0) {
+        params.append('facets', JSON.stringify(facets));
+      }
 
       const url = `${MODRINTH_API}/search?${params}`;
 
@@ -40,7 +49,8 @@ class ModService {
                 categories: mod.categories,
                 versions: mod.versions,
                 server_side: mod.server_side,
-                client_side: mod.client_side
+                client_side: mod.client_side,
+                project_type: mod.project_type
               })),
               offset: result.offset,
               limit: result.limit,
@@ -140,7 +150,9 @@ class ModService {
       fs.mkdirSync(modsDir, { recursive: true });
     }
 
-    const versions = await this.getModVersions(modId, server.version, this.getServerLoader(server));
+    const isPlugin = this.isPluginServer(server);
+    const loader = isPlugin ? null : this.getServerLoader(server);
+    const versions = await this.getModVersions(modId, null, loader);
     const version = versionId 
       ? versions.find(v => v.id === versionId)
       : versions[0];
@@ -177,7 +189,7 @@ class ModService {
       mod = db.prepare('SELECT * FROM mods WHERE id = ?').get(result.lastInsertRowid);
     }
 
-    UserService.logActivity(userId, 'mod_install', 'mod', mod.id, `Installed mod "${mod.name}" v${mod.version}`);
+    UserService.logActivity(userId, 'mod_install', 'mod', mod.id, `Installed ${isPlugin ? 'plugin' : 'mod'} "${mod.name}" v${mod.version}`);
 
     return mod;
   }

@@ -204,20 +204,6 @@
               <option value="food">Food</option>
               <option value="game-mechanics">Game Mechanics</option>
             </select>
-            <select class="form-select-sm" id="mod-loader">
-              <option value="">All Loaders</option>
-              <option value="paper">Paper/Spigot</option>
-              <option value="forge">Forge</option>
-              <option value="fabric">Fabric</option>
-              <option value="bukkit">Bukkit</option>
-            </select>
-            <select class="form-select-sm" id="mod-version">
-              <option value="">All Versions</option>
-              <option value="1.21.4" selected>1.21.4</option>
-              <option value="1.21.3">1.21.3</option>
-              <option value="1.20.4">1.20.4</option>
-              <option value="1.20.1">1.20.1</option>
-            </select>
           </div>
         </div>
 
@@ -236,7 +222,7 @@
 
         <div class="mods-panel" id="mods-browse-panel">
           <div class="mods-panel-header">
-            <h3>Browse Mods & Plugins</h3>
+            <h3>Browse <span id="browse-label">Mods & Plugins</span></h3>
             <div class="mods-results-info" id="mods-results-info"></div>
           </div>
           <div class="mods-list" id="available-mods">

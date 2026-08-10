@@ -9,7 +9,8 @@ const CloudflareService = require('./CloudflareService');
 
 const DATA_DIR = path.join(process.env.HOME || '/data/data/com.termux/files/home/panel', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
-const JAVA_PATH = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', 'java') : '/data/data/com.termux/files/usr/bin/java';
+const PROOT_DISTRO = 'ubuntu';
+const JAVA_PATH = '/usr/bin/java';
 
 const PAPER_API = 'https://fill.papermc.io/v3/projects/paper';
 const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
@@ -180,8 +181,9 @@ class ServerService {
     await this.downloadFileTo(installerUrl, installerPath);
 
     return new Promise((resolve, reject) => {
-      const { execFile } = require('child_process');
-      execFile(JAVA_PATH, ['-jar', installerPath, '--installServer'], { cwd: serverDir }, (err) => {
+      const { exec } = require('child_process');
+      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd ${serverDir} && java -jar forge-installer.jar --installServer"`;
+      exec(cmd, { cwd: serverDir, timeout: 300000 }, (err) => {
         if (err) {
           reject(new Error(`Forge installer failed: ${err.message}`));
           return;
@@ -265,7 +267,7 @@ class ServerService {
           try {
             const info = JSON.parse(data);
             const latestBuild = info.builds?.latest || '1';
-            const downloadUrl = `${PURPUR_API}/versions/${version}/builds/${latestBuild}/download`;
+            const downloadUrl = `${PURPUR_API}/versions/${version}/${latestBuild}/download`;
             this.downloadFileTo(downloadUrl, jarPath).then(() => resolve(jarPath)).catch(reject);
           } catch (err) { reject(err); }
         });
@@ -300,7 +302,7 @@ class ServerService {
     return new Promise((resolve, reject) => {
       const followRedirect = (downloadUrl) => {
         https.get(downloadUrl, (res) => {
-          if (res.statusCode === 301 || res.statusCode === 302) {
+          if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 308) {
             followRedirect(res.headers.location);
             return;
           }
@@ -362,8 +364,9 @@ class ServerService {
       }
       const javaArgs = server.java_args || `-Xmx${server.ram_max}M -Xms${server.ram_min}M`;
       const args = javaArgs.split(' ').filter(a => a);
-      args.push('-jar', jarPath, 'nogui');
-      child = spawn(JAVA_PATH, args, {
+      args.push('-jar', 'server.jar', 'nogui');
+      child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
+        `cd /data/data/com.termux/files/home/panel/data/servers/${serverId} && /usr/bin/java ${args.join(' ')}`], {
         cwd: serverDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -716,19 +719,37 @@ class ServerService {
 
   static async getForgeVersions() {
     return new Promise((resolve, reject) => {
-      https.get('https://files.minecraftforge.net/maven/net/minecraftforge/forge/promotions_slim.json', (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            const versions = Object.keys(json.promos || {}).map(v => v.replace('-latest', '')).filter((v, i, a) => a.indexOf(v) === i);
-            resolve(versions);
-          } catch (err) {
-            reject(err);
+      const followRedirect = (url) => {
+        https.get(url, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 308) {
+            followRedirect(res.headers.location);
+            return;
           }
-        });
-      }).on('error', reject);
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            try {
+              const json = JSON.parse(data);
+              const versions = Object.keys(json.promos || {})
+                .map(v => v.replace('-latest', ''))
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .sort((a, b) => {
+                  const pa = a.split('.').map(Number);
+                  const pb = b.split('.').map(Number);
+                  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                    const na = pa[i] || 0, nb = pb[i] || 0;
+                    if (na !== nb) return nb - na;
+                  }
+                  return 0;
+                });
+              resolve(versions.slice(0, 50));
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }).on('error', reject);
+      };
+      followRedirect('https://files.minecraftforge.net/maven/net/minecraftforge/forge/promotions_slim.json');
     });
   }
 
