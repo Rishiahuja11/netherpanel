@@ -154,6 +154,11 @@ class BackupService {
       throw new Error('Backup file not found');
     }
 
+    const serverDir = ServerService.getServerDir(backup.server_id);
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip(backupPath);
+    zip.extractAllTo(serverDir, true);
+
     UserService.logActivity(userId, 'backup_restore', 'backup', id, `Restored backup "${backup.name}"`);
     return backup;
   }

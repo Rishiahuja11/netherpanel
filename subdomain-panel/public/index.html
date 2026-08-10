@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetherPanel - Subdomain Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #0f0a1a;
+      --bg-secondary: #1a1025;
+      --bg-card: #1e1530;
+      --bg-elevated: #251d38;
+      --accent-orange: #f97316;
+      --accent-cyan: #06b6d4;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border: #2d2342;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    .header { text-align: center; margin-bottom: 2rem; }
+    .header h1 {
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-orange), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+    .header p { color: var(--text-secondary); font-size: 0.85rem; }
+    .status-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .status-card {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .status-card .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem; }
+    .status-card .value { font-size: 1.1rem; font-weight: 600; }
+    .status-card .value.green { color: var(--accent-green); }
+    .status-card .value.red { color: var(--accent-red); }
+    .add-form {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .add-form h3 { font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .form-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .form-group { flex: 1; }
+    .form-group label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .form-group input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    .form-group input:focus { outline: none; border-color: var(--accent-orange); }
+    .domain-suffix {
+      padding: 0.6rem 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .btn {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent-orange); color: white; }
+    .btn-primary:hover { background: #ea580c; }
+    .btn-sm { padding: 0.35rem 0.6rem; font-size: 0.75rem; border-radius: 6px; }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .records-table {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .records-table table { width: 100%; border-collapse: collapse; }
+    .records-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+    .records-table td {
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .records-table tr:last-child td { border-bottom: none; }
+    .records-table tr:hover td { background: var(--bg-elevated); }
+    .record-name { color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
+    .record-ip { color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+    }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+      animation: slideIn 0.3s ease;
+      min-width: 250px;
+      font-size: 0.85rem;
+    }
+    .toast.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: var(--accent-green); }
+    .toast.error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--accent-red); }
+    .toast.info { background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.3); color: var(--accent-cyan); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+    }
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-card h2 { text-align: center; margin-bottom: 1.5rem; font-size: 1.2rem; }
+    .login-card .form-group { margin-bottom: 1rem; }
+    .login-card .btn { width: 100%; margin-top: 0.5rem; padding: 0.75rem; }
+    .refresh-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+    .refresh-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    const App = {
+      token: localStorage.getItem('subdomain_token'),
+      user: null,
+      records: [],
+      settings: {},
+
+      async init() {
+        if (this.token) {
+          try {
+            const res = await this.api('GET', '/api/auth/me');
+            this.user = res;
+            this.renderDashboard();
+            this.loadRecords();
+          } catch (e) {
+            this.renderLogin();
+          }
+        } else {
+          this.renderLogin();
+        }
+      },
+
+      async api(method, path, body) {
+        const opts = {
+          method,
+          headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' }
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(path, opts);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+      },
+
+      showToast(title, message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const icons = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `<strong>${title}</strong> ${message}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+      },
+
+      renderLogin() {
+        document.getElementById('app').innerHTML = `
+          <div class="login-page">
+            <div class="login-card">
+              <h2 style="background: linear-gradient(135deg, var(--accent-orange), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Subdomain Manager</h2>
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="login-user" placeholder="Username">
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-pass" placeholder="Password">
+              </div>
+              <button class="btn btn-primary" onclick="App.login()">Sign In</button>
+            </div>
+          </div>`;
+      },
+
+      async login() {
+        const username = document.getElementById('login-user').value;
+        const password = document.getElementById('login-pass').value;
+        try {
+          const res = await this.api('POST', '/api/auth/login', { username, password });
+          this.token = res.token;
+          this.user = res.user;
+          localStorage.setItem('subdomain_token', this.token);
+          this.renderDashboard();
+          this.loadRecords();
+        } catch (e) {
+          this.showToast('Error', e.message, 'error');
+        }
+      },
+
+      renderDashboard() {
+        document.getElementById('app').innerHTML = `
+          <div class="container">
+            <div class="header">
+              <h1>NetherPanel Subdomain Manager</h1>
+              <p>Manage DNS records for your Minecraft servers</p>
+            </div>
+            <div class="status-bar">
+              <div class="status-card">
+                <div class="label">Cloudflare Status</div>
+                <div class="value" id="cf-status">Checking...</div>
+              </div>
+              <div class="status-card">
+                <div class="label">Total Records</div>
+                <div class="value" id="record-count">0</div>
+              </div>
+              <div class="status-card">
+                <div class="label">Server IP</div>
+                <div class="value" id="server-ip">-</div>
+              </div>
+            </div>
+            <div class="add-form">
+              <h3>Add New Subdomain</h3>
+              <div class="form-row">
+                <div class="form-group" style="flex:2">
+                  <label>Subdomain</label>
+                  <input type="text" id="new-subdomain" placeholder="myserver">
+                </div>
+                <div class="domain-suffix" id="domain-suffix">.smp45.qzz.io</div>
+                <button class="btn btn-primary" onclick="App.createRecord()">Create</button>
+              </div>
+            </div>
+            <div class="toolbar">
+              <span style="color: var(--text-muted); font-size: 0.85rem;">DNS A Records</span>
+              <button class="refresh-btn" onclick="App.loadRecords()">Refresh</button>
+            </div>
+            <div class="records-table" id="records-container">
+              <div class="empty-state">Loading...</div>
+            </div>
+          </div>`;
+        this.testConnection();
+      },
+
+      async testConnection() {
+        try {
+          const res = await this.api('GET', '/api/test');
+          document.getElementById('cf-status').textContent = res.zoneName || 'Connected';
+          document.getElementById('cf-status').className = 'value green';
+        } catch (e) {
+          document.getElementById('cf-status').textContent = 'Error';
+          document.getElementById('cf-status').className = 'value red';
+        }
+      },
+
+      async loadRecords() {
+        try {
+          const res = await this.api('GET', '/api/records');
+          this.records = res.records || [];
+          this.settings = { domain: res.domain, serverIp: res.serverIp };
+
+          document.getElementById('record-count').textContent = this.records.length;
+          document.getElementById('server-ip').textContent = res.serverIp || '-';
+          document.getElementById('domain-suffix').textContent = `.${res.domain}`;
+
+          this.renderRecords();
+        } catch (e) {
+          document.getElementById('records-container').innerHTML = `<div class="empty-state">Failed to load: ${e.message}</div>`;
+        }
+      },
+
+      renderRecords() {
+        const container = document.getElementById('records-container');
+        if (this.records.length === 0) {
+          container.innerHTML = '<div class="empty-state">No DNS records found</div>';
+          return;
+        }
+
+        const rows = this.records.map(r => `
+          <tr>
+            <td><span class="record-name">${r.name}</span></td>
+            <td><span class="record-ip">${r.content}</span></td>
+            <td>${r.proxied ? 'Proxied' : 'DNS Only'}</td>
+            <td style="text-align:right">
+              <button class="btn btn-sm btn-danger" onclick="App.deleteRecord('${r.id}', '${r.name}')">
+                Delete
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <table>
+            <thead>
+              <tr><th>Hostname</th><th>IP</th><th>Proxy</th><th style="text-align:right">Actions</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      },
+
+      async createRecord() {
+        const subdomain = document.getElementById('new-subdomain').value.trim();
+        if (!subdomain) return this.showToast('Error', 'Enter a subdomain', 'error');
+
+        try {
+          await this.api('POST', '/api/records', { subdomain });
+          this.showToast('Created', `${subdomain}.${this.settings.domain} created`, 'success');
+          document.getElementById('new-subdomain').value = '';
+          this.loadRecords();
+        } catch (e) {
+          this.showToast('Error', e.message, 'error');
+        }
+      },
+
+      async deleteRecord(id, name) {
+        if (!confirm(`Delete ${name}?`)) return;
+        try {
+          await this.api('DELETE', `/api/records/${id}`);
+          this.showToast('Deleted', `${name} removed`, 'success');
+          this.loadRecords();
+        } catch (e) {
+          this.showToast('Error', e.message, 'error');
+        }
+      },
+
+      logout() {
+        localStorage.removeItem('subdomain_token');
+        this.token = null;
+        this.user = null;
+        this.renderLogin();
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>

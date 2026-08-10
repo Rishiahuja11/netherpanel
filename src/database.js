@@ -200,6 +200,7 @@ async function initDatabase() {
       name TEXT NOT NULL,
       cron_expression TEXT NOT NULL,
       action TEXT NOT NULL,
+      command TEXT,
       enabled INTEGER DEFAULT 1,
       last_run DATETIME,
       next_run DATETIME,

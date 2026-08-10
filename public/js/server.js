@@ -447,138 +447,114 @@ const NetherServer = {
   },
 
   initFileManager() {
-    const fileItems = document.querySelectorAll('.file-tree-item');
-    const editor = document.getElementById('file-editor');
-    const fileName = document.getElementById('current-file-name');
-    const saveBtn = document.getElementById('file-save-btn');
-
-    const fileContents = {
-      '/server.properties': `#Minecraft server properties
-#Sat Aug 09 2026
-level-name=world
-level-seed=
-level-type=minecraft\\:normal
-gamemode=survival
-difficulty=normal
-pvp=true
-max-players=50
-online-mode=true
-allow-flight=false
-spawn-protection=16
-view-distance=10
-simulation-distance=10
-network-compression-threshold=256
-rate-limit=0
-white-list=false
-enable-query=true
-query.port=25565
-server-port=25565
-server-ip=
-spawn-animals=true
-spawn-monsters=true
-spawn-npcs=true
-generate-structures=true
-allow-nether=true
-hardcore=false
-enable-command-block=true
-broadcast-rcon-to-ops=true
-broadcast-console-to-ops=true
-max-world-size=29999984
-sync-chunk-writes=true
-entity-broadcast-range-percentage=100`,
-
-      '/bukkit.yml': `# This is the main configuration file for Bukkit.
-# ... bukkit.yml configuration ...
-settings:
-  allow-end: true
-  warn-on-overload: true
-  permissions-file: permissions.yml
-  update-folder: update
-  plugin-profiling: false
-  debug: false
-  connection-throttle: 4000
-  query-plugins: true
-  deprecated-verbose: default
-  shutdown-message: Server closed
-  minimum-api: none
-  use-map-color-cache: true
-spawn-limits:
-  monsters: 70
-  animals: 10
-  water-animals: 5
-  water-ambient: 20
-  water-underground-creature: 5
-  axolotls: 5
-  ambient: 15
-chunk-gc:
-  period-in-ticks: 400
-ticks:
-  animal-spawns: 400
-  monster-spawns: 1
-  water-spawns: 400
-  water-ambient-spawns: 400
-  water-underground-creature-spawns: 400
-  axolotl-spawns: 400
-  ambient-spawns: 400
-  autosave: 6000
-aliases: now-hierarchical-by-default
-`,
-
-      '/ops.json': `[
-  {
-    "uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5",
-    "name": "Notch",
-    "level": 4,
-    "bypassesPlayerLimit": true
+    this.loadFiles();
   },
-  {
-    "uuid": "4566e69fcu08e48977f43bcd132eae95",
-    "name": "jeb_",
-    "level": 3,
-    "bypassesPlayerLimit": false
-  }
-]`,
 
-      '/whitelist.json': `[
-  {
-    "uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5",
-    "name": "Notch"
-  },
-  {
-    "uuid": "4566e69fcu08e48977f43bcd132eae95",
-    "name": "jeb_"
-  }
-]`
-    };
-
-    fileItems.forEach(item => {
-      item.addEventListener('click', () => {
-        fileItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-
-        const path = item.dataset.path;
-        const name = item.querySelector('span')?.textContent || path;
-
-        if (fileName) fileName.textContent = name;
-
-        if (fileContents[path] && editor) {
-          editor.innerHTML = `<textarea spellcheck="false">${fileContents[path]}</textarea>`;
-        } else if (editor) {
-          editor.innerHTML = `
-            <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
-              <p>Preview not available for this file.</p>
-              <p style="font-size: 0.8rem; margin-top: 0.5rem;">Click "Download" to save locally or edit via console.</p>
-            </div>
-          `;
-        }
+  async loadFiles(subPath = '') {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/files?path=${encodeURIComponent(subPath)}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
+      if (!res.ok) throw new Error('Failed to load files');
+      const files = await res.json();
+      this.renderFiles(files, subPath);
+    } catch (err) {
+      console.error('Failed to load files:', err);
+    }
+  },
+
+  renderFiles(files, currentPath) {
+    const tree = document.getElementById('file-tree');
+    if (!tree) return;
+
+    let html = '';
+    if (currentPath) {
+      const parent = currentPath.split('/').slice(0, -1).join('/');
+      html += `<div class="file-tree-item" data-path="${parent}" onclick="NetherServer.loadFiles('${parent}')">
+        <i data-lucide="folder" style="color: var(--text-tertiary)"></i>
+        <span>..</span>
+      </div>`;
+    }
+
+    files.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      return a.name.localeCompare(b.name);
     });
 
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        NetherServer.showToast('Saved', 'File saved successfully', 'success');
+    files.forEach(file => {
+      const icon = file.isDirectory ? 'folder' : 'file';
+      const color = file.isDirectory ? 'var(--accent-orange)' : 'var(--text-tertiary)';
+      const size = file.isDirectory ? '' : this.formatBytes(file.size);
+      const clickAction = file.isDirectory
+        ? `NetherServer.loadFiles('${currentPath ? currentPath + '/' : ''}${file.name}')`
+        : `NetherServer.openFile('${currentPath ? currentPath + '/' : ''}${file.name}')`;
+      html += `<div class="file-tree-item" data-path="${file.path}" onclick="${clickAction}">
+        <i data-lucide="${icon}" style="color: ${color}"></i>
+        <span>${file.name}</span>
+        <span class="file-size">${size}</span>
+      </div>`;
+    });
+
+    tree.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  },
+
+  async openFile(filePath) {
+    const editor = document.getElementById('file-editor');
+    const fileName = document.getElementById('current-file-name');
+    if (fileName) fileName.textContent = filePath.split('/').pop();
+
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/files/read?path=${encodeURIComponent(filePath)}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
+      if (!res.ok) throw new Error('Failed to read file');
+      const data = await res.json();
+
+      if (editor) {
+        editor.innerHTML = `<textarea spellcheck="false" id="file-editor-content">${data.content || ''}</textarea>`;
+      }
+
+      const saveBtn = document.getElementById('file-save-btn');
+      if (saveBtn) {
+        saveBtn.onclick = () => this.saveFile(filePath);
+      }
+    } catch (err) {
+      if (editor) {
+        editor.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+          <p>Failed to load file.</p>
+        </div>`;
+      }
     }
+  },
+
+  async saveFile(filePath) {
+    const content = document.getElementById('file-editor-content')?.value;
+    if (content === undefined) return;
+
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/files/write`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: filePath, content })
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      NetherServer.showToast('Saved', 'File saved successfully', 'success');
+    } catch (err) {
+      NetherServer.showToast('Error', 'Failed to save file', 'error');
+    }
+  },
+
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   },
 
   initModManager() {
@@ -845,12 +821,18 @@ aliases: now-hierarchical-by-default
       btn.addEventListener('click', () => {
         const text = btn.textContent.trim();
         const card = btn.closest('.schedule-card');
+        const scheduleId = card?.dataset?.scheduleId;
         const name = card?.querySelector('h4')?.textContent || 'Task';
 
-        if (text.includes('Run Now')) {
+        if (text.includes('Run Now') && scheduleId) {
           NetherServer.showToast('Running', `Running "${name}"...`, 'info');
-        } else if (text.includes('Edit')) {
-          NetherServer.showToast('Edit', `Editing "${name}"...`, 'info');
+          fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}/run`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.authToken}` }
+          }).then(r => r.json()).then(d => {
+            if (d.error) NetherServer.showToast('Error', d.error, 'error');
+            else NetherServer.showToast('Done', `"${name}" executed`, 'success');
+          }).catch(() => NetherServer.showToast('Error', 'Failed to run schedule', 'error'));
         }
       });
     });
@@ -861,9 +843,13 @@ aliases: now-hierarchical-by-default
     if (createBtn) {
       createBtn.addEventListener('click', () => {
         NetherServer.showToast('Creating Backup', 'Backup is being created...', 'info');
-        setTimeout(() => {
-          NetherServer.showToast('Backup Complete', 'Backup created successfully!', 'success');
-        }, 3000);
+        fetch(`/api/servers/${this.serverId}/backups`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' }
+        }).then(r => r.json()).then(d => {
+          if (d.error) NetherServer.showToast('Error', d.error, 'error');
+          else NetherServer.showToast('Backup Complete', 'Backup created successfully!', 'success');
+        }).catch(() => NetherServer.showToast('Error', 'Failed to create backup', 'error'));
       });
     }
 
@@ -871,14 +857,27 @@ aliases: now-hierarchical-by-default
       btn.addEventListener('click', () => {
         const icon = btn.querySelector('i');
         const card = btn.closest('.backup-card');
+        const backupId = card?.dataset?.backupId;
         const name = card?.querySelector('.backup-name')?.textContent || 'Backup';
 
-        if (icon?.dataset.lucide === 'rotate-ccw') {
+        if (icon?.dataset.lucide === 'rotate-ccw' && backupId) {
           NetherServer.showToast('Restoring', `Restoring from "${name}"...`, 'warning');
-        } else if (icon?.dataset.lucide === 'download') {
-          NetherServer.showToast('Downloading', `Downloading "${name}"...`, 'info');
-        } else if (icon?.dataset.lucide === 'trash-2') {
+          fetch(`/api/servers/${this.serverId}/backups/${backupId}/restore`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.authToken}` }
+          }).then(r => r.json()).then(d => {
+            if (d.error) NetherServer.showToast('Error', d.error, 'error');
+            else NetherServer.showToast('Restored', `"${name}" restored`, 'success');
+          }).catch(() => NetherServer.showToast('Error', 'Failed to restore', 'error'));
+        } else if (icon?.dataset.lucide === 'trash-2' && backupId) {
           NetherServer.showToast('Deleted', `Backup "${name}" deleted`, 'error');
+          fetch(`/api/servers/${this.serverId}/backups/${backupId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${this.authToken}` }
+          }).then(r => r.json()).then(d => {
+            if (d.error) NetherServer.showToast('Error', d.error, 'error');
+            else card.remove();
+          }).catch(() => NetherServer.showToast('Error', 'Failed to delete', 'error'));
         }
       });
     });
