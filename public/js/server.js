@@ -37,7 +37,9 @@ const NetherServer = {
       document.getElementById('server-title').textContent = server.name;
 
       const addr = server.subdomain
-        ? `${server.subdomain}.smp45.qzz.io`
+        ? (server.port === 25565 || server.port === 19132
+          ? `${server.subdomain}.smp45.qzz.io`
+          : `${server.subdomain}.smp45.qzz.io:${server.port}`)
         : `localhost:${server.port}`;
       document.getElementById('server-addr-text').textContent = addr;
 

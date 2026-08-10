@@ -205,7 +205,11 @@ const NetherApp = {
     const port = document.getElementById('server-port')?.value || '25565';
     const sub = document.getElementById('server-subdomain')?.value;
     const allSw = { ...this.JAVA_SOFTWARE, ...this.BEDROCK_SOFTWARE };
-    const addr = sub ? `${sub}.smp45.qzz.io` : `your-ip:${port}`;
+    const addr = sub
+      ? (port === '25565' || port === '19132'
+        ? `${sub}.smp45.qzz.io`
+        : `${sub}.smp45.qzz.io:${port}`)
+      : `your-ip:${port}`;
 
     document.getElementById('review-name').textContent = name;
     document.getElementById('review-game').textContent = this.selectedGameType === 'bedrock' ? 'Bedrock' : 'Java';
@@ -270,7 +274,11 @@ const NetherApp = {
 
     grid.innerHTML = this.servers.map(s => {
       const isRunning = s.status === 'running';
-      const addr = s.subdomain ? `${s.subdomain}.smp45.qzz.io` : `localhost:${s.port}`;
+      const addr = s.subdomain
+        ? (s.port === 25565 || s.port === 19132
+          ? `${s.subdomain}.smp45.qzz.io`
+          : `${s.subdomain}.smp45.qzz.io:${s.port}`)
+        : `localhost:${s.port}`;
       return `
       <div class="server-card" data-status="${s.status}">
         <div class="server-card-header">

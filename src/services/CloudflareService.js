@@ -7,14 +7,18 @@ class CloudflareService {
     this.apiToken = apiToken;
     this.zoneId = zoneId;
     this.serverIp = serverIp;
+    this.domain = 'smp45.qzz.io';
   }
 
   static fromSettings(db) {
     const token = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_api_token'")?.get()?.value;
     const zoneId = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_zone_id'")?.get()?.value;
     const ip = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_server_ip'")?.get()?.value;
+    const domain = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_domain'")?.get()?.value;
     if (!token || !zoneId || !ip) return null;
-    return new CloudflareService(token, zoneId, ip);
+    const cf = new CloudflareService(token, zoneId, ip);
+    cf.domain = domain || 'smp45.qzz.io';
+    return cf;
   }
 
   request(method, path, body) {
@@ -54,7 +58,7 @@ class CloudflareService {
   }
 
   async createSubdomain(subdomain) {
-    const fqdn = `${subdomain}.smp45.qzz.io`;
+    const fqdn = `${subdomain}.${this.domain}`;
 
     const existing = await this.listDNSRecords('A', fqdn);
     if (existing.success && existing.result && existing.result.length > 0) {
@@ -73,7 +77,7 @@ class CloudflareService {
   }
 
   async deleteSubdomain(subdomain) {
-    const fqdn = `${subdomain}.smp45.qzz.io`;
+    const fqdn = `${subdomain}.${this.domain}`;
     const records = await this.listDNSRecords('A', fqdn);
     if (!records.success || !records.result || records.result.length === 0) {
       return { success: true, message: 'Record not found' };

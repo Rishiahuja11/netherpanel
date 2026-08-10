@@ -33,7 +33,6 @@ const SERVER_TYPES = {
 };
 
 const serverProcesses = new Map();
-const tunnelProcesses = new Map();
 const consoleBuffers = new Map();
 
 class ServerService {
@@ -52,9 +51,26 @@ class ServerService {
     return path.join(SERVERS_DIR, String(serverId));
   }
 
+  static getUsedPorts() {
+    const db = this.getDb();
+    const rows = db.prepare('SELECT port FROM servers').all();
+    const used = new Set(rows.map(r => r.port));
+    const net = require('net');
+    for (let p = 25565; p < 25700; p++) {
+      if (!used.has(p)) return p;
+    }
+    for (let p = 19132; p < 19200; p++) {
+      if (!used.has(p)) return p;
+    }
+    for (let p = 30000; p < 30100; p++) {
+      if (!used.has(p)) return p;
+    }
+    return 25565;
+  }
+
   static async createServer(userId, data) {
     const db = this.getDb();
-    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port = 25565, ramMin = 1024, ramMax = 2048, subdomain = null } = data;
+    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port, ramMin = 1024, ramMax = 2048, subdomain = null } = data;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const existing = db.prepare('SELECT id FROM servers WHERE slug = ?').get(slug);
@@ -68,8 +84,7 @@ class ServerService {
       throw new Error(`Maximum server limit (${maxServers}) reached`);
     }
 
-    const defaultPort = gameType === 'bedrock' ? 19132 : 25565;
-    const actualPort = port || defaultPort;
+    const actualPort = port || this.getUsedPorts();
 
     const result = db.prepare(
       'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path, subdomain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -357,10 +372,6 @@ class ServerService {
     serverProcesses.set(serverId, child);
     db.prepare('UPDATE servers SET status = ?, pid = ? WHERE id = ?').run('running', child.pid, serverId);
 
-    if (server.subdomain) {
-      this.startTunnel(serverId, server.port, server.subdomain);
-    }
-
     const bufferConsole = (data) => {
       const line = data.toString();
       const buffer = consoleBuffers.get(serverId) || [];
@@ -386,7 +397,6 @@ class ServerService {
         this.logCrash(serverId, code, signal, crashOutput);
       }
 
-      this.stopTunnel(serverId);
       UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
     });
 
@@ -427,8 +437,6 @@ class ServerService {
     db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
     serverProcesses.delete(serverId);
 
-    this.stopTunnel(serverId);
-
     UserService.logActivity(userId, 'server_stop', 'server', serverId, 'Server stopped');
     return this.getServer(serverId);
   }
@@ -451,56 +459,11 @@ class ServerService {
       proc.kill('SIGKILL');
     }
 
-    this.stopTunnel(serverId);
-
     db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
     serverProcesses.delete(serverId);
 
     UserService.logActivity(userId, 'server_kill', 'server', serverId, 'Server force killed');
     return this.getServer(serverId);
-  }
-
-  static startTunnel(serverId, port, subdomain) {
-    const tunnelProc = tunnelProcesses.get(serverId);
-    if (tunnelProc && !tunnelProc.killed) return;
-
-    try {
-      const child = spawn('cloudflared', [
-        'tunnel', '--url', `http://localhost:${port}`,
-        '--no-autoupdate'
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      tunnelProcesses.set(serverId, child);
-
-      const buffer = consoleBuffers.get(serverId) || [];
-      child.stdout.on('data', (data) => {
-        const line = data.toString();
-        buffer.push({ timestamp: new Date().toISOString(), line: `[tunnel] ${line}` });
-      });
-      child.stderr.on('data', (data) => {
-        const line = data.toString();
-        buffer.push({ timestamp: new Date().toISOString(), line: `[tunnel] ${line}` });
-      });
-      consoleBuffers.set(serverId, buffer);
-
-      child.on('exit', () => {
-        tunnelProcesses.delete(serverId);
-      });
-
-      console.log(`[Tunnel] Started for server ${serverId} on port ${port}`);
-    } catch (err) {
-      console.error(`[Tunnel] Failed to start: ${err.message}`);
-    }
-  }
-
-  static stopTunnel(serverId) {
-    const tunnelProc = tunnelProcesses.get(serverId);
-    if (tunnelProc && !tunnelProc.killed) {
-      tunnelProc.kill('SIGTERM');
-      tunnelProcesses.delete(serverId);
-    }
   }
 
   static getConsole(serverId) {
