@@ -3,3 +3,4 @@ data/
 .env
 *.db
 .DS_Store
+session-*.md

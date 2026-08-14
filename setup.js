@@ -85,8 +85,8 @@ async function main() {
     if (exec('command -v java')) {
         success('Java already installed');
     } else {
-        execLive('pkg install -y openjdk-17');
-        success('Java 17 installed');
+        execLive('pkg install -y openjdk-25');
+        success('Java 25 installed');
     }
 
     // Step 4: Install utilities

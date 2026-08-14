@@ -1,6 +1,7 @@
 const NetherApp = {
   currentWizardStep: 1,
-  maxWizardStep: 4,
+  maxWizardStep: 5,
+  wizardBackupFile: null,
   selectedGameType: 'java',
   servers: [],
 
@@ -37,10 +38,12 @@ const NetherApp = {
     this.initUserMenu();
     this.initCreateServerModal();
     this.initWizardNavigation();
+    this.initWizardBackupImport();
     this.initGameTypeSelector();
     this.initLogout();
     this.updateSoftwareOptions();
     this.loadServers();
+    setInterval(() => this.loadServerStats(), 15000);
   },
 
   api(method, url, body) {
@@ -65,8 +68,6 @@ const NetherApp = {
   updateUserUI() {
     const name = this.user?.username || 'User';
     const initials = name.substring(0, 2).toUpperCase();
-    document.getElementById('page-title').textContent = `Welcome, ${name}`;
-    document.getElementById('user-display-name').textContent = name;
     document.getElementById('user-avatar').textContent = initials;
     document.getElementById('user-avatar-lg').textContent = initials;
     document.getElementById('dropdown-user-name').textContent = name;
@@ -125,7 +126,6 @@ const NetherApp = {
       <label class="software-option">
         <input type="radio" name="software" value="${key}" ${i === 0 ? 'checked' : ''}>
         <div class="software-card">
-          <div class="software-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
           <strong>${val.name}</strong>
           <span>${val.desc}</span>
         </div>
@@ -139,7 +139,6 @@ const NetherApp = {
     });
     this.selectedSoftware = Object.keys(sw)[0];
     this.updateVersionOptions();
-    this.initLucideIcons();
   },
 
   async updateVersionOptions() {
@@ -171,9 +170,7 @@ const NetherApp = {
 
   updatePort() {
     const port = document.getElementById('server-port');
-    const hint = document.getElementById('port-hint');
     if (port) port.value = this.selectedGameType === 'bedrock' ? 19132 : 25565;
-    if (hint) hint.textContent = this.selectedGameType === 'bedrock' ? 'Default Bedrock port' : 'Default Java port';
   },
 
   initWizardNavigation() {
@@ -187,6 +184,46 @@ const NetherApp = {
         this.createServer();
       }
     });
+  },
+
+  initWizardBackupImport() {
+    const area = document.getElementById('backup-import-area');
+    const input = document.getElementById('wizard-backup-file');
+    const selected = document.getElementById('wizard-backup-selected');
+    const nameEl = document.getElementById('wizard-backup-name');
+    const removeBtn = document.getElementById('wizard-backup-remove');
+
+    if (area && input) {
+      area.addEventListener('click', () => input.click());
+      area.addEventListener('dragover', e => { e.preventDefault(); area.style.borderColor = 'var(--primary)'; });
+      area.addEventListener('dragleave', () => { area.style.borderColor = 'var(--border)'; });
+      area.addEventListener('drop', e => {
+        e.preventDefault();
+        area.style.borderColor = 'var(--border)';
+        if (e.dataTransfer.files.length && e.dataTransfer.files[0].name.endsWith('.zip')) {
+          input.files = e.dataTransfer.files;
+          input.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+    if (input) {
+      input.addEventListener('change', () => {
+        if (input.files.length > 0) {
+          this.wizardBackupFile = input.files[0];
+          if (nameEl) nameEl.textContent = input.files[0].name;
+          if (selected) selected.style.display = '';
+          if (area) area.style.display = 'none';
+        }
+      });
+    }
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        this.wizardBackupFile = null;
+        if (input) input.value = '';
+        if (selected) selected.style.display = 'none';
+        if (area) area.style.display = '';
+      });
+    }
   },
 
   setWizardStep(step) {
@@ -204,9 +241,9 @@ const NetherApp = {
     document.getElementById('wizard-prev').style.display = step === 1 ? 'none' : 'inline-flex';
     const next = document.getElementById('wizard-next');
     if (step === this.maxWizardStep) {
-      next.innerHTML = '<i data-lucide="check"></i> Create Server';
+      next.innerHTML = 'Create Server';
     } else {
-      next.innerHTML = 'Next Step <i data-lucide="arrow-right"></i>';
+      next.innerHTML = 'Next Step';
     }
     this.initLucideIcons();
     this.updateReview();
@@ -216,10 +253,8 @@ const NetherApp = {
     const name = document.getElementById('server-name')?.value || 'My Server';
     const sw = document.querySelector('input[name="software"]:checked')?.value || 'paper';
     const ver = document.getElementById('server-version')?.value || '1.21.4';
-    const ramMin = document.getElementById('server-ram-min')?.value || '1024';
-    const ramMax = document.getElementById('server-ram-max')?.value || '2048';
     const port = document.getElementById('server-port')?.value || '25565';
-    const sub = document.getElementById('server-subdomain')?.value;
+    const sub = document.getElementById('server-subdomain')?.value?.trim();
     const allSw = { ...this.JAVA_SOFTWARE, ...this.BEDROCK_SOFTWARE };
     const addr = sub
       ? (port === '25565' || port === '19132'
@@ -231,33 +266,68 @@ const NetherApp = {
     document.getElementById('review-game').textContent = this.selectedGameType === 'bedrock' ? 'Bedrock' : 'Java';
     document.getElementById('review-software').textContent = allSw[sw]?.name || sw;
     document.getElementById('review-version').textContent = ver;
-    document.getElementById('review-ram').textContent = `${ramMin}-${ramMax} MB`;
     document.getElementById('review-port').textContent = port;
     document.getElementById('review-address').textContent = addr;
+
+    const backupRow = document.getElementById('review-backup-row');
+    const backupName = document.getElementById('review-backup');
+    if (this.wizardBackupFile) {
+      if (backupRow) backupRow.style.display = '';
+      if (backupName) backupName.textContent = this.wizardBackupFile.name;
+    } else {
+      if (backupRow) backupRow.style.display = 'none';
+    }
+
+    const preview = document.getElementById('subdomain-preview');
+    if (preview) preview.textContent = sub ? `${sub}.smp45.qzz.io` : 'myserver.smp45.qzz.io';
   },
 
   async createServer() {
     const name = document.getElementById('server-name')?.value?.trim();
     const software = document.querySelector('input[name="software"]:checked')?.value;
     const version = document.getElementById('server-version')?.value;
-    const ramMin = parseInt(document.getElementById('server-ram-min')?.value || '1024');
-    const ramMax = parseInt(document.getElementById('server-ram-max')?.value || '2048');
     const port = parseInt(document.getElementById('server-port')?.value || '25565');
     const subdomain = document.getElementById('server-subdomain')?.value?.trim();
 
     if (!name) return this.showToast('Error', 'Server name is required', 'error');
+    if (subdomain && !/^[a-z0-9-]+$/.test(subdomain)) return this.showToast('Error', 'Subdomain can only contain lowercase letters, numbers, and hyphens', 'error');
 
     try {
       this.showToast('Creating', `Setting up "${name}"...`, 'info');
       const server = await this.api('POST', '/api/servers', {
         name, version, server_type: software,
         game_type: this.selectedGameType, port,
-        ram_min: ramMin, ram_max: ramMax, subdomain
+        ram_min: 0, ram_max: 2048, subdomain
       });
+
+      if (this.wizardBackupFile) {
+        this.showToast('Importing', 'Uploading backup file...', 'info');
+        const fd = new FormData();
+        fd.append('file', this.wizardBackupFile);
+        const uploadRes = await fetch(`/api/servers/${server.id}/restore-upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${this.token}` },
+          body: fd
+        });
+        if (!uploadRes.ok) {
+          const d = await uploadRes.json();
+          this.showToast('Warning', `Server created but backup import failed: ${d.error}`, 'error');
+        } else {
+          this.showToast('Imported', 'Backup restored successfully!', 'success');
+        }
+      }
+
       document.getElementById('create-server-modal').classList.remove('active');
       document.body.style.overflow = '';
       this.showToast('Created', `"${name}" created successfully!`, 'success');
       this.currentWizardStep = 1;
+      this.wizardBackupFile = null;
+      const input = document.getElementById('wizard-backup-file');
+      if (input) input.value = '';
+      const sel = document.getElementById('wizard-backup-selected');
+      if (sel) sel.style.display = 'none';
+      const area = document.getElementById('backup-import-area');
+      if (area) area.style.display = '';
       this.setWizardStep(1);
       this.loadServers();
     } catch (err) {
@@ -267,10 +337,36 @@ const NetherApp = {
 
   async loadServers() {
     try {
-      this.servers = await this.api('GET', '/api/servers');
+      const result = await this.api('GET', '/api/servers');
+      this.servers = Array.isArray(result) ? result : [];
       this.renderServers();
+      this.loadServerStats();
     } catch (err) {
       console.error('Failed to load servers:', err);
+    }
+  },
+
+  async loadServerStats() {
+    const running = this.servers.filter(s => s.status === 'running');
+    for (const s of running) {
+      try {
+        const res = await fetch(`/api/servers/${s.id}/resources`, {
+          headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        if (res.ok) {
+          const stats = await res.json();
+          const card = document.querySelector(`.server-card[data-server-id="${s.id}"]`);
+          if (card) {
+            const statsEl = card.querySelector('.server-stats');
+            if (statsEl) {
+              const cpu = stats.cpu ? stats.cpu.toFixed(1) : '0';
+              const mem = stats.memory ? `${(stats.memory / 1024 / 1024).toFixed(0)}MB` : '0MB';
+              statsEl.innerHTML = `<span title="CPU"><i data-lucide="cpu" style="width:12px;height:12px"></i> ${cpu}%</span><span title="Memory"><i data-lucide="hard-drive" style="width:12px;height:12px"></i> ${mem}</span>`;
+              lucide.createIcons({ nodes: [statsEl] });
+            }
+          }
+        }
+      } catch (e) {}
     }
   },
 
@@ -296,7 +392,7 @@ const NetherApp = {
           : `${s.subdomain}.smp45.qzz.io:${s.port}`)
         : `localhost:${s.port}`;
       return `
-      <div class="server-card" data-status="${s.status}">
+      <div class="server-card" data-status="${s.status}" data-server-id="${s.id}">
         <div class="server-card-header">
           <div class="server-info">
             <h3 class="server-name">${s.name}</h3>
@@ -312,6 +408,7 @@ const NetherApp = {
             <i data-lucide="globe"></i>
             <span>${addr}</span>
           </div>
+          ${isRunning ? '<div class="server-stats" style="display:flex;gap:0.75rem;font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem"></div>' : ''}
         </div>
         <div class="server-card-footer">
           <div class="server-actions">
@@ -358,6 +455,12 @@ const NetherApp = {
     }
   },
 
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  },
+
   showToast(title, message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -366,11 +469,16 @@ const NetherApp = {
     toast.className = `toast ${type}`;
     toast.innerHTML = `
       <i data-lucide="${icons[type]}" class="toast-icon"></i>
-      <div class="toast-message"><div class="toast-title">${title}</div><div class="toast-desc">${message}</div></div>
-      <button class="toast-close" onclick="this.parentElement.remove()"><i data-lucide="x"></i></button>`;
+      <div class="toast-message"><div class="toast-title">${this.escapeHtml(title)}</div><div class="toast-desc">${this.escapeHtml(String(message))}</div></div>
+      <button class="toast-close" onclick="this.parentElement.classList.add('leaving'); setTimeout(() => this.parentElement.remove(), 300);"><i data-lucide="x"></i></button>`;
     container.appendChild(toast);
     lucide.createIcons({ nodes: [toast] });
-    setTimeout(() => toast.remove(), 5000);
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.classList.add('leaving');
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 5000);
   }
 };
 

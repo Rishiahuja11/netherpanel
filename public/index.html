@@ -2,43 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NetherPanel - Dashboard</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="css/style.css?v=3">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="dashboard-page">
+<body>
   <nav class="top-nav">
     <div class="nav-left">
       <a href="index.html" class="nav-logo">
         <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
-          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#navGrad)" stroke-width="1.5" fill="none"/>
-          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#navGrad)"/>
-          <defs>
-            <linearGradient id="navGrad" x1="2" y1="2" x2="30" y2="30">
-              <stop stop-color="#f97316"/>
-              <stop offset="1" stop-color="#06b6d4"/>
-            </linearGradient>
-          </defs>
+          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#ng)" stroke-width="1.5" fill="none"/>
+          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#ng)"/>
+          <defs><linearGradient id="ng" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
         </svg>
-        <span class="logo-text">NetherPanel</span>
+        <span>NetherPanel</span>
       </a>
-      <div class="nav-links">
-        <a href="index.html" class="nav-link active">
-          <i data-lucide="layout-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-      </div>
     </div>
     <div class="nav-right">
-      <div class="user-menu" id="user-menu">
+      <div class="user-menu">
         <button class="user-avatar" id="user-menu-toggle">
           <div class="avatar-circle" id="user-avatar">?</div>
-          <span class="user-name" id="user-display-name">Loading...</span>
           <i data-lucide="chevron-down" class="chevron"></i>
         </button>
-        <div class="dropdown-menu" id="user-dropdown">
+        <div class="dropdown-menu">
           <div class="dropdown-header">
             <div class="avatar-circle large" id="user-avatar-lg">?</div>
             <div>
@@ -50,64 +40,57 @@
           <a href="#" class="dropdown-item" id="btn-logout"><i data-lucide="log-out"></i> Sign Out</a>
         </div>
       </div>
-      <button class="nav-icon-btn mobile-menu-btn" id="mobile-menu-btn">
-        <i data-lucide="menu"></i>
-      </button>
     </div>
   </nav>
 
-  <main class="main-content">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title" id="page-title">Dashboard</h1>
-        <p class="page-subtitle">Manage your Minecraft servers</p>
-      </div>
-      <button class="btn-primary" id="create-server-btn">
-        <i data-lucide="plus"></i>
-        <span>New Server</span>
-      </button>
+  <main class="dashboard">
+    <div class="dashboard-header">
+      <h1 id="page-title">Dashboard</h1>
+      <p>Manage your Minecraft servers</p>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon orange"><i data-lucide="server"></i></div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-total">0</span>
-          <span class="stat-label">Total Servers</span>
+    <div class="stats-row">
+      <div class="stat-card stagger-1">
+        <div class="stat-icon blue"><i data-lucide="server"></i></div>
+        <div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Servers</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stagger-2">
         <div class="stat-icon green"><i data-lucide="play-circle"></i></div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-running">0</span>
-          <span class="stat-label">Running</span>
+        <div>
+          <div class="stat-value" id="stat-running">0</div>
+          <div class="stat-label">Running</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stagger-3">
         <div class="stat-icon red"><i data-lucide="stop-circle"></i></div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-stopped">0</span>
-          <span class="stat-label">Stopped</span>
+        <div>
+          <div class="stat-value" id="stat-stopped">0</div>
+          <div class="stat-label">Stopped</div>
         </div>
       </div>
     </div>
 
-    <div class="section-header" id="servers">
-      <h2>Your Servers</h2>
+    <div class="dashboard-header" style="display:flex;align-items:center;justify-content:space-between">
+      <h2 style="font-size:1.1rem">Your Servers</h2>
+      <button class="btn-primary" id="create-server-btn" style="width:auto;padding:0.5rem 1rem;font-size:0.85rem">
+        <i data-lucide="plus"></i> New Server
+      </button>
     </div>
 
     <div class="servers-grid" id="servers-grid">
       <div class="empty-state" id="empty-state">
-        <i data-lucide="server" style="width:48px;height:48px;opacity:0.3;"></i>
+        <i data-lucide="server" style="width:48px;height:48px"></i>
         <p>No servers yet</p>
         <span>Create your first server to get started</span>
       </div>
     </div>
   </main>
 
-  <!-- Create Server Modal -->
   <div class="modal-overlay" id="create-server-modal">
-    <div class="modal create-server-modal">
+    <div class="modal">
       <div class="modal-header">
         <h2>Create New Server</h2>
         <button class="modal-close" id="close-modal"><i data-lucide="x"></i></button>
@@ -115,140 +98,118 @@
       <div class="modal-body">
         <div class="wizard-steps">
           <div class="wizard-step active" data-step="1">
-            <div class="step-number">1</div>
-            <span>Game</span>
+            <div class="wizard-step-num">1</div>
+            <div class="wizard-step-label">Game</div>
           </div>
           <div class="wizard-step" data-step="2">
-            <div class="step-number">2</div>
-            <span>Software</span>
+            <div class="wizard-step-num">2</div>
+            <div class="wizard-step-label">Software</div>
           </div>
           <div class="wizard-step" data-step="3">
-            <div class="step-number">3</div>
-            <span>Configure</span>
+            <div class="wizard-step-num">3</div>
+            <div class="wizard-step-label">Configure</div>
           </div>
           <div class="wizard-step" data-step="4">
-            <div class="step-number">4</div>
-            <span>Review</span>
+            <div class="wizard-step-num">4</div>
+            <div class="wizard-step-label">Import</div>
+          </div>
+          <div class="wizard-step" data-step="5">
+            <div class="wizard-step-num">5</div>
+            <div class="wizard-step-label">Review</div>
           </div>
         </div>
 
-        <div class="wizard-content">
-          <!-- Step 1: Game Type -->
-          <div class="wizard-panel active" data-panel="1">
-            <div class="form-group">
-              <label for="server-name">Server Name</label>
-              <input type="text" id="server-name" placeholder="My Server" class="form-input" required>
+        <div class="wizard-panel active" data-panel="1">
+          <div class="form-group">
+            <label>Server Name</label>
+            <input type="text" id="server-name" class="form-input" placeholder="My Server" required>
+          </div>
+          <div class="form-group">
+            <label>Game Type</label>
+            <div class="game-type-selector">
+              <label class="game-type-card">
+                <input type="radio" name="game-type" value="java" checked>
+                <div class="game-type-card-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  <strong>Java Edition</strong>
+                  <span>PC servers with mods & plugins</span>
+                </div>
+              </label>
+              <label class="game-type-card">
+                <input type="radio" name="game-type" value="bedrock">
+                <div class="game-type-card-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+                  <strong>Bedrock Edition</strong>
+                  <span>Mobile, Console & Windows</span>
+                </div>
+              </label>
             </div>
-            <div class="form-group">
-              <label>Game Type</label>
-              <div class="game-type-grid">
-                <label class="game-type-option">
-                  <input type="radio" name="game-type" value="java" checked>
-                  <div class="game-type-card">
-                    <div class="game-type-icon java">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                    </div>
-                    <strong>Java Edition</strong>
-                    <span>PC servers with mods & plugins</span>
-                  </div>
-                </label>
-                <label class="game-type-option">
-                  <input type="radio" name="game-type" value="bedrock">
-                  <div class="game-type-card">
-                    <div class="game-type-icon bedrock">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
-                    </div>
-                    <strong>Bedrock Edition</strong>
-                    <span>Mobile, Console & Windows</span>
-                  </div>
-                </label>
+          </div>
+        </div>
+
+        <div class="wizard-panel" data-panel="2">
+          <div class="form-group">
+            <label>Server Software</label>
+            <div class="software-grid" id="software-grid"></div>
+          </div>
+          <div class="form-group">
+            <label>Version</label>
+            <select id="server-version" class="form-select"></select>
+          </div>
+        </div>
+
+        <div class="wizard-panel" data-panel="3">
+          <div class="form-group">
+            <label>Server Port</label>
+            <input type="number" id="server-port" class="form-input" value="25565" min="1024" max="65535">
+          </div>
+          <div class="form-group">
+            <label>Subdomain <span style="color:var(--error)">*</span></label>
+            <input type="text" id="server-subdomain" class="form-input" placeholder="myserver" required>
+            <span class="form-hint">Your server address: <strong id="subdomain-preview">myserver.smp45.qzz.io</strong></span>
+          </div>
+        </div>
+
+        <div class="wizard-panel" data-panel="4">
+          <div class="form-group">
+            <label>Import Backup <span style="color:var(--text-muted)">(optional)</span></label>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">Upload a backup zip to pre-fill your server with existing world files, plugins, and configs.</p>
+            <div class="backup-import-area" id="backup-import-area" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:border-color 0.2s">
+              <i data-lucide="upload-cloud" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:0.5rem"></i>
+              <p style="font-size:0.85rem;color:var(--text-muted)">Click to choose a .zip backup file</p>
+              <p style="font-size:0.75rem;color:var(--text-light);margin-top:0.25rem">or drag and drop</p>
+            </div>
+            <input type="file" id="wizard-backup-file" accept=".zip" style="display:none">
+            <div id="wizard-backup-selected" style="display:none;margin-top:0.75rem">
+              <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg-secondary);border-radius:var(--radius)">
+                <i data-lucide="file-archive" style="width:16px;height:16px;color:var(--primary)"></i>
+                <span id="wizard-backup-name" style="font-size:0.82rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                <button class="btn-sm danger" id="wizard-backup-remove" style="padding:0.2rem"><i data-lucide="x" style="width:12px;height:12px"></i></button>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Step 2: Software -->
-          <div class="wizard-panel" data-panel="2">
-            <div class="form-group">
-              <label>Server Software</label>
-              <div class="software-grid" id="software-grid"></div>
-            </div>
-            <div class="form-group">
-              <label for="server-version">Version</label>
-              <select id="server-version" class="form-select"></select>
-            </div>
-          </div>
-
-          <!-- Step 3: Configure -->
-          <div class="wizard-panel" data-panel="3">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="server-ram-min">Minimum RAM (MB)</label>
-                <input type="number" id="server-ram-min" class="form-input" value="1024" min="512" max="32768" step="512">
-              </div>
-              <div class="form-group">
-                <label for="server-ram-max">Maximum RAM (MB)</label>
-                <input type="number" id="server-ram-max" class="form-input" value="2048" min="1024" max="32768" step="512">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="server-port">Server Port</label>
-              <input type="number" id="server-port" class="form-input" value="25565" min="1024" max="65535">
-              <span class="form-hint" id="port-hint">Default port for Java Edition</span>
-            </div>
-            <div class="form-group">
-              <label for="server-subdomain">Subdomain (optional)</label>
-              <div class="input-with-suffix">
-                <input type="text" id="server-subdomain" class="form-input" placeholder="myserver">
-                <span class="input-suffix">.smp45.qzz.io</span>
-              </div>
-              <span class="form-hint">Players will join via this address. Leave empty to use IP:port only.</span>
-            </div>
-          </div>
-
-          <!-- Step 4: Review -->
-          <div class="wizard-panel" data-panel="4">
-            <div class="review-summary">
-              <div class="review-item">
-                <span class="review-label">Server Name</span>
-                <span class="review-value" id="review-name">-</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Game Type</span>
-                <span class="review-value" id="review-game">Java Edition</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Software</span>
-                <span class="review-value" id="review-software">Paper</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Version</span>
-                <span class="review-value" id="review-version">1.21.4</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">RAM</span>
-                <span class="review-value" id="review-ram">1024-2048 MB</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Port</span>
-                <span class="review-value" id="review-port">25565</span>
-              </div>
-              <div class="review-item">
-                <span class="review-label">Address</span>
-                <span class="review-value" id="review-address">-</span>
-              </div>
-            </div>
+        <div class="wizard-panel" data-panel="5">
+          <div class="review-grid">
+            <div class="review-row"><span class="review-label">Name</span><span class="review-value" id="review-name">-</span></div>
+            <div class="review-row"><span class="review-label">Game</span><span class="review-value" id="review-game">Java</span></div>
+            <div class="review-row"><span class="review-label">Software</span><span class="review-value" id="review-software">Paper</span></div>
+            <div class="review-row"><span class="review-label">Version</span><span class="review-value" id="review-version">-</span></div>
+            <div class="review-row"><span class="review-label">Port</span><span class="review-value" id="review-port">25565</span></div>
+            <div class="review-row"><span class="review-label">Address</span><span class="review-value" id="review-address">-</span></div>
+            <div class="review-row" id="review-backup-row" style="display:none"><span class="review-label">Backup</span><span class="review-value" id="review-backup">-</span></div>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" id="wizard-prev" style="display:none;">Previous</button>
-        <button class="btn-primary" id="wizard-next">Next Step <i data-lucide="arrow-right"></i></button>
+      <div class="wizard-nav">
+        <button class="btn-secondary" id="wizard-prev" style="display:none">Previous</button>
+        <button class="btn-primary" id="wizard-next" style="width:auto;padding:0.6rem 1.5rem">Next Step</button>
       </div>
     </div>
   </div>
 
   <div class="toast-container" id="toast-container"></div>
-
-  <script src="js/app.js?v=4"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>

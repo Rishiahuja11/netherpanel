@@ -160,6 +160,7 @@ async function initDatabase() {
       path TEXT NOT NULL,
       java_args TEXT,
       subdomain TEXT,
+      startup_cmd TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -269,6 +270,10 @@ async function initDatabase() {
       FOREIGN KEY (created_by) REFERENCES users(id)
     );
   `);
+
+  // Migrations - add columns that may not exist
+  try { db.db.run('ALTER TABLE servers ADD COLUMN startup_cmd TEXT'); } catch (e) {}
+  try { db.db.run('ALTER TABLE schedules ADD COLUMN user_id INTEGER'); } catch (e) {}
 
   const defaultSettings = [
     { key: 'panel_name', value: 'NetherPanel', category: 'general' },

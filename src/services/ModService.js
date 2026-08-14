@@ -7,7 +7,7 @@ const UserService = require('./UserService');
 
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const HANGAR_API = 'https://hangar.papermc.io/api/v1';
-const POGGIT_API = 'https://poggit.pmmp.io/ci';
+const POGGIT_API = 'https://poggit.pmmp.io';
 
 class ModService {
   static getDb() {
@@ -40,7 +40,7 @@ class ModService {
           try {
             const result = JSON.parse(data);
             resolve({
-              hits: result.hits.map(mod => ({
+              hits: (result.hits || []).map(mod => ({
                 id: mod.project_id,
                 slug: mod.slug,
                 title: mod.title,
@@ -71,13 +71,11 @@ class ModService {
   static async searchHangar(query, limit = 20) {
     return new Promise((resolve, reject) => {
       const params = new URLSearchParams({
-        limit: limit.toString(),
-        order: 'RELEVANCE'
+        limit: limit.toString()
       });
-      if (query) params.append('search', query);
+      if (query) params.append('q', query);
 
       const url = `${HANGAR_API}/projects?${params}`;
-
       https.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
@@ -114,7 +112,7 @@ class ModService {
       const params = new URLSearchParams({ limit: limit.toString() });
       if (query) params.append('search', query);
 
-      const url = `${POGGIT_API}/projects?${params}`;
+      const url = `${POGGIT_API}/releases.json?${params}`;
 
       https.get(url, (res) => {
         let data = '';
@@ -122,14 +120,14 @@ class ModService {
         res.on('end', () => {
           try {
             const result = JSON.parse(data);
-            const hits = (result.projects || result || []).map(p => ({
-              id: p.name || p.project_id,
-              slug: p.name || p.project_id,
-              title: p.name || p.project_id,
-              description: p.description || '',
-              author: p.author || 'unknown',
-              downloads: p.downloads || p.stats?.downloads || 0,
-              icon_url: p.icon_url || null,
+            const hits = (Array.isArray(result) ? result : []).map(p => ({
+              id: String(p.project_id || p.name),
+              slug: p.project_name || p.name,
+              title: p.name || p.project_name,
+              description: p.tagline || '',
+              author: (p.repo_name || '').split('/')[0] || 'unknown',
+              downloads: p.downloads || 0,
+              icon_url: null,
               categories: [],
               versions: [],
               source: 'poggit'
@@ -210,14 +208,14 @@ class ModService {
         res.on('end', () => {
           try {
             const versions = JSON.parse(data);
-            resolve(versions.map(v => ({
+            resolve((Array.isArray(versions) ? versions : []).map(v => ({
               id: v.id,
               name: v.name,
               version_number: v.version_number,
               version_type: v.version_type,
               game_versions: v.game_versions,
               loaders: v.loaders,
-              files: v.files.map(f => ({
+              files: (v.files || []).map(f => ({
                 filename: f.filename,
                 url: f.url,
                 size: f.size,
@@ -233,13 +231,124 @@ class ModService {
     });
   }
 
-  static async installMod(serverId, modId, versionId, userId) {
+  static async installMod(serverId, modId, versionId, userId, source = 'modrinth', modName = null) {
     const server = ServerService.getServer(serverId);
     if (!server) {
       throw new Error('Server not found');
     }
 
-    const serverDir = ServerService.getServerDir(serverId);
+    if (source === 'hangar') {
+      return this.installHangarMod(server, modId, userId, modName);
+    }
+    if (source === 'poggit') {
+      return this.installPoggitMod(server, modId, userId, modName);
+    }
+    return this.installModrinthMod(server, modId, versionId, userId);
+  }
+
+  static async getHangarVersions(slug, limit = 5) {
+    return new Promise((resolve, reject) => {
+      const params = new URLSearchParams({ limit: limit.toString(), channel: 'Release' });
+      const url = `${HANGAR_API}/projects/${encodeURIComponent(slug)}/versions?${params}`;
+
+      https.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const result = JSON.parse(data);
+            resolve((result.result || []).map(v => ({
+              id: v.id,
+              name: v.name,
+              channel: v.channel?.name,
+              downloads: v.downloads || {}
+            })));
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async installHangarMod(server, slug, userId, modName) {
+    const versions = await this.getHangarVersions(slug, 5);
+    if (!versions.length) {
+      throw new Error('No compatible version found');
+    }
+
+    const version = versions[0];
+    let file = null;
+    if (version.downloads && typeof version.downloads === 'object') {
+      const keys = Object.keys(version.downloads);
+      file = keys.length ? version.downloads[keys[0]] : null;
+    }
+
+    const fileUrl = file?.downloadUrl || file?.externalUrl;
+    const filename = file?.fileInfo?.name || `${slug}-${version.name}.jar`;
+    if (!fileUrl) {
+      throw new Error('No download file found');
+    }
+
+    const serverDir = ServerService.getServerDir(server.id);
+    const modsDir = path.join(serverDir, this.getModFolder(server));
+    if (!fs.existsSync(modsDir)) {
+      fs.mkdirSync(modsDir, { recursive: true });
+    }
+
+    const filePath = path.join(modsDir, filename);
+    await this.downloadFile(fileUrl, filePath);
+
+    return this.recordInstalledMod(server, slug, modName || slug, version.name, filename, userId);
+  }
+
+  static async getPoggitReleases(project, limit = 1) {
+    return new Promise((resolve, reject) => {
+      const url = `${POGGIT_API}/releases.json?name=${encodeURIComponent(project)}`;
+
+      https.get(url, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const releases = JSON.parse(data);
+            resolve((Array.isArray(releases) ? releases : []).slice(0, limit).map(r => ({
+              id: r.id,
+              name: r.name,
+              version: r.version,
+              artifact_url: r.artifact_url,
+              downloads: r.downloads || 0
+            })));
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async installPoggitMod(server, slug, userId, modName) {
+    const releases = await this.getPoggitReleases(modName || slug, 1);
+    const release = releases[0];
+    if (!release) {
+      throw new Error('No compatible version found');
+    }
+
+    const filename = `${release.name}-${release.version}.phar`;
+    if (!release.artifact_url) {
+      throw new Error('No download file found');
+    }
+
+    const serverDir = ServerService.getServerDir(server.id);
+    const modsDir = path.join(serverDir, this.getModFolder(server));
+    if (!fs.existsSync(modsDir)) {
+      fs.mkdirSync(modsDir, { recursive: true });
+    }
+
+    const filePath = path.join(modsDir, filename);
+    await this.downloadFile(release.artifact_url, filePath);
+
+    return this.recordInstalledMod(server, slug, modName || release.name, release.version, filename, userId);
+  }
+
+  static async installModrinthMod(server, modId, versionId, userId) {
+    const serverDir = ServerService.getServerDir(server.id);
     const modFolder = this.getModFolder(server);
     const modsDir = path.join(serverDir, modFolder);
 
@@ -250,7 +359,7 @@ class ModService {
     const isPlugin = this.isPluginServer(server);
     const loader = isPlugin ? null : this.getServerLoader(server);
     const versions = await this.getModVersions(modId, null, loader);
-    const version = versionId 
+    const version = versionId
       ? versions.find(v => v.id === versionId)
       : versions[0];
 
@@ -270,23 +379,38 @@ class ModService {
     const db = this.getDb();
     const existingMod = db.prepare(
       'SELECT id FROM mods WHERE server_id = ? AND modrinth_id = ?'
-    ).get(serverId, modId);
+    ).get(server.id, modId);
+
+    let modName = null;
+    if (!existingMod) {
+      const modDetails = await this.getModDetails(modId);
+      modName = modDetails.title;
+    }
+
+    return this.recordInstalledMod(server, modId, modName, version.version_number, primaryFile.filename, userId);
+  }
+
+  static recordInstalledMod(server, externalId, modName, version, filename, userId) {
+    const db = this.getDb();
+    const existingMod = db.prepare(
+      'SELECT id FROM mods WHERE server_id = ? AND modrinth_id = ?'
+    ).get(server.id, externalId);
 
     let mod;
     if (existingMod) {
       db.prepare(
         'UPDATE mods SET version = ?, filename = ?, enabled = 1 WHERE id = ?'
-      ).run(version.version_number, primaryFile.filename, existingMod.id);
+      ).run(version, filename, existingMod.id);
       mod = db.prepare('SELECT * FROM mods WHERE id = ?').get(existingMod.id);
     } else {
-      const modDetails = await this.getModDetails(modId);
+      const name = modName || externalId;
       const result = db.prepare(
         'INSERT INTO mods (server_id, modrinth_id, name, slug, version, filename) VALUES (?, ?, ?, ?, ?, ?)'
-      ).run(serverId, modId, modDetails.title, modDetails.slug, version.version_number, primaryFile.filename);
+      ).run(server.id, externalId, name, externalId, version, filename);
       mod = db.prepare('SELECT * FROM mods WHERE id = ?').get(result.lastInsertRowid);
     }
 
-    UserService.logActivity(userId, 'mod_install', 'mod', mod.id, `Installed ${isPlugin ? 'plugin' : 'mod'} "${mod.name}" v${mod.version}`);
+    UserService.logActivity(userId, 'mod_install', 'mod', mod.id, `Installed mod "${mod.name}" v${mod.version}`);
 
     return mod;
   }
@@ -351,19 +475,29 @@ class ModService {
 
   static async downloadFile(url, destPath) {
     return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(destPath);
-
       const download = (downloadUrl) => {
-        https.get(downloadUrl, (res) => {
-          if (res.statusCode === 301 || res.statusCode === 302) {
-            download(res.headers.location);
+        https.get(downloadUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36' } }, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            res.resume();
+            download(new URL(res.headers.location, downloadUrl).toString());
             return;
           }
 
+          if (res.statusCode !== 200) {
+            res.resume();
+            reject(new Error(`Download failed with status ${res.statusCode}`));
+            return;
+          }
+
+          const file = fs.createWriteStream(destPath);
           res.pipe(file);
           file.on('finish', () => {
             file.close();
             resolve();
+          });
+          file.on('error', (err) => {
+            fs.unlink(destPath, () => {});
+            reject(err);
           });
         }).on('error', (err) => {
           fs.unlink(destPath, () => {});

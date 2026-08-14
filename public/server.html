@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NetherPanel - Server Console</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NetherPanel - Server</title>
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="css/style.css?v=4">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -15,48 +17,22 @@
 <body class="server-page">
   <nav class="top-nav">
     <div class="nav-left">
-      <a href="index.html" class="nav-logo">
-        <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
-          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#navGrad2)" stroke-width="1.5" fill="none"/>
-          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#navGrad2)"/>
-          <defs>
-            <linearGradient id="navGrad2" x1="2" y1="2" x2="30" y2="30">
-              <stop stop-color="#f97316"/>
-              <stop offset="1" stop-color="#06b6d4"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <span class="logo-text">NetherPanel</span>
-      </a>
-      <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i> Dashboard</a>
-    </div>
-    <div class="nav-center">
+      <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i></a>
       <div class="server-header-info">
-        <h1 class="server-page-title" id="server-title">Survival World</h1>
+        <h1 class="server-page-title" id="server-title">Loading...</h1>
         <div class="server-address-bar" id="server-address">
-          <i data-lucide="globe" style="width:14px;height:14px"></i>
-          <span id="server-addr-text">Loading...</span>
-          <button class="copy-btn" onclick="copyAddress()" title="Copy Address">
-            <i data-lucide="copy" style="width:12px;height:12px"></i>
-          </button>
+          <i data-lucide="globe"></i>
+          <span id="server-addr-text">...</span>
+          <button class="copy-btn" onclick="copyAddress()"><i data-lucide="copy"></i></button>
         </div>
-        <span class="server-page-version" id="server-version-badge">Paper 1.21.4</span>
       </div>
     </div>
     <div class="nav-right">
       <div class="power-controls">
-        <button class="power-btn start" id="btn-start" title="Start Server">
-          <i data-lucide="play"></i>
-        </button>
-        <button class="power-btn restart" id="btn-restart" title="Restart Server">
-          <i data-lucide="refresh-cw"></i>
-        </button>
-        <button class="power-btn stop" id="btn-stop" title="Stop Server">
-          <i data-lucide="square"></i>
-        </button>
-        <button class="power-btn kill" id="btn-kill" title="Kill Server">
-          <i data-lucide="power"></i>
-        </button>
+        <button class="power-btn start" id="btn-start" title="Start"><i data-lucide="play"></i></button>
+        <button class="power-btn restart" id="btn-restart" title="Restart"><i data-lucide="refresh-cw"></i></button>
+        <button class="power-btn stop" id="btn-stop" title="Stop"><i data-lucide="square"></i></button>
+        <button class="power-btn kill" id="btn-kill" title="Kill"><i data-lucide="power"></i></button>
       </div>
       <div class="server-status-badge running" id="server-status-badge">
         <span class="status-dot"></span>
@@ -64,19 +40,17 @@
       </div>
       <div class="user-menu">
         <button class="user-avatar" id="user-menu-toggle">
-          <div class="avatar-circle">JD</div>
+          <div class="avatar-circle" id="user-avatar">?</div>
           <i data-lucide="chevron-down" class="chevron"></i>
         </button>
-        <div class="dropdown-menu" id="user-dropdown">
+        <div class="dropdown-menu">
           <div class="dropdown-header">
-            <div class="avatar-circle large">JD</div>
+            <div class="avatar-circle large" id="user-avatar-lg">?</div>
             <div>
-              <div class="dropdown-user-name">John Doe</div>
-              <div class="dropdown-user-email">john@example.com</div>
+              <div class="dropdown-user-name" id="dropdown-user-name">User</div>
+              <div class="dropdown-user-email" id="dropdown-user-email">-</div>
             </div>
           </div>
-          <div class="dropdown-divider"></div>
-          <a href="#" class="dropdown-item"><i data-lucide="settings"></i> Settings</a>
           <div class="dropdown-divider"></div>
           <a href="login.html" class="dropdown-item danger" onclick="localStorage.clear()"><i data-lucide="log-out"></i> Sign Out</a>
         </div>
@@ -86,34 +60,18 @@
 
   <div class="server-tabs-container">
     <div class="server-tabs">
-      <button class="server-tab active" data-tab="console">
-        <i data-lucide="terminal"></i>
-        <span>Console</span>
-      </button>
-      <button class="server-tab" data-tab="files">
-        <i data-lucide="folder-tree"></i>
-        <span>Files</span>
-      </button>
-      <button class="server-tab" data-tab="mods">
-        <i data-lucide="puzzle"></i>
-        <span>Mods</span>
-      </button>
-      <button class="server-tab" data-tab="backups">
-        <i data-lucide="database"></i>
-        <span>Backups</span>
-      </button>
-      <button class="server-tab" data-tab="schedules">
-        <i data-lucide="calendar-clock"></i>
-        <span>Schedules</span>
-      </button>
-      <button class="server-tab" data-tab="settings">
-        <i data-lucide="settings"></i>
-        <span>Settings</span>
-      </button>
+      <button class="server-tab active" data-tab="console"><i data-lucide="terminal"></i><span>Console</span></button>
+      <button class="server-tab" data-tab="players"><i data-lucide="users"></i><span>Players</span></button>
+      <button class="server-tab" data-tab="files"><i data-lucide="folder-tree"></i><span>Files</span></button>
+      <button class="server-tab" data-tab="mods"><i data-lucide="puzzle"></i><span>Mods</span></button>
+      <button class="server-tab" data-tab="logs"><i data-lucide="scroll-text"></i><span>Logs</span></button>
+      <button class="server-tab" data-tab="backups"><i data-lucide="database"></i><span>Backups</span></button>
+      <button class="server-tab" data-tab="settings"><i data-lucide="settings"></i><span>Settings</span></button>
     </div>
   </div>
 
   <main class="server-main">
+    <!-- Console Tab -->
     <div class="server-tab-content active" id="tab-console">
       <div class="console-wrapper">
         <div class="console-toolbar">
@@ -122,64 +80,101 @@
             <span class="console-status" id="console-status">Connected</span>
           </div>
           <div class="console-toolbar-right">
-            <button class="btn-sm" id="console-clear" title="Clear Console">
-              <i data-lucide="trash-2"></i> Clear
-            </button>
-            <button class="btn-sm" id="console-scroll-toggle" title="Auto-scroll">
-              <i data-lucide="arrow-down-to-line"></i> Auto-scroll
-            </button>
+            <button class="btn-sm" id="console-clear"><i data-lucide="trash-2"></i> Clear</button>
+            <button class="btn-sm" id="console-scroll-toggle"><i data-lucide="arrow-down-to-line"></i> Auto</button>
           </div>
         </div>
         <div id="xterm-container" class="xterm-container"></div>
         <div class="console-input-wrapper">
-          <div class="console-input-prefix">❯</div>
+          <span class="console-input-prefix">❯</span>
           <input type="text" id="console-input" class="console-input" placeholder="Type a command..." autocomplete="off">
-          <button class="console-send-btn" id="console-send">
-            <i data-lucide="send"></i>
-          </button>
+          <button class="console-send-btn" id="console-send"><i data-lucide="send"></i></button>
         </div>
       </div>
     </div>
 
+    <!-- Players Tab -->
+    <div class="server-tab-content" id="tab-players">
+      <div class="players-layout">
+        <div class="players-tabs">
+          <button class="players-tab active" data-players-tab="whitelist">Whitelist</button>
+          <button class="players-tab" data-players-tab="ops">Operators</button>
+          <button class="players-tab" data-players-tab="bans">Banned Players</button>
+        </div>
+
+        <div class="players-section active" id="players-whitelist-section">
+          <div class="players-section-header">
+            <h3>Whitelist</h3>
+            <div class="players-add">
+              <input type="text" class="form-input" id="whitelist-input" placeholder="Player name...">
+              <button class="btn-primary" style="width:auto;padding:0.45rem 0.8rem;font-size:0.82rem" onclick="NetherServer.addToWhitelist()"><i data-lucide="plus"></i> Add</button>
+            </div>
+          </div>
+          <div class="players-list" id="whitelist-list"></div>
+        </div>
+
+        <div class="players-section" id="players-ops-section">
+          <div class="players-section-header">
+            <h3>Operators</h3>
+            <div class="players-add">
+              <input type="text" class="form-input" id="ops-input" placeholder="Player name...">
+              <select class="form-select-sm" id="ops-level">
+                <option value="4">Level 4</option>
+                <option value="3">Level 3</option>
+                <option value="2" selected>Level 2</option>
+                <option value="1">Level 1</option>
+              </select>
+              <button class="btn-primary" style="width:auto;padding:0.45rem 0.8rem;font-size:0.82rem" onclick="NetherServer.addOp()"><i data-lucide="plus"></i> Add</button>
+            </div>
+          </div>
+          <div class="players-list" id="ops-list"></div>
+        </div>
+
+        <div class="players-section" id="players-bans-section">
+          <div class="players-section-header">
+            <h3>Banned Players</h3>
+            <div class="players-add">
+              <input type="text" class="form-input" id="ban-player-input" placeholder="Player name...">
+              <input type="text" class="form-input" id="ban-reason-input" placeholder="Reason...">
+              <button class="btn-danger" style="width:auto;padding:0.45rem 0.8rem;font-size:0.82rem" onclick="NetherServer.banPlayer()"><i data-lucide="ban"></i> Ban</button>
+            </div>
+          </div>
+          <div class="players-list" id="bans-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Files Tab -->
     <div class="server-tab-content" id="tab-files">
-      <div class="files-layout">
-        <div class="file-sidebar">
-          <div class="file-sidebar-header">
-            <h3>Files</h3>
-            <div class="file-sidebar-actions">
-              <button class="btn-sm" id="file-upload-btn" title="Upload"><i data-lucide="upload"></i></button>
-              <button class="btn-sm" id="file-new-btn" title="New File"><i data-lucide="file-plus"></i></button>
-              <button class="btn-sm" id="file-folder-btn" title="New Folder"><i data-lucide="folder-plus"></i></button>
-            </div>
+      <div class="files-container">
+        <div class="files-toolbar">
+          <div class="files-breadcrumb" id="files-breadcrumb">
+            <button class="btn-sm" id="files-back-btn" style="display:none"><i data-lucide="arrow-left"></i></button>
+            <span id="files-current-path">Server Files</span>
           </div>
-          <div class="file-tree" id="file-tree">
-            <div style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem;">Loading files...</div>
-          </div>
+          <div class="files-actions">
+            <button class="btn-sm" id="file-upload-btn" title="Upload"><i data-lucide="upload"></i></button>
+            <button class="btn-sm" id="file-new-btn" title="New file"><i data-lucide="file-plus"></i></button>
+            <button class="btn-sm" id="file-folder-btn" title="New folder"><i data-lucide="folder-plus"></i></button>
           </div>
         </div>
-        <div class="file-content">
-          <div class="file-content-header" id="file-content-header">
-            <div class="file-breadcrumb">
-              <span class="breadcrumb-item" data-path="/">server</span>
-              <i data-lucide="chevron-right" class="breadcrumb-sep"></i>
-              <span class="breadcrumb-item" id="current-file-name">server.properties</span>
-            </div>
-            <div class="file-actions">
-              <button class="btn-sm" id="file-save-btn"><i data-lucide="save"></i> Save</button>
-              <button class="btn-sm" id="file-download-btn"><i data-lucide="download"></i> Download</button>
-              <button class="btn-sm danger" id="file-delete-btn"><i data-lucide="trash-2"></i></button>
+        <input type="file" id="file-upload-input" multiple style="display:none">
+        <div class="files-list" id="files-list"></div>
+        <div class="file-editor-panel" id="file-editor-panel" style="display:none">
+          <div class="file-editor-header">
+            <button class="btn-sm" id="file-editor-back"><i data-lucide="arrow-left"></i></button>
+            <span id="file-editor-name">-</span>
+            <div class="file-editor-actions">
+              <button class="btn-sm" id="file-download-btn"><i data-lucide="download"></i></button>
+              <button class="btn-sm btn-primary" id="file-save-btn"><i data-lucide="save"></i> Save</button>
             </div>
           </div>
-          <div class="file-editor" id="file-editor">
-            <div class="editor-placeholder">
-              <i data-lucide="file-code"></i>
-              <p>Select a file to view or edit</p>
-            </div>
-          </div>
+          <div class="file-editor" id="file-editor"></div>
         </div>
       </div>
     </div>
 
+    <!-- Mods Tab -->
     <div class="server-tab-content" id="tab-mods">
       <div class="mods-layout">
         <div class="mods-header">
@@ -189,283 +184,132 @@
           </div>
           <div class="mods-search">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="mod-search" placeholder="Search on Modrinth..." class="mods-search-input">
-          </div>
-          <div class="mods-filters">
-            <select class="form-select-sm" id="mod-category">
-              <option value="">All Categories</option>
-              <option value="technology">Technology</option>
-              <option value="magic">Magic</option>
-              <option value="adventure">Adventure</option>
-              <option value="optimization">Optimization</option>
-              <option value="utility">Utility</option>
-              <option value="decoration">Decoration</option>
-              <option value="storage">Storage</option>
-              <option value="food">Food</option>
-              <option value="game-mechanics">Game Mechanics</option>
-            </select>
+            <input type="text" id="mod-search" class="mods-search-input" placeholder="Search mods...">
           </div>
         </div>
-
         <div class="mods-panel active" id="mods-installed-panel">
-          <div class="mods-panel-header">
-            <h3>Installed <span id="installed-count">(0)</span></h3>
-          </div>
+          <div class="mods-panel-header"><h3>Installed <span id="installed-count">(0)</span></h3></div>
           <div class="mods-list" id="installed-mods">
-            <div class="mods-empty-state">
-              <i data-lucide="package-open"></i>
-              <p>No mods or plugins installed yet</p>
-              <span>Browse and install mods from Modrinth</span>
-            </div>
+            <div class="mods-empty-state"><i data-lucide="package-open"></i><p>No mods installed yet</p><span>Browse and install from the Browse tab</span></div>
           </div>
         </div>
-
         <div class="mods-panel" id="mods-browse-panel">
-          <div class="mods-panel-header">
-            <h3>Browse <span id="browse-label">Mods & Plugins</span></h3>
-            <div class="mods-results-info" id="mods-results-info"></div>
-          </div>
+          <div class="mods-panel-header"><h3>Browse <span id="browse-label">Mods</span></h3><span class="mods-results-info" id="mods-results-info"></span></div>
           <div class="mods-list" id="available-mods">
-            <div class="mods-loading">
-              <div class="spinner"></div>
-              <span>Searching Modrinth...</span>
-            </div>
+            <div class="mods-loading"><div class="spinner"></div><span>Searching...</span></div>
           </div>
-          <div class="mods-pagination" id="mods-pagination">
-            <button class="btn-sm" id="mods-load-more" style="display:none;">Load More</button>
-          </div>
+          <div class="mods-pagination"><button class="btn-sm" id="mods-load-more" style="display:none">Load More</button></div>
         </div>
       </div>
     </div>
 
+    <!-- Logs Tab -->
+    <div class="server-tab-content" id="tab-logs">
+      <div class="logs-layout">
+        <div class="logs-header">
+          <div class="logs-toolbar">
+            <span class="console-label"><i data-lucide="scroll-text"></i> Server Logs</span>
+            <div class="logs-controls">
+              <select class="form-select-sm" id="log-lines-select">
+                <option value="100">100 lines</option>
+                <option value="200" selected>200 lines</option>
+                <option value="500">500 lines</option>
+                <option value="1000">1000 lines</option>
+              </select>
+              <button class="btn-sm" onclick="NetherServer.loadLogs()"><i data-lucide="refresh-cw"></i></button>
+              <button class="btn-sm" id="log-autorefresh-toggle" onclick="NetherServer.toggleLogAutoRefresh()"><i data-lucide="timer"></i> Auto</button>
+            </div>
+          </div>
+        </div>
+        <div class="logs-content" id="logs-content">
+          <div style="padding:2rem;text-align:center;color:var(--text-muted)">Loading logs...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backups Tab -->
     <div class="server-tab-content" id="tab-backups">
       <div class="backups-layout">
         <div class="backups-header">
-          <h3>Server Backups</h3>
-          <button class="btn-primary" id="create-backup-btn">
-            <i data-lucide="plus"></i>
-            <span>Create Backup</span>
-          </button>
+          <h3>Backups</h3>
+          <button class="btn-primary" id="download-backup-btn" style="width:auto;padding:0.5rem 1rem;font-size:0.82rem"><i data-lucide="download"></i> Download Backup</button>
         </div>
-
-        <div class="backups-settings">
+        <div style="padding:0.75rem;border-bottom:1px solid var(--border)">
           <div class="backup-setting-card">
-            <div class="setting-header">
-              <i data-lucide="hard-drive"></i>
-              <span>Automatic Backups</span>
-            </div>
-            <div class="setting-body">
-              <div class="setting-row">
-                <span>Enable automatic backups</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="auto-backup-toggle" checked>
-                  <span class="toggle-slider"></span>
-                </label>
+            <div class="setting-row"><span>Enable automatic backups</span><label class="toggle-switch"><input type="checkbox" id="auto-backup-toggle" checked><span class="toggle-slider"></span></label></div>
+            <div class="setting-row"><span>Backup interval</span><select class="form-select-sm" id="backup-interval"><option value="6">Every 6 hours</option><option value="12">Every 12 hours</option><option value="24" selected>Daily</option><option value="168">Weekly</option></select></div>
+            <div class="setting-row"><span>Keep backups for</span><select class="form-select-sm" id="backup-retention"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></div>
+          </div>
+        </div>
+        <div style="padding:0.75rem"><div id="backups-list"><div class="mods-loading"><div class="spinner"></div><span>Loading...</span></div></div></div>
+        <div style="padding:0.75rem;border-top:1px solid var(--border)">
+          <div class="backup-setting-card">
+            <div class="setting-row" style="flex-direction:column;gap:0.5rem">
+              <span style="font-weight:500">Restore from file</span>
+              <span style="font-size:0.78rem;color:var(--text-muted)">Upload a backup zip to restore server files</span>
+              <div style="display:flex;gap:0.5rem;align-items:center">
+                <input type="file" id="restore-file-input" accept=".zip" style="display:none">
+                <button class="btn-sm" id="restore-file-btn"><i data-lucide="upload"></i> Choose zip file</button>
+                <span id="restore-file-name" style="font-size:0.78rem;color:var(--text-muted)">No file chosen</span>
               </div>
-              <div class="setting-row">
-                <span>Backup interval</span>
-                <select class="form-select-sm" id="backup-interval">
-                  <option value="6">Every 6 hours</option>
-                  <option value="12">Every 12 hours</option>
-                  <option value="24" selected>Daily</option>
-                  <option value="168">Weekly</option>
-                </select>
-              </div>
-              <div class="setting-row">
-                <span>Keep backups for</span>
-                <select class="form-select-sm" id="backup-retention">
-                  <option value="3">3 days</option>
-                  <option value="7" selected>7 days</option>
-                  <option value="14">14 days</option>
-                  <option value="30">30 days</option>
-                </select>
-              </div>
+              <button class="btn-primary" id="restore-upload-btn" style="width:auto;padding:0.5rem 1rem;font-size:0.82rem;display:none"><i data-lucide="rotate-ccw"></i> Restore from zip</button>
             </div>
           </div>
         </div>
-
-        <div class="backups-list" id="backups-list">
-          <div class="mods-loading"><div class="spinner"></div><span>Loading backups...</span></div>
-        </div>
       </div>
     </div>
 
-    <div class="server-tab-content" id="tab-schedules">
-      <div class="schedules-layout">
-        <div class="schedules-header">
-          <h3>Scheduled Tasks</h3>
-          <button class="btn-primary" id="create-schedule-btn">
-            <i data-lucide="plus"></i>
-            <span>New Schedule</span>
-          </button>
-        </div>
-
-        <div class="schedules-list" id="schedules-list">
-          <div class="mods-loading"><div class="spinner"></div><span>Loading schedules...</span></div>
-        </div>
-      </div>
-    </div>
-
+    <!-- Settings Tab -->
     <div class="server-tab-content" id="tab-settings">
       <div class="settings-layout">
         <div class="settings-sidebar">
-          <button class="settings-nav-item active" data-section="general">
-            <i data-lucide="settings"></i>
-            <span>General</span>
-          </button>
-          <button class="settings-nav-item" data-section="startup">
-            <i data-lucide="power"></i>
-            <span>Startup</span>
-          </button>
-          <button class="settings-nav-item" data-section="network">
-            <i data-lucide="network"></i>
-            <span>Network</span>
-          </button>
-          <button class="settings-nav-item" data-section="players">
-            <i data-lucide="users"></i>
-            <span>Players</span>
-          </button>
-          <button class="settings-nav-item" data-section="minecraft">
-            <i data-lucide="blocks"></i>
-            <span>Minecraft</span>
-          </button>
-          <button class="settings-nav-item danger" data-section="danger">
-            <i data-lucide="alert-triangle"></i>
-            <span>Danger Zone</span>
-          </button>
+          <button class="settings-nav-item active" data-section="general"><i data-lucide="settings"></i><span>General</span></button>
+          <button class="settings-nav-item" data-section="startup"><i data-lucide="power"></i><span>Startup</span></button>
+          <button class="settings-nav-item" data-section="network"><i data-lucide="network"></i><span>Network</span></button>
+          <button class="settings-nav-item danger" data-section="danger"><i data-lucide="alert-triangle"></i><span>Danger</span></button>
         </div>
         <div class="settings-content">
           <div class="settings-section active" id="settings-general">
             <h3>General Settings</h3>
             <div class="settings-group">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Server Name</label>
-                  <p class="setting-description">Display name for your server</p>
-                </div>
-                <input type="text" class="form-input" id="setting-name" value="">
-              </div>
+              <div class="setting-item"><div class="setting-info"><label>Server Name</label><p class="setting-description">Display name for your server</p></div><input type="text" class="form-input" id="setting-name"></div>
+              <div class="setting-item"><div class="setting-info"><label>Subdomain</label><p class="setting-description">Your server address will be [subdomain].smp45.qzz.io</p></div><input type="text" class="form-input" id="setting-subdomain" placeholder="myserver"></div>
+              <div class="setting-item"><div class="setting-info"><label>MOTD</label><p class="setting-description">Message shown in the server list</p></div><input type="text" class="form-input" id="sp-motd"></div>
+              <div class="setting-item"><div class="setting-info"><label>Max Players</label><p class="setting-description">Maximum number of players allowed</p></div><input type="number" class="form-input" id="sp-max-players" min="1" max="1000"></div>
+              <div class="setting-item"><div class="setting-info"><label>Online Mode</label><p class="setting-description">Verify players with Mojang servers</p></div><label class="toggle-switch"><input type="checkbox" id="sp-online-mode" checked><span class="toggle-slider"></span></label></div>
+              <div class="setting-item"><div class="setting-info"><label>Hardcore</label><p class="setting-description">Players are permanently banned on death</p></div><label class="toggle-switch"><input type="checkbox" id="sp-hardcore"><span class="toggle-slider"></span></label></div>
             </div>
           </div>
-
           <div class="settings-section" id="settings-startup">
             <h3>Startup Settings</h3>
             <div class="settings-group">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Java Args</label>
-                  <p class="setting-description">JVM arguments for the server</p>
-                </div>
-                <input type="text" class="form-input mono" id="setting-java-args" value="">
-              </div>
+              <div class="setting-item"><div class="setting-info"><label>Java Args</label><p class="setting-description">JVM arguments</p></div><input type="text" class="form-input" id="setting-java-args" style="font-family:var(--font-mono);font-size:0.8rem"></div>
+              <div class="setting-item"><div class="setting-info"><label>RAM Max (MB)</label><p class="setting-description">Maximum memory allocated to the server</p></div><input type="number" class="form-input" id="setting-ram-max" min="512" step="512"></div>
+              <div class="setting-item"><div class="setting-info"><label>Startup Command</label><p class="setting-description">Override the default startup command. Leave empty for auto-generated.</p></div><input type="text" class="form-input" id="setting-startup-cmd" style="font-family:var(--font-mono);font-size:0.8rem" placeholder="Auto-generated"></div>
             </div>
           </div>
-
           <div class="settings-section" id="settings-network">
-            <h3>Network Settings</h3>
+            <h3>World & Gameplay</h3>
             <div class="settings-group">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Server Port</label>
-                  <p class="setting-description">Port the server listens on</p>
-                </div>
-                <input type="number" class="form-input" id="setting-port" value="">
-              </div>
+              <div class="setting-item"><div class="setting-info"><label>Gamemode</label><p class="setting-description">Default gamemode for new players</p></div><select class="form-select" id="sp-gamemode"><option value="survival">Survival</option><option value="creative">Creative</option><option value="adventure">Adventure</option><option value="spectator">Spectator</option></select></div>
+              <div class="setting-item"><div class="setting-info"><label>Difficulty</label><p class="setting-description">World difficulty</p></div><select class="form-select" id="sp-difficulty"><option value="peaceful">Peaceful</option><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></div>
+              <div class="setting-item"><div class="setting-info"><label>PvP</label><p class="setting-description">Allow player vs player combat</p></div><label class="toggle-switch"><input type="checkbox" id="sp-pvp" checked><span class="toggle-slider"></span></label></div>
+              <div class="setting-item"><div class="setting-info"><label>Allow Flight</label><p class="setting-description">Allow players to fly in survival</p></div><label class="toggle-switch"><input type="checkbox" id="sp-allow-flight"><span class="toggle-slider"></span></label></div>
+              <div class="setting-item"><div class="setting-info"><label>Command Blocks</label><p class="setting-description">Enable command blocks</p></div><label class="toggle-switch"><input type="checkbox" id="sp-enable-command-block"><span class="toggle-slider"></span></label></div>
+              <div class="setting-item"><div class="setting-info"><label>Spawn Protection</label><p class="setting-description">Radius of spawn area protection (0 = disabled)</p></div><input type="number" class="form-input" id="sp-spawn-protection" min="0" max="100" value="16"></div>
+              <div class="setting-item"><div class="setting-info"><label>View Distance</label><p class="setting-description">Server render distance (chunks). Lower = better performance.</p></div><input type="number" class="form-input" id="sp-view-distance" min="2" max="32" value="10"></div>
+              <div class="setting-item"><div class="setting-info"><label>Spawn Animals</label><p class="setting-description">Allow animals to spawn</p></div><label class="toggle-switch"><input type="checkbox" id="sp-spawn-animals" checked><span class="toggle-slider"></span></label></div>
+              <div class="setting-item"><div class="setting-info"><label>Spawn Monsters</label><p class="setting-description">Allow monsters to spawn</p></div><label class="toggle-switch"><input type="checkbox" id="sp-spawn-monsters" checked><span class="toggle-slider"></span></label></div>
             </div>
           </div>
-
-          <div class="settings-section" id="settings-players">
-            <h3>Player Settings</h3>
-            <div class="settings-group">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Max Players</label>
-                  <p class="setting-description">Maximum number of players allowed</p>
-                </div>
-                <input type="number" class="form-input" id="setting-max-players" value="20">
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>RAM (MB)</label>
-                  <p class="setting-description">Maximum memory allocation</p>
-                </div>
-                <input type="number" class="form-input" id="setting-ram-max" value="">
-              </div>
-            </div>
-          </div>
-
-          <div class="settings-section" id="settings-minecraft">
-            <h3>Minecraft Settings</h3>
-            <div class="settings-group">
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Game Mode</label>
-                  <p class="setting-description">Default game mode for new players</p>
-                </div>
-                <select class="form-select">
-                  <option>Survival</option>
-                  <option>Creative</option>
-                  <option>Adventure</option>
-                  <option>Spectator</option>
-                </select>
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Difficulty</label>
-                  <p class="setting-description">World difficulty level</p>
-                </div>
-                <select class="form-select">
-                  <option>Peaceful</option>
-                  <option>Easy</option>
-                  <option selected>Normal</option>
-                  <option>Hard</option>
-                </select>
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Allow PvP</label>
-                  <p class="setting-description">Allow player vs player combat</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" checked>
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div class="setting-item">
-                <div class="setting-info">
-                  <label>Spawn Protection</label>
-                  <p class="setting-description">Radius of spawn protection in blocks</p>
-                </div>
-                <input type="number" class="form-input" value="16" min="0" max="100">
-              </div>
-            </div>
-          </div>
-
           <div class="settings-section" id="settings-danger">
             <h3 class="danger-title">Danger Zone</h3>
             <div class="settings-group">
-              <div class="setting-item danger-setting">
-                <div class="setting-info">
-                  <label>Reinstall Server</label>
-                  <p class="setting-description">This will delete all files and reinstall the server software. Worlds and backups are preserved.</p>
-                </div>
-                <button class="btn-danger-outline">Reinstall</button>
-              </div>
-              <div class="setting-item danger-setting">
-                <div class="setting-info">
-                  <label>Delete Server</label>
-                  <p class="setting-description">Permanently delete this server and all its data. This action cannot be undone.</p>
-                </div>
-                <button class="btn-danger">Delete Server</button>
-              </div>
+              <div class="setting-item danger-setting"><div class="setting-info"><label>Delete Server</label><p class="setting-description">Permanently delete this server and all its data.</p></div><button class="btn-danger" onclick="NetherServer.deleteServer()">Delete Server</button></div>
             </div>
           </div>
-
           <div class="settings-save-bar">
-            <button class="btn-primary" id="save-settings">
-              <i data-lucide="save"></i>
-              Save Changes
-            </button>
+            <button class="btn-primary" id="save-settings" style="width:auto;padding:0.6rem 1.5rem"><i data-lucide="save"></i> Save Changes</button>
           </div>
         </div>
       </div>
@@ -473,7 +317,6 @@
   </main>
 
   <div class="toast-container" id="toast-container"></div>
-
-  <script src="js/server.js?v=5"></script>
+  <script src="js/server.js?v=7"></script>
 </body>
 </html>

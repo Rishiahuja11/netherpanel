@@ -5,13 +5,25 @@ const path = require('path');
 const fs = require('fs');
 const { initDatabase, getDb } = require('./src/database');
 
-const PORT = process.env.PORT || 3000;
+const ENV_PATH = path.join(__dirname, '.env');
+if (fs.existsSync(ENV_PATH)) {
+  fs.readFileSync(ENV_PATH, 'utf8').split('\n').forEach(line => {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (match && !(match[1] in process.env)) {
+      process.env[match[1]] = match[2].replace(/^["']|["']$/g, '');
+    }
+  });
+}
+
+const PORT = parseInt(process.env.PORT || process.env.PANEL_PORT || '3000', 10);
+const HOST = process.env.HOST || process.env.PANEL_HOST || '0.0.0.0';
 
 const DATA_DIR = path.join(__dirname, 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'servers'), { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'backups'), { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'logs'), { recursive: true });
+fs.mkdirSync(path.join(DATA_DIR, 'tmp', 'uploads'), { recursive: true });
 
 async function startServer() {
   await initDatabase();
@@ -131,6 +143,10 @@ async function startServer() {
         return socket.emit('error', { error: 'Not authenticated' });
       }
 
+      if (!command || typeof command !== 'string') {
+        return socket.emit('error', { error: 'Invalid command' });
+      }
+
       const server = ServerService.getServer(serverId);
       if (!server) {
         return socket.emit('error', { error: 'Server not found' });
@@ -248,13 +264,14 @@ async function startServer() {
 
   process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
+    process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
     console.error('Unhandled Rejection:', reason);
   });
 
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, HOST, () => {
     console.log(`
   ╔══════════════════════════════════════════╗
   ║           NetherPanel v1.0.0             ║

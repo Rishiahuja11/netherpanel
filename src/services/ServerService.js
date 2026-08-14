@@ -18,6 +18,7 @@ const PURPUR_API = 'https://api.purpurmc.org/v2/purpur';
 const FABRIC_API = 'https://meta.fabricmc.net/v2/versions';
 const QUILT_API = 'https://meta.quiltmc.org/v3/versions';
 const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
+const PMMP_PHP_URL = 'https://github.com/pmmp/PHP-Binaries/releases/download/pm5-php-8.2-latest/PHP-8.2-Android-arm64-PM5.tar.gz';
 
 function sortVersionsDesc(versions) {
   return versions.sort((a, b) => {
@@ -53,6 +54,7 @@ const SERVER_TYPES = {
 
 const serverProcesses = new Map();
 const consoleBuffers = new Map();
+const intentionalStops = new Set();
 
 class ServerService {
   static SERVER_TYPES = SERVER_TYPES;
@@ -74,7 +76,6 @@ class ServerService {
     const db = this.getDb();
     const rows = db.prepare('SELECT port FROM servers').all();
     const used = new Set(rows.map(r => r.port));
-    const net = require('net');
     for (let p = 25565; p < 25700; p++) {
       if (!used.has(p)) return p;
     }
@@ -97,6 +98,13 @@ class ServerService {
       throw new Error('Server with this name already exists');
     }
 
+    if (subdomain) {
+      const existingSub = db.prepare('SELECT id FROM servers WHERE subdomain = ?').get(subdomain);
+      if (existingSub) {
+        throw new Error('This subdomain is already in use');
+      }
+    }
+
     const userServers = db.prepare('SELECT COUNT(*) as count FROM servers WHERE user_id = ?').get(userId).count;
     const maxServers = parseInt(db.prepare("SELECT value FROM settings WHERE key = 'max_servers_per_user'").get()?.value || '5');
     if (userServers >= maxServers) {
@@ -104,6 +112,12 @@ class ServerService {
     }
 
     const actualPort = port || this.getUsedPorts();
+    if (port) {
+      const portUsed = db.prepare('SELECT id FROM servers WHERE port = ?').get(port);
+      if (portUsed) {
+        throw new Error('This port is already in use');
+      }
+    }
 
     const result = db.prepare(
       'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path, subdomain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -419,6 +433,9 @@ class ServerService {
           const zip = new AdmZip(zipPath);
           zip.extractAllTo(serverDir, true);
           fs.unlinkSync(zipPath);
+          if (fs.existsSync(exePath)) {
+            fs.chmodSync(exePath, 0o755);
+          }
           resolve(exePath);
         } catch (err) {
           reject(err);
@@ -438,14 +455,53 @@ class ServerService {
       downloadUrl = 'https://github.com/pmmp/PocketMine-MP/releases/latest/download/PocketMine-MP.phar';
     }
     await this.downloadFileTo(downloadUrl, pharPath);
+    await this.ensurePocketMinePhp();
     return pharPath;
+  }
+
+  static getPocketMinePhpDir() {
+    return path.join(DATA_DIR, 'pmmpphp');
+  }
+
+  static getPocketMinePhpBin() {
+    return path.join(this.getPocketMinePhpDir(), 'bin', 'php7', 'bin', 'php');
+  }
+
+  static async ensurePocketMinePhp() {
+    const phpBin = this.getPocketMinePhpBin();
+    if (fs.existsSync(phpBin)) return phpBin;
+
+    const phpDir = this.getPocketMinePhpDir();
+    fs.mkdirSync(phpDir, { recursive: true });
+
+    const tarPath = path.join(phpDir, 'php.tar.gz');
+    console.log('[PocketMine] Downloading PocketMine PHP runtime...');
+    await this.downloadFileTo(PMMP_PHP_URL, tarPath);
+
+    await new Promise((resolve, reject) => {
+      exec(`tar -xzf "${tarPath}" -C "${phpDir}"`, (err) => {
+        if (err) {
+          fs.unlinkSync(tarPath);
+          return reject(new Error(`Failed to extract PocketMine PHP: ${err.message}`));
+        }
+        fs.unlinkSync(tarPath);
+        resolve();
+      });
+    });
+
+    if (fs.existsSync(phpBin)) {
+      fs.chmodSync(phpBin, 0o755);
+    }
+    console.log('[PocketMine] PocketMine PHP runtime ready');
+    return phpBin;
   }
 
   static async downloadPowerNukkitServer(version, serverDir) {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
-    const downloadUrl = `https://github.com/PowerNukkit/PowerNukkit/releases/download/${version}/powernukkit-${version}-shaded.jar`;
+    const dlVersion = String(version).replace(/^v/, '');
+    const downloadUrl = `https://github.com/PowerNukkit/PowerNukkit/releases/download/${version}/powernukkit-${dlVersion}-shaded.jar`;
     await this.downloadFileTo(downloadUrl, jarPath);
     return jarPath;
   }
@@ -454,7 +510,7 @@ class ServerService {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
-    const downloadUrl = `https://github.com/CloudburstMC/Nukkit/releases/download/${version}/Nukkit.jar`;
+    const downloadUrl = `https://github.com/PowerNukkitX/PowerNukkitX/releases/download/${version}/powernukkitx.jar`;
     await this.downloadFileTo(downloadUrl, jarPath);
     return jarPath;
   }
@@ -462,12 +518,14 @@ class ServerService {
   static async downloadFileTo(url, destPath) {
     return new Promise((resolve, reject) => {
       const followRedirect = (downloadUrl) => {
-        https.get(downloadUrl, (res) => {
-          if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 308) {
-            followRedirect(res.headers.location);
+        https.get(downloadUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36' } }, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) {
+            res.resume();
+            followRedirect(new URL(res.headers.location, downloadUrl).toString());
             return;
           }
           if (res.statusCode !== 200) {
+            res.resume();
             reject(new Error(`Download failed with status ${res.statusCode}`));
             return;
           }
@@ -515,14 +573,40 @@ class ServerService {
 
     let child;
     if (isBedrock) {
-      const exePath = path.join(serverDir, 'bedrock_server');
-      if (!fs.existsSync(exePath)) {
-        throw new Error('Bedrock server not found. Please reinstall server.');
+      const serverType = server.server_type;
+      if (serverType === 'pocketmine') {
+        const pharPath = path.join(serverDir, 'PocketMine-MP.phar');
+        if (!fs.existsSync(pharPath)) {
+          throw new Error('PocketMine phar not found. Please reinstall server.');
+        }
+        const phpBin = await this.ensurePocketMinePhp();
+        child = spawn(phpBin, ['PocketMine-MP.phar', '--no-wizard'], {
+          cwd: serverDir,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      } else if (serverType === 'nukkit' || serverType === 'powernukkit') {
+        const jarPath = path.join(serverDir, 'server.jar');
+        if (!fs.existsSync(jarPath)) {
+          throw new Error('Server jar not found. Please reinstall server.');
+        }
+        child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
+          `cd '${serverDir}' && ${JAVA_PATH} -Xmx${server.ram_max}M -Xms${server.ram_min || 512}M -jar server.jar nogui`], {
+          cwd: serverDir,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      } else {
+        const exePath = path.join(serverDir, 'bedrock_server');
+        if (!fs.existsSync(exePath)) {
+          throw new Error('Bedrock server not found. Please reinstall server.');
+        }
+        if (process.arch !== 'x64') {
+          throw new Error(`Official Bedrock Dedicated Server only runs on x86_64 CPUs (this device is ${process.arch}). Please use PocketMine or Nukkit instead.`);
+        }
+        child = spawn(exePath, [], {
+          cwd: serverDir,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
       }
-      child = spawn(exePath, [], {
-        cwd: serverDir,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
     } else {
       const jarPath = path.join(serverDir, 'server.jar');
       if (!fs.existsSync(jarPath)) {
@@ -558,15 +642,20 @@ class ServerService {
 
     child.on('exit', (code, signal) => {
       serverProcesses.delete(serverId);
-      db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
+      const intentional = intentionalStops.has(serverId);
+      intentionalStops.delete(serverId);
+      const crashed = !intentional && (code !== 0 || signal);
 
-      if (code !== 0 || signal) {
+      db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run(crashed ? 'crashed' : 'stopped', serverId);
+
+      if (crashed) {
         const buffer = consoleBuffers.get(serverId) || [];
         const crashOutput = buffer.slice(-50).map(b => b.line).join('');
         this.logCrash(serverId, code, signal, crashOutput);
+        UserService.logActivity(userId, 'server_crash', 'server', serverId, `Server crashed (exit code: ${code}, signal: ${signal})`);
+      } else {
+        UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
       }
-
-      UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
     });
 
     child.on('error', (err) => {
@@ -588,6 +677,7 @@ class ServerService {
 
     const proc = serverProcesses.get(serverId);
     if (proc) {
+      intentionalStops.add(serverId);
       proc.kill('SIGTERM');
 
       await new Promise((resolve) => {
@@ -625,6 +715,7 @@ class ServerService {
 
     const proc = serverProcesses.get(serverId);
     if (proc) {
+      intentionalStops.add(serverId);
       proc.kill('SIGKILL');
     }
 
@@ -640,6 +731,9 @@ class ServerService {
   }
 
   static sendCommand(serverId, command, userId) {
+    if (!command || typeof command !== 'string') {
+      throw new Error('Invalid command');
+    }
     const proc = serverProcesses.get(serverId);
     if (!proc) {
       throw new Error('Server is not running');
@@ -652,11 +746,19 @@ class ServerService {
 
   static updateServer(id, data) {
     const db = this.getDb();
+
+    if (data.subdomain) {
+      const existingSub = db.prepare('SELECT id FROM servers WHERE subdomain = ? AND id != ?').get(data.subdomain, id);
+      if (existingSub) {
+        throw new Error('This subdomain is already in use');
+      }
+    }
+
     const fields = [];
     const values = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (['name', 'version', 'port', 'ram_min', 'ram_max', 'java_args'].includes(key)) {
+      if (['name', 'version', 'port', 'ram_min', 'ram_max', 'java_args', 'subdomain', 'startup_cmd'].includes(key)) {
         fields.push(`${key} = ?`);
         values.push(value);
       }
@@ -678,7 +780,11 @@ class ServerService {
       throw new Error('Server not found');
     }
 
-    this.killServer(id, userId);
+    try {
+      this.killServer(id, userId);
+    } catch (e) {
+      console.error(`[ServerService] Error killing server ${id}:`, e.message);
+    }
 
     const serverDir = this.getServerDir(id);
     if (fs.existsSync(serverDir)) {
@@ -969,6 +1075,24 @@ class ServerService {
 
   static async getNukkitVersions() {
     return new Promise((resolve, reject) => {
+      https.get('https://api.github.com/repos/PowerNukkitX/PowerNukkitX/releases', { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          try {
+            const releases = JSON.parse(data);
+            const versions = releases
+              .filter(r => !r.prerelease && r.assets.some(a => a.name === 'powernukkitx.jar'))
+              .map(r => r.tag_name);
+            resolve(versions);
+          } catch (err) { reject(err); }
+        });
+      }).on('error', reject);
+    });
+  }
+
+  static async getPowerNukkitVersions() {
+    return new Promise((resolve, reject) => {
       https.get('https://api.github.com/repos/PowerNukkit/PowerNukkit/releases', { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
@@ -976,7 +1100,7 @@ class ServerService {
           try {
             const releases = JSON.parse(data);
             const versions = releases
-              .filter(r => r.assets.some(a => a.name.includes('shaded.jar')))
+              .filter(r => !r.prerelease && r.assets.some(a => a.name.includes('shaded.jar')))
               .map(r => r.tag_name);
             resolve(versions);
           } catch (err) { reject(err); }

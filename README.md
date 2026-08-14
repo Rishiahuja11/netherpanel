@@ -1,36 +1,37 @@
 # NetherPanel
 
-A modern Minecraft server management panel for Termux. No Docker, no proot-distro, no FQDN required - just install and run natively.
+A modern Minecraft server management panel for Termux. Runs directly in Termux with Java servers executed through proot-distro (Ubuntu). Works on localhost out of the box, with optional Cloudflare Tunnel and subdomain support.
 
 ![NetherPanel](https://img.shields.io/badge/NetherPanel-v4.0-orange) ![License](https://img.shields.io/badge/License-MIT-blue) ![Platform](https://img.shields.io/badge/Platform-Termux-purple)
 
 ## Features
 
 ### Core Features
-- **Native Termux** - Runs directly in Termux without proot-distro or Docker
+- **Native Termux** - Panel runs directly in Termux, no Docker needed
 - **One-click setup** - Installs all dependencies automatically
 - **No FQDN needed** - Works on localhost out of the box
-- **Real-time console** - Terminal-based console with history
+- **Real-time console** - Terminal-based console (xterm.js) with history and command input
 - **File manager** - Browse, edit, upload, delete server files
-- **Backup system** - Create and restore server backups
-- **Crash detection** - Automatic crash analysis and reporting
+- **Backup system** - Create, download, and restore server backups
+- **Crash detection** - Automatic crash analysis, reporting, and auto-restart
 - **Activity logging** - Track all server actions
+- **Cloudflare Tunnel** - Optional tunnel for remote access via panel.smp45.qzz.io
+- **Subdomain management** - Automatic DNS A records for each server subdomain
 
 ### Server Management
 - Java and Bedrock server support
-- Paper, Spigot, Purpur, Fabric, Forge, Vanilla
-- PocketMine-MP, Nukkit for Bedrock
+- Java: Paper, Folia, Spigot, Purpur, Fabric, Forge, NeoForge, Quilt, Vanilla
+- Bedrock: Official Bedrock Server, PocketMine-MP, Nukkit, PowerNukkit
 - Start, stop, restart, kill servers
 - Live console output with command input
 - Server properties editor
-- Memory and disk usage monitoring
+- Memory, CPU, and disk usage monitoring
 - Automatic port allocation
 
 ### Mod Manager
-- Search mods from Modrinth API
+- Search and install plugins from Modrinth, Hangar, and Poggit
 - Install and remove mods/plugins
-- Browse popular Minecraft mods
-- Supports Paper, Spigot, Forge, Fabric loaders
+- Auto-detects compatible loader for each server type
 
 ### Schedule System
 - Cron-based task scheduling
@@ -38,7 +39,8 @@ A modern Minecraft server management panel for Termux. No Docker, no proot-distr
 - Power actions on schedule
 
 ### User System
-- User registration (no default admin)
+- User registration
+- Default admin user (`admin` / `admin123`) auto-created on first run - change it after login
 - Admin CLI tool for creating admins
 - Role-based access control
 - Activity tracking
@@ -47,7 +49,8 @@ A modern Minecraft server management panel for Termux. No Docker, no proot-distr
 
 - **Termux** (Android) - Download from F-Droid or GitHub
 - **Node.js** (installed by setup)
-- **Java 17** (installed by setup)
+- **Java 25** (installed by setup, used inside a proot-distro Ubuntu container)
+- **proot-distro** with the `ubuntu` distribution installed (used to run Java servers)
 
 ## Quick Start
 
@@ -171,12 +174,15 @@ netherpanel/
 │   │   ├── admin.js          # Admin API
 │   │   └── client.js         # Client API
 │   └── services/
-│       ├── ServerService.js  # Server process management
+│       ├── ServerService.js  # Server process management + software downloads
 │       ├── UserService.js    # User management
 │       ├── BackupService.js  # Backup system
 │       ├── ScheduleService.js # Task scheduling
-│       ├── ModService.js     # Modrinth API integration
-│       └── CrashService.js   # Crash detection
+│       ├── ModService.js     # Modrinth/Hangar/Poggit integration
+│       ├── CrashService.js   # Crash detection + auto-restart
+│       ├── PlayerService.js  # Whitelist/ops/bans management
+│       ├── CloudflareService.js # DNS subdomain management
+│       └── SystemInfoService.js # CPU/memory/disk monitoring
 ├── public/
 │   ├── login.html            # Login page
 │   ├── index.html            # Dashboard
@@ -199,19 +205,23 @@ netherpanel/
 
 1. **Termux**: Native Android terminal emulator
 2. **Panel**: Express.js server running directly in Termux
-3. **Servers**: Java/Bedrock processes spawned directly
+3. **Servers**: Java servers run inside a proot-distro Ubuntu container; Bedrock/PocketMine run natively
+
+### Java via proot-distro
+
+Java servers are spawned with `proot-distro login ubuntu` and Java 25 installed inside the Ubuntu container. Bedrock Edition servers run directly on Termux:
+
+- **PocketMine-MP** uses PMMP's prebuilt Android ARM64 PHP runtime (auto-downloaded to `data/pmmpphp/` on first use) — no system PHP needed.
+- **Nukkit / PowerNukkit** run the NukkitX-family jar via the proot Ubuntu Java. Official Nukkit (CloudburstMC) has no downloadable releases, so Nukkit uses the maintained PowerNukkitX jar.
+- **Official Bedrock Dedicated Server** only supports x86_64 CPUs, so on ARM devices the panel shows a clear error and recommends PocketMine or Nukkit.
+
+### Optional Cloudflare Tunnel
+
+If a Cloudflare tunnel token is present at `~/.cloudflared/token`, `start.sh` will launch `cloudflared` alongside the panel and expose it at `https://panel.smp45.qzz.io`. Without the token, the panel simply runs on `http://localhost:3000`.
 
 ### No Docker
 
 Unlike Pterodactyl, NetherPanel runs game servers directly as Java processes. This makes it lightweight and easy to set up on Termux.
-
-### No proot-distro
-
-Unlike other solutions, NetherPanel runs natively in Termux without needing Ubuntu or proot-distro. This simplifies setup and improves reliability.
-
-### No FQDN
-
-The panel works on localhost without any domain configuration. Just install and access at http://localhost:3000.
 
 ## Differences from Pterodactyl
 
@@ -219,7 +229,6 @@ The panel works on localhost without any domain configuration. Just install and 
 |---------|-------------|-------------|
 | Docker Required | Yes | No |
 | FQDN Required | Yes | No |
-| proot Required | No | No |
 | Complexity | High | Low |
 | Setup Time | 30+ minutes | 2 minutes |
 | Mod Manager | No | Yes |
@@ -231,7 +240,14 @@ The panel works on localhost without any domain configuration. Just install and 
 ### Java not found
 
 ```bash
-pkg install openjdk-17
+pkg install openjdk-25
+```
+
+Java servers need the `ubuntu` proot-distro with Java 25 installed:
+
+```bash
+proot-distro install ubuntu
+proot-distro login ubuntu -- apt update && apt install -y openjdk-25
 ```
 
 ### Node.js not found

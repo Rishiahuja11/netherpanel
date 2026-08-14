@@ -26,94 +26,7 @@ const NetherAuth = {
     }
   },
 
-  initParticles() {
-    const canvas = document.getElementById('particle-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-
-    class Particle {
-      constructor() {
-        this.reset();
-      }
-
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 2 + 0.5;
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.speedY = (Math.random() - 0.5) * 0.5;
-        this.opacity = Math.random() * 0.5 + 0.1;
-        this.color = Math.random() > 0.5 ? '#f97316' : '#06b6d4';
-        this.pulse = Math.random() * Math.PI * 2;
-        this.pulseSpeed = Math.random() * 0.02 + 0.01;
-      }
-
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.pulse += this.pulseSpeed;
-        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-          this.reset();
-        }
-      }
-
-      draw() {
-        const pulseOpacity = this.opacity * (0.7 + Math.sin(this.pulse) * 0.3);
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = pulseOpacity;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    const createParticles = () => {
-      const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
-      particles = [];
-      for (let i = 0; i < count; i++) {
-        particles.push(new Particle());
-      }
-    };
-
-    const connectParticles = () => {
-      const maxDist = 120;
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < maxDist) {
-            const opacity = (1 - dist / maxDist) * 0.15;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(249, 115, 22, ${opacity})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-    };
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => { p.update(); p.draw(); });
-      connectParticles();
-      requestAnimationFrame(animate);
-    };
-
-    resize();
-    createParticles();
-    animate();
-    window.addEventListener('resize', () => { resize(); createParticles(); });
-  },
+  initParticles() {},
 
   initTabs() {
     const tabs = document.querySelectorAll('.auth-tab');
@@ -230,7 +143,6 @@ const NetherAuth = {
         const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-password').value;
         const confirmPassword = document.getElementById('reg-password-confirm').value;
-        const agreeTerms = document.getElementById('agree-terms').checked;
         const btn = registerForm.querySelector('button[type="submit"]');
 
         if (!username || !email || !password || !confirmPassword) {
@@ -245,11 +157,6 @@ const NetherAuth = {
 
         if (password.length < 6) {
           NetherAuth.showToast('Error', 'Password must be at least 6 characters', 'error');
-          return;
-        }
-
-        if (!agreeTerms) {
-          NetherAuth.showToast('Error', 'Please agree to the Terms of Service', 'error');
           return;
         }
 
@@ -272,6 +179,12 @@ const NetherAuth = {
     }
   },
 
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  },
+
   showToast(title, message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -282,8 +195,8 @@ const NetherAuth = {
     toast.innerHTML = `
       <i data-lucide="${icons[type]}" class="toast-icon"></i>
       <div class="toast-message">
-        <div class="toast-title">${title}</div>
-        <div class="toast-desc">${message}</div>
+        <div class="toast-title">${this.escapeHtml(title)}</div>
+        <div class="toast-desc">${this.escapeHtml(String(message))}</div>
       </div>
       <button class="toast-close" onclick="this.parentElement.classList.add('leaving'); setTimeout(() => this.parentElement.remove(), 300);">
         <i data-lucide="x"></i>

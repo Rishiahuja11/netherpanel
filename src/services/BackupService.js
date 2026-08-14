@@ -39,6 +39,7 @@ class BackupService {
       const output = createWriteStream(backupPath);
       const archive = archiver('zip', { zlib: { level: 6 } });
 
+      output.on('error', reject);
       output.on('close', () => {
         const size = archive.pointer();
         const db = this.getDb();

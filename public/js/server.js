@@ -21,8 +21,10 @@ const NetherServer = {
     this.initModManager();
     this.initSettingsNav();
     this.initSettingsActions();
-    this.initScheduleActions();
     this.initBackupActions();
+    this.initPlayers();
+    this.initLogsControls();
+    this.initSettingsDanger();
   },
 
   async loadServerInfo() {
@@ -42,9 +44,6 @@ const NetherServer = {
           : `${server.subdomain}.smp45.qzz.io:${server.port}`)
         : `localhost:${server.port}`;
       document.getElementById('server-addr-text').textContent = addr;
-
-      const versionBadge = document.getElementById('server-version-badge');
-      versionBadge.textContent = `${server.server_type || server.software || 'Paper'} ${server.version || server.mc_version || '1.21.4'}`;
 
       const statusBadge = document.getElementById('server-status-badge');
       statusBadge.className = `server-status-badge ${server.status}`;
@@ -263,6 +262,8 @@ const NetherServer = {
     this.socket = io(window.location.origin, { transports: ['websocket', 'polling'] });
 
     this.socket.on('connect', () => {
+      const csEl = document.getElementById('console-status');
+      if (csEl) { csEl.textContent = 'Connected'; csEl.style.color = 'var(--success)'; }
       this.socket.emit('auth', token);
     });
 
@@ -298,6 +299,8 @@ const NetherServer = {
     });
 
     this.socket.on('disconnect', () => {
+      const csEl = document.getElementById('console-status');
+      if (csEl) { csEl.textContent = 'Disconnected'; csEl.style.color = 'var(--error)'; }
       if (this.term) {
         this.term.writeln('\x1b[38;2;234;179;8m[Console] Disconnected from server. Reconnecting...\x1b[0m');
       }
@@ -356,26 +359,12 @@ const NetherServer = {
 
     if (!cmd) return;
 
-    this.term.writeln(`\x1b[38;2;148;163;184m> ${cmd}\x1b[0m`);
-
-    fetch(`/api/servers/${this.serverId}/command`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.authToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ command: cmd })
-    }).then(r => r.json()).then(data => {
-      if (data.error) {
-        this.term.writeln(`\x1b[38;2;239;68;68m${data.error}\x1b[0m`);
-      } else if (data.output) {
-        data.output.split('\n').forEach(line => {
-          this.term.writeln(`\x1b[38;2;148;163;184m${line}\x1b[0m`);
-        });
-      }
-    }).catch(() => {
-      this.term.writeln('\x1b[38;2;239;68;68mFailed to send command. Is the server running?\x1b[0m');
-    });
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('send_command', { serverId: parseInt(this.serverId), command: cmd });
+    } else {
+      this.term.writeln('\x1b[38;2;239;68;68mNot connected. Reconnecting...\x1b[0m');
+      this.connectSocket();
+    }
   },
 
   initPowerControls() {
@@ -447,10 +436,49 @@ const NetherServer = {
   },
 
   initFileManager() {
+    this.currentDirPath = '';
+
+    const backBtn = document.getElementById('files-back-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        const parent = this.currentDirPath.split('/').slice(0, -1).join('/');
+        this.loadFiles(parent);
+      });
+    }
+
+    const editorBack = document.getElementById('file-editor-back');
+    if (editorBack) {
+      editorBack.addEventListener('click', () => this.closeEditor());
+    }
+
+    const uploadBtn = document.getElementById('file-upload-btn');
+    const uploadInput = document.getElementById('file-upload-input');
+    if (uploadBtn && uploadInput) {
+      uploadBtn.addEventListener('click', () => uploadInput.click());
+      uploadInput.addEventListener('change', () => this.uploadFiles());
+    }
+
+    const downloadBtn = document.getElementById('file-download-btn');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        if (this.currentFilePath) this.downloadFile(this.currentFilePath);
+      });
+    }
+
     this.loadFiles();
   },
 
   async loadFiles(subPath = '') {
+    this.currentDirPath = subPath;
+    const list = document.getElementById('files-list');
+    const backBtn = document.getElementById('files-back-btn');
+    const pathEl = document.getElementById('files-current-path');
+
+    if (backBtn) backBtn.style.display = subPath ? '' : 'none';
+    if (pathEl) pathEl.textContent = subPath || 'Server Files';
+
+    this.closeEditor();
+
     try {
       const res = await fetch(`/api/servers/${this.serverId}/files?path=${encodeURIComponent(subPath)}`, {
         headers: { 'Authorization': `Bearer ${this.authToken}` }
@@ -459,20 +487,20 @@ const NetherServer = {
       const files = await res.json();
       this.renderFiles(files, subPath);
     } catch (err) {
-      console.error('Failed to load files:', err);
+      if (list) list.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted)">Failed to load files</div>';
     }
   },
 
   renderFiles(files, currentPath) {
-    const tree = document.getElementById('file-tree');
-    if (!tree) return;
+    const list = document.getElementById('files-list');
+    if (!list) return;
 
     let html = '';
     if (currentPath) {
       const parent = currentPath.split('/').slice(0, -1).join('/');
-      html += `<div class="file-tree-item" data-path="${parent}" onclick="NetherServer.loadFiles('${parent}')">
-        <i data-lucide="folder" style="color: var(--text-tertiary)"></i>
-        <span>..</span>
+      html += `<div class="file-item parent" onclick="NetherServer.loadFiles('${parent}')">
+        <i data-lucide="arrow-up"></i>
+        <span class="file-name">..</span>
       </div>`;
     }
 
@@ -484,26 +512,38 @@ const NetherServer = {
 
     files.forEach(file => {
       const icon = file.isDirectory ? 'folder' : 'file';
-      const color = file.isDirectory ? 'var(--accent-orange)' : 'var(--text-tertiary)';
+      const color = file.isDirectory ? 'var(--accent-blue)' : 'var(--text-tertiary)';
       const size = file.isDirectory ? '' : this.formatBytes(file.size);
+      const cls = file.isDirectory ? 'file-item folder' : 'file-item';
+      const fullPath = currentPath ? currentPath + '/' + file.name : file.name;
       const clickAction = file.isDirectory
-        ? `NetherServer.loadFiles('${currentPath ? currentPath + '/' : ''}${file.name}')`
-        : `NetherServer.openFile('${currentPath ? currentPath + '/' : ''}${file.name}')`;
-      html += `<div class="file-tree-item" data-path="${file.path}" onclick="${clickAction}">
+        ? `NetherServer.loadFiles('${fullPath}')`
+        : `NetherServer.openFile('${fullPath}')`;
+      html += `<div class="${cls}" onclick="${clickAction}">
         <i data-lucide="${icon}" style="color: ${color}"></i>
-        <span>${file.name}</span>
+        <span class="file-name">${file.name}</span>
         <span class="file-size">${size}</span>
       </div>`;
     });
 
-    tree.innerHTML = html;
+    if (!files.length && !currentPath) {
+      html = '<div style="padding:3rem;text-align:center;color:var(--text-muted)"><i data-lucide="folder-open" style="width:32px;height:32px;margin-bottom:0.5rem"></i><p>Server directory is empty</p></div>';
+    }
+
+    list.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   },
 
   async openFile(filePath) {
+    this.currentFilePath = filePath;
+    const panel = document.getElementById('file-editor-panel');
     const editor = document.getElementById('file-editor');
-    const fileName = document.getElementById('current-file-name');
-    if (fileName) fileName.textContent = filePath.split('/').pop();
+    const nameEl = document.getElementById('file-editor-name');
+    const list = document.getElementById('files-list');
+
+    if (nameEl) nameEl.textContent = filePath.split('/').pop();
+    if (panel) panel.style.display = 'flex';
+    if (list) list.style.display = 'none';
 
     try {
       const res = await fetch(`/api/servers/${this.serverId}/files/read?path=${encodeURIComponent(filePath)}`, {
@@ -522,11 +562,17 @@ const NetherServer = {
       }
     } catch (err) {
       if (editor) {
-        editor.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">
-          <p>Failed to load file.</p>
-        </div>`;
+        editor.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Failed to load file.</div>`;
       }
     }
+  },
+
+  closeEditor() {
+    const panel = document.getElementById('file-editor-panel');
+    const list = document.getElementById('files-list');
+    if (panel) panel.style.display = 'none';
+    if (list) list.style.display = '';
+    this.currentFilePath = null;
   },
 
   async saveFile(filePath) {
@@ -549,6 +595,54 @@ const NetherServer = {
     }
   },
 
+  async uploadFiles() {
+    const input = document.getElementById('file-upload-input');
+    if (!input || !input.files.length) return;
+
+    const formData = new FormData();
+    for (const file of input.files) {
+      formData.append('files', file);
+    }
+    formData.append('path', this.currentDirPath || '');
+
+    try {
+      NetherServer.showToast('Uploading', `Uploading ${input.files.length} file(s)...`, 'info');
+      const res = await fetch(`/api/servers/${this.serverId}/files/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${this.authToken}` },
+        body: formData
+      });
+      if (res.ok) {
+        NetherServer.showToast('Uploaded', 'Files uploaded successfully', 'success');
+        input.value = '';
+        this.loadFiles(this.currentDirPath || '');
+      } else {
+        const d = await res.json();
+        NetherServer.showToast('Error', d.error || 'Upload failed', 'error');
+      }
+    } catch (e) {
+      NetherServer.showToast('Error', 'Failed to upload files', 'error');
+    }
+  },
+
+  downloadFile(filePath) {
+    const a = document.createElement('a');
+    a.href = `/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(filePath)}`;
+    a.setAttribute('download', '');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  },
+
+  downloadBackup(backupId) {
+    const a = document.createElement('a');
+    a.href = `/api/servers/${this.serverId}/backups/${backupId}/download`;
+    a.setAttribute('download', '');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  },
+
   formatBytes(bytes) {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -562,7 +656,8 @@ const NetherServer = {
     this.modLimit = 20;
 
     const isModded = this.serverData && ['fabric', 'forge', 'quilt', 'neoforge'].includes(this.serverData.server_type || this.serverData.software);
-    const isPlugin = this.serverData && ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(this.serverData.server_type || this.serverData.software);
+    const serverType = this.serverData?.server_type || this.serverData?.software || 'paper';
+    const isPlugin = ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(serverType);
     const modTab = document.querySelector('.server-tab[data-tab="mods"]');
     if (modTab) {
       const label = isPlugin ? 'Plugins' : 'Mods';
@@ -581,11 +676,9 @@ const NetherServer = {
     });
 
     const searchInput = document.getElementById('mod-search');
-    const serverType = this.serverData?.server_type || 'paper';
     const isPoggit = ['pocketmine'].includes(serverType);
     const isHangar = ['paper', 'spigot', 'purpur', 'folia'].includes(serverType);
     const searchSource = isPoggit ? 'Poggit' : isHangar ? 'Hangar' : 'Modrinth';
-    const isPlugin = ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(serverType);
 
     if (searchInput) {
       searchInput.placeholder = `Search ${isPlugin ? 'plugins' : 'mods'} on ${searchSource}...`;
@@ -625,6 +718,7 @@ const NetherServer = {
     }
 
     this.loadInstalledMods();
+    this.searchMods('');
   },
 
   async loadInstalledMods() {
@@ -706,6 +800,7 @@ const NetherServer = {
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
       const hits = data.hits || [];
+      this.searchSource = data.source || searchSource.toLowerCase();
 
       if (info) {
         info.textContent = `Showing ${Math.min(this.modOffset + hits.length, data.total_hits)} of ${data.total_hits} results (${searchSource})`;
@@ -749,7 +844,7 @@ const NetherServer = {
     }
   },
 
-  async installModFromModrinth(modrinthId, modName) {
+  async installModFromModrinth(modrinthId, modName, source = 'modrinth') {
     NetherServer.showToast('Installing', `Installing ${modName}...`, 'info');
     try {
       const res = await fetch(`/api/servers/${this.serverId}/mods/install`, {
@@ -758,7 +853,7 @@ const NetherServer = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.authToken}`
         },
-        body: JSON.stringify({ mod_id: modrinthId })
+        body: JSON.stringify({ mod_id: modrinthId, source, name: modName })
       });
 
       if (res.ok) {
@@ -774,7 +869,8 @@ const NetherServer = {
   },
 
   async installModFromSearch(modId, modName) {
-    return this.installModFromModrinth(modId, modName);
+    const source = this.searchSource || 'modrinth';
+    return this.installModFromModrinth(modId, modName, source);
   },
 
   async removeMod(modId) {
@@ -826,13 +922,17 @@ const NetherServer = {
       const javaArgsEl = document.getElementById('setting-java-args');
       const portEl = document.getElementById('setting-port');
       const ramMaxEl = document.getElementById('setting-ram-max');
-      const maxPlayersEl = document.getElementById('setting-max-players');
+      const subdomainEl = document.getElementById('setting-subdomain');
+      const startupCmdEl = document.getElementById('setting-startup-cmd');
       if (nameEl) nameEl.value = this.serverData.name || '';
       if (javaArgsEl) javaArgsEl.value = this.serverData.java_args || `-Xmx${this.serverData.ram_max}M -Xms${this.serverData.ram_min}M`;
       if (portEl) portEl.value = this.serverData.port || 25565;
       if (ramMaxEl) ramMaxEl.value = this.serverData.ram_max || 2048;
-      if (maxPlayersEl) maxPlayersEl.value = 20;
+      if (subdomainEl) subdomainEl.value = this.serverData.subdomain || '';
+      if (startupCmdEl) startupCmdEl.value = this.serverData.startup_cmd || '';
     }
+
+    this.loadServerProperties();
 
     const saveBtn = document.getElementById('save-settings');
     if (saveBtn) {
@@ -842,10 +942,14 @@ const NetherServer = {
         const javaArgsEl = document.getElementById('setting-java-args');
         const portEl = document.getElementById('setting-port');
         const ramMaxEl = document.getElementById('setting-ram-max');
+        const subdomainEl = document.getElementById('setting-subdomain');
+        const startupCmdEl = document.getElementById('setting-startup-cmd');
         if (nameEl?.value) body.name = nameEl.value;
         if (javaArgsEl?.value) body.java_args = javaArgsEl.value;
         if (portEl?.value) body.port = parseInt(portEl.value);
         if (ramMaxEl?.value) body.ram_max = parseInt(ramMaxEl.value);
+        if (subdomainEl?.value !== undefined) body.subdomain = subdomainEl.value;
+        if (startupCmdEl?.value !== undefined) body.startup_cmd = startupCmdEl.value;
         try {
           const res = await fetch(`/api/servers/${this.serverId}`, {
             method: 'PUT',
@@ -854,79 +958,137 @@ const NetherServer = {
           });
           if (res.ok) {
             this.serverData = await res.json();
-            NetherServer.showToast('Saved', 'Settings saved successfully', 'success');
           }
-        } catch (e) {
-          NetherServer.showToast('Error', 'Failed to save settings', 'error');
-        }
+        } catch (e) {}
+
+        await this.saveServerProperties();
       });
     }
   },
 
-  async initScheduleActions() {
-    const container = document.getElementById('schedules-list');
-    if (!container) return;
+  async loadServerProperties() {
     try {
-      const res = await fetch(`/api/servers/${this.serverId}/schedules`, {
+      const res = await fetch(`/api/servers/${this.serverId}/properties`, {
         headers: { 'Authorization': `Bearer ${this.authToken}` }
       });
       if (!res.ok) return;
-      const schedules = await res.json();
-      if (!schedules.length) {
-        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="calendar"></i><p>No schedules configured</p><span>Create schedules to automate server tasks</span></div>';
-        lucide.createIcons({ nodes: [container] });
-        return;
+      const props = await res.json();
+      this.currentProps = props;
+
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+      const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val === 'true'; };
+
+      setVal('sp-motd', props.motd);
+      setVal('sp-max-players', props['max-players']);
+      setVal('sp-gamemode', props.gamemode);
+      setVal('sp-difficulty', props.difficulty);
+      setVal('sp-spawn-protection', props['spawn-protection']);
+      setVal('sp-view-distance', props['view-distance']);
+      setCheck('sp-online-mode', props['online-mode']);
+      setCheck('sp-pvp', props.pvp);
+      setCheck('sp-allow-flight', props['allow-flight']);
+      setCheck('sp-enable-command-block', props['enable-command-block']);
+      setCheck('sp-hardcore', props.hardcore);
+      setCheck('sp-spawn-animals', props['spawn-animals']);
+      setCheck('sp-spawn-monsters', props['spawn-monsters']);
+    } catch (err) {}
+  },
+
+  async saveServerProperties() {
+    const props = {};
+    const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : undefined; };
+    const getCheck = (id) => { const el = document.getElementById(id); return el ? el.checked ? 'true' : 'false' : undefined; };
+
+    const motd = getVal('sp-motd'); if (motd !== undefined) props.motd = motd;
+    const maxPlayers = getVal('sp-max-players'); if (maxPlayers) props['max-players'] = String(parseInt(maxPlayers) || 20);
+    const gamemode = getVal('sp-gamemode'); if (gamemode !== undefined) props.gamemode = gamemode;
+    const difficulty = getVal('sp-difficulty'); if (difficulty !== undefined) props.difficulty = difficulty;
+    const spawnProt = getVal('sp-spawn-protection'); if (spawnProt !== undefined) props['spawn-protection'] = String(parseInt(spawnProt) || 0);
+    const viewDist = getVal('sp-view-distance'); if (viewDist) props['view-distance'] = String(parseInt(viewDist) || 10);
+
+    const boolKeys = ['sp-online-mode','sp-pvp','sp-allow-flight','sp-enable-command-block','sp-hardcore','sp-spawn-animals','sp-spawn-monsters'];
+    const propKeys = ['online-mode','pvp','allow-flight','enable-command-block','hardcore','spawn-animals','spawn-monsters'];
+    boolKeys.forEach((id, i) => { const v = getCheck(id); if (v !== undefined) props[propKeys[i]] = v; });
+
+    if (Object.keys(props).length === 0) {
+      NetherServer.showToast('Saved', 'Settings saved', 'success');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/properties`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(props)
+      });
+      if (res.ok) {
+        NetherServer.showToast('Saved', 'Settings saved successfully', 'success');
+      } else {
+        const d = await res.json();
+        NetherServer.showToast('Error', d.error || 'Failed to save', 'error');
       }
-      container.innerHTML = schedules.map(s => `
-        <div class="schedule-card" data-schedule-id="${s.id}">
-          <div class="schedule-header">
-            <div class="schedule-info">
-              <h4>${s.name}</h4>
-              <span class="schedule-cron">${s.cron_expression}</span>
-            </div>
-          </div>
-          <div class="schedule-body">
-            <div class="schedule-action">
-              <i data-lucide="play"></i>
-              <span>Action: ${s.action}${s.command ? ' - ' + s.command : ''}</span>
-            </div>
-          </div>
-          <div class="schedule-footer">
-            <div class="schedule-actions">
-              <button class="btn-sm" onclick="NetherServer.runSchedule(${s.id})"><i data-lucide="play"></i> Run Now</button>
-              <button class="btn-sm danger" onclick="NetherServer.deleteSchedule(${s.id})"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons({ nodes: [container] });
-    } catch (err) {
-      container.innerHTML = '<div class="mods-empty-state"><p>Failed to load schedules</p></div>';
+    } catch (e) {
+      NetherServer.showToast('Error', 'Failed to save properties', 'error');
     }
   },
 
   async initBackupActions() {
     const container = document.getElementById('backups-list');
-    const createBtn = document.getElementById('create-backup-btn');
-    if (createBtn) {
-      createBtn.addEventListener('click', async () => {
-        NetherServer.showToast('Creating Backup', 'Backup is being created...', 'info');
+    const downloadBtn = document.getElementById('download-backup-btn');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = `/api/servers/${this.serverId}/download`;
+        a.setAttribute('download', '');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        NetherServer.showToast('Downloading', 'Backup zip is downloading...', 'info');
+      });
+    }
+
+    const restoreFileInput = document.getElementById('restore-file-input');
+    const restoreFileBtn = document.getElementById('restore-file-btn');
+    const restoreFileName = document.getElementById('restore-file-name');
+    const restoreUploadBtn = document.getElementById('restore-upload-btn');
+    if (restoreFileBtn && restoreFileInput) {
+      restoreFileBtn.addEventListener('click', () => restoreFileInput.click());
+      restoreFileInput.addEventListener('change', () => {
+        if (restoreFileInput.files.length > 0) {
+          if (restoreFileName) restoreFileName.textContent = restoreFileInput.files[0].name;
+          if (restoreUploadBtn) restoreUploadBtn.style.display = '';
+        }
+      });
+    }
+    if (restoreUploadBtn) {
+      restoreUploadBtn.addEventListener('click', async () => {
+        if (!restoreFileInput || !restoreFileInput.files.length) return;
+        restoreUploadBtn.disabled = true;
+        restoreUploadBtn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Restoring...';
+        const fd = new FormData();
+        fd.append('file', restoreFileInput.files[0]);
         try {
-          const res = await fetch(`/api/servers/${this.serverId}/backups`, {
+          const res = await fetch(`/api/servers/${this.serverId}/restore-upload`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: `Backup ${new Date().toLocaleString()}` })
+            headers: { 'Authorization': `Bearer ${this.authToken}` },
+            body: fd
           });
           if (res.ok) {
-            NetherServer.showToast('Backup Complete', 'Backup created successfully!', 'success');
-            this.loadBackups();
+            NetherServer.showToast('Restored', 'Backup restored successfully', 'success');
+            restoreFileInput.value = '';
+            if (restoreFileName) restoreFileName.textContent = 'No file chosen';
+            restoreUploadBtn.style.display = 'none';
           } else {
             const d = await res.json();
             NetherServer.showToast('Error', d.error || 'Failed', 'error');
           }
-        } catch (e) { NetherServer.showToast('Error', 'Failed to create backup', 'error'); }
+        } catch (e) { NetherServer.showToast('Error', 'Failed to restore backup', 'error'); }
+        restoreUploadBtn.disabled = false;
+        restoreUploadBtn.innerHTML = '<i data-lucide="rotate-ccw"></i> Restore from zip';
+        lucide.createIcons({ nodes: [restoreUploadBtn.parentElement] });
       });
     }
+
     this.loadBackups();
   },
 
@@ -956,7 +1118,8 @@ const NetherServer = {
             </div>
           </div>
           <div class="backup-actions">
-            <button class="btn-sm" onclick="NetherServer.restoreBackup(${b.id})" title="Restore"><i data-lucide="rotate-ccw"></i> Restore</button>
+            <button class="btn-sm" onclick="NetherServer.downloadBackup(${b.id})" title="Download"><i data-lucide="download"></i></button>
+            <button class="btn-sm" onclick="NetherServer.restoreBackup(${b.id})" title="Restore"><i data-lucide="rotate-ccw"></i></button>
             <button class="btn-sm danger" onclick="NetherServer.deleteBackup(${b.id})" title="Delete"><i data-lucide="trash-2"></i></button>
           </div>
         </div>
@@ -965,30 +1128,6 @@ const NetherServer = {
     } catch (err) {
       container.innerHTML = '<div class="mods-empty-state"><p>Failed to load backups</p></div>';
     }
-  },
-
-  async runSchedule(scheduleId) {
-    NetherServer.showToast('Running', 'Executing schedule...', 'info');
-    try {
-      const res = await fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}/run`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${this.authToken}` }
-      });
-      const d = await res.json();
-      if (d.error) NetherServer.showToast('Error', d.error, 'error');
-      else NetherServer.showToast('Done', 'Schedule executed', 'success');
-    } catch (e) { NetherServer.showToast('Error', 'Failed to run schedule', 'error'); }
-  },
-
-  async deleteSchedule(scheduleId) {
-    try {
-      await fetch(`/api/servers/${this.serverId}/schedules/${scheduleId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${this.authToken}` }
-      });
-      NetherServer.showToast('Deleted', 'Schedule removed', 'success');
-      this.initScheduleActions();
-    } catch (e) { NetherServer.showToast('Error', 'Failed to delete', 'error'); }
   },
 
   async restoreBackup(backupId) {
@@ -1015,6 +1154,256 @@ const NetherServer = {
     } catch (e) { NetherServer.showToast('Error', 'Failed to delete', 'error'); }
   },
 
+  initLogsControls() {
+    const select = document.getElementById('log-lines-select');
+    if (select) {
+      select.addEventListener('change', () => this.loadLogs());
+    }
+    this.loadLogs();
+  },
+
+  async deleteServer() {
+    if (!confirm(`Are you sure you want to delete "${this.serverData?.name}"? This cannot be undone.`)) return;
+    try {
+      await fetch(`/api/servers/${this.serverId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      this.showToast('Deleted', 'Server deleted', 'success');
+      window.location.href = 'index.html';
+    } catch (e) { this.showToast('Error', 'Failed to delete server', 'error'); }
+  },
+
+  initSettingsDanger() {},
+
+  escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  },
+
+  initPlayers() {
+    const tabs = document.querySelectorAll('.players-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.players-section').forEach(s => s.classList.remove('active'));
+        const sec = document.getElementById(`players-${tab.dataset.playersTab}-section`);
+        if (sec) sec.classList.add('active');
+      });
+    });
+    this.loadWhitelist();
+    this.loadOps();
+    this.loadBans();
+  },
+
+  async loadWhitelist() {
+    const container = document.getElementById('whitelist-list');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/whitelist`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) { container.innerHTML = '<div class="mods-empty-state"><p>Failed to load whitelist</p></div>'; return; }
+      const data = await res.json();
+      const players = data.players || [];
+      if (!players.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="shield-check"></i><p>No players whitelisted</p><span>Add players using the input above</span></div>';
+        lucide.createIcons({ nodes: [container] });
+        return;
+      }
+      container.innerHTML = players.map(p => `
+        <div class="player-card">
+          <div class="player-info">
+            <div class="player-avatar"><i data-lucide="user"></i></div>
+            <span class="player-name">${this.escapeHtml(p.name)}</span>
+          </div>
+          <button class="btn-sm danger" onclick="NetherServer.removeWhitelist('${this.escapeHtml(p.name)}')"><i data-lucide="trash-2"></i></button>
+        </div>
+      `).join('');
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) { container.innerHTML = '<div class="mods-empty-state"><p>Error loading whitelist</p></div>'; }
+  },
+
+  async addToWhitelist() {
+    const input = document.getElementById('whitelist-input');
+    const name = input?.value?.trim();
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/whitelist`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name })
+      });
+      if (res.ok) { this.showToast('Added', `${name} added to whitelist`, 'success'); input.value = ''; this.loadWhitelist(); }
+      else { const d = await res.json(); this.showToast('Error', d.error, 'error'); }
+    } catch (e) { this.showToast('Error', 'Failed to add player', 'error'); }
+  },
+
+  async removeWhitelist(name) {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/whitelist`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name })
+      });
+      if (res.ok) { this.showToast('Removed', `${name} removed from whitelist`, 'success'); this.loadWhitelist(); }
+    } catch (e) { this.showToast('Error', 'Failed to remove player', 'error'); }
+  },
+
+  async loadOps() {
+    const container = document.getElementById('ops-list');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/ops`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) { container.innerHTML = '<div class="mods-empty-state"><p>Failed to load operators</p></div>'; return; }
+      const data = await res.json();
+      const players = data.ops || [];
+      if (!players.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="shield"></i><p>No operators configured</p><span>Add operators using the input above</span></div>';
+        lucide.createIcons({ nodes: [container] });
+        return;
+      }
+      container.innerHTML = players.map(p => `
+        <div class="player-card">
+          <div class="player-info">
+            <div class="player-avatar op"><i data-lucide="crown"></i></div>
+            <span class="player-name">${this.escapeHtml(p.name)}</span>
+            <span class="player-level">Level ${p.level || 4}</span>
+          </div>
+          <button class="btn-sm danger" onclick="NetherServer.removeOp('${this.escapeHtml(p.name)}')"><i data-lucide="trash-2"></i></button>
+        </div>
+      `).join('');
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) { container.innerHTML = '<div class="mods-empty-state"><p>Error loading operators</p></div>'; }
+  },
+
+  async addOp() {
+    const input = document.getElementById('ops-input');
+    const levelEl = document.getElementById('ops-level');
+    const name = input?.value?.trim();
+    const level = parseInt(levelEl?.value || '4');
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/ops`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name, level })
+      });
+      if (res.ok) { this.showToast('Added', `${name} is now an operator`, 'success'); input.value = ''; this.loadOps(); }
+      else { const d = await res.json(); this.showToast('Error', d.error, 'error'); }
+    } catch (e) { this.showToast('Error', 'Failed to add operator', 'error'); }
+  },
+
+  async removeOp(name) {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/ops`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name })
+      });
+      if (res.ok) { this.showToast('Removed', `${name} deopped`, 'success'); this.loadOps(); }
+    } catch (e) { this.showToast('Error', 'Failed to remove operator', 'error'); }
+  },
+
+  async loadBans() {
+    const container = document.getElementById('bans-list');
+    if (!container) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/bans`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) { container.innerHTML = '<div class="mods-empty-state"><p>Failed to load bans</p></div>'; return; }
+      const data = await res.json();
+      const players = data.bans || [];
+      if (!players.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="shield-alert"></i><p>No players banned</p><span>Ban players using the form above</span></div>';
+        lucide.createIcons({ nodes: [container] });
+        return;
+      }
+      container.innerHTML = players.map(p => `
+        <div class="player-card">
+          <div class="player-info">
+            <div class="player-avatar banned"><i data-lucide="ban"></i></div>
+            <div>
+              <span class="player-name">${this.escapeHtml(p.name)}</span>
+              <span class="player-reason">${this.escapeHtml(p.reason || 'No reason')}</span>
+            </div>
+          </div>
+          <button class="btn-sm" onclick="NetherServer.unbanPlayer('${this.escapeHtml(p.name)}')"><i data-lucide="rotate-ccw"></i> Unban</button>
+        </div>
+      `).join('');
+      lucide.createIcons({ nodes: [container] });
+    } catch (err) { container.innerHTML = '<div class="mods-empty-state"><p>Error loading bans</p></div>'; }
+  },
+
+  async banPlayer() {
+    const nameInput = document.getElementById('ban-player-input');
+    const reasonInput = document.getElementById('ban-reason-input');
+    const name = nameInput?.value?.trim();
+    const reason = reasonInput?.value?.trim() || 'Banned by operator';
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/bans`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name, reason })
+      });
+      if (res.ok) { this.showToast('Banned', `${name} has been banned`, 'success'); nameInput.value = ''; reasonInput.value = ''; this.loadBans(); }
+      else { const d = await res.json(); this.showToast('Error', d.error, 'error'); }
+    } catch (e) { this.showToast('Error', 'Failed to ban player', 'error'); }
+  },
+
+  async unbanPlayer(name) {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/players/bans`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_name: name })
+      });
+      if (res.ok) { this.showToast('Unbanned', `${name} has been unbanned`, 'success'); this.loadBans(); }
+    } catch (e) { this.showToast('Error', 'Failed to unban player', 'error'); }
+  },
+
+  async loadLogs() {
+    const container = document.getElementById('logs-content');
+    if (!container) return;
+    const lines = document.getElementById('log-lines-select')?.value || '200';
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/logs?lines=${lines}`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) { container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">Failed to load logs. Server may not have started yet.</div>'; return; }
+      const data = await res.json();
+      const logLines = (data.content || '').split('\n');
+      container.innerHTML = `<pre class="logs-pre">${logLines.map(l => {
+        let cls = '';
+        if (/\berror\b/i.test(l)) cls = 'log-error';
+        else if (/\bwarn/i.test(l)) cls = 'log-warn';
+        else if (/\binfo\b/i.test(l)) cls = 'log-info';
+        else if (/debug/i.test(l)) cls = 'log-debug';
+        return `<span class="${cls}">${this.escapeHtml(l)}</span>`;
+      }).join('\n')}</pre>`;
+      container.scrollTop = container.scrollHeight;
+    } catch (err) { container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">Error loading logs</div>'; }
+  },
+
+  logAutoRefreshInterval: null,
+  toggleLogAutoRefresh() {
+    const btn = document.getElementById('log-autorefresh-toggle');
+    if (this.logAutoRefreshInterval) {
+      clearInterval(this.logAutoRefreshInterval);
+      this.logAutoRefreshInterval = null;
+      if (btn) btn.classList.remove('active');
+      this.showToast('Auto-refresh', 'Log auto-refresh disabled', 'info');
+    } else {
+      this.logAutoRefreshInterval = setInterval(() => this.loadLogs(), 5000);
+      if (btn) btn.classList.add('active');
+      this.showToast('Auto-refresh', 'Logs will refresh every 5 seconds', 'info');
+    }
+  },
+
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  },
+
   showToast(title, message, type = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -1031,8 +1420,8 @@ const NetherServer = {
     toast.innerHTML = `
       <i data-lucide="${icons[type]}" class="toast-icon"></i>
       <div class="toast-message">
-        <div class="toast-title">${title}</div>
-        <div class="toast-desc">${message}</div>
+        <div class="toast-title">${this.escapeHtml(title)}</div>
+        <div class="toast-desc">${this.escapeHtml(String(message))}</div>
       </div>
       <button class="toast-close" onclick="this.parentElement.classList.add('leaving'); setTimeout(() => this.parentElement.remove(), 300);">
         <i data-lucide="x"></i>
@@ -1048,12 +1437,6 @@ const NetherServer = {
         setTimeout(() => toast.remove(), 300);
       }
     }, 5000);
-  }
-};
-
-const NetherMods = {
-  install(btn) {
-    NetherServer.installMod(btn);
   }
 };
 

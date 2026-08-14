@@ -2,159 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NetherPanel - Login</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/style.css?v=3">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="auth-page">
-  <canvas id="particle-canvas"></canvas>
+  <div class="auth-bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 4L4 14V34L24 44L44 34V14L24 4Z" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
-            <path d="M24 12L12 18V30L24 36L36 30V18L24 12Z" fill="url(#logoGrad)" opacity="0.3"/>
-            <path d="M24 18L18 21V27L24 30L30 27V21L24 18Z" fill="url(#logoGrad)"/>
-            <defs>
-              <linearGradient id="logoGrad" x1="4" y1="4" x2="44" y2="44">
-                <stop stop-color="#f97316"/>
-                <stop offset="1" stop-color="#06b6d4"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <h1 class="auth-title">NetherPanel</h1>
-        <p class="auth-subtitle">Minecraft Server Management</p>
-      </div>
-
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="login">Sign In</button>
-        <button class="auth-tab" data-tab="register">Create Account</button>
-        <div class="tab-indicator"></div>
-      </div>
-
-      <div class="auth-forms">
-        <form id="login-form" class="auth-form active">
-          <div class="form-group">
-            <label for="login-email">Username</label>
-            <div class="input-wrapper">
-              <i data-lucide="user" class="input-icon"></i>
-              <input type="text" id="login-email" placeholder="Enter username" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="login-password">Password</label>
-            <div class="input-wrapper">
-              <i data-lucide="lock" class="input-icon"></i>
-              <input type="password" id="login-password" placeholder="••••••••" required>
-              <button type="button" class="toggle-password" aria-label="Toggle password">
-                <i data-lucide="eye" class="eye-icon"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="form-options">
-            <label class="checkbox-wrapper">
-              <input type="checkbox" id="remember-me">
-              <span class="checkbox-custom"></span>
-              <span class="checkbox-label">Remember me</span>
-            </label>
-            <a href="#" class="forgot-link">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="btn-primary btn-full">
-            <span>Sign In</span>
-            <i data-lucide="arrow-right"></i>
-          </button>
-        </form>
-
-        <form id="register-form" class="auth-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="reg-firstname">First Name</label>
-              <div class="input-wrapper">
-                <i data-lucide="user" class="input-icon"></i>
-                <input type="text" id="reg-firstname" placeholder="John" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="reg-lastname">Last Name</label>
-              <div class="input-wrapper">
-                <i data-lucide="user" class="input-icon"></i>
-                <input type="text" id="reg-lastname" placeholder="Doe" required>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reg-username">Username</label>
-            <div class="input-wrapper">
-              <i data-lucide="at-sign" class="input-icon"></i>
-              <input type="text" id="reg-username" placeholder="johndoe" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reg-email">Email</label>
-            <div class="input-wrapper">
-              <i data-lucide="mail" class="input-icon"></i>
-              <input type="email" id="reg-email" placeholder="you@example.com" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reg-password">Password</label>
-            <div class="input-wrapper">
-              <i data-lucide="lock" class="input-icon"></i>
-              <input type="password" id="reg-password" placeholder="Min 8 characters" required minlength="8">
-              <button type="button" class="toggle-password" aria-label="Toggle password">
-                <i data-lucide="eye" class="eye-icon"></i>
-              </button>
-            </div>
-            <div class="password-strength" id="password-strength">
-              <div class="strength-bar"><div class="strength-fill"></div></div>
-              <span class="strength-text">Weak</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reg-password-confirm">Confirm Password</label>
-            <div class="input-wrapper">
-              <i data-lucide="shield-check" class="input-icon"></i>
-              <input type="password" id="reg-password-confirm" placeholder="Repeat password" required>
-            </div>
-          </div>
-
-          <div class="form-options">
-            <label class="checkbox-wrapper">
-              <input type="checkbox" id="agree-terms" required>
-              <span class="checkbox-custom"></span>
-              <span class="checkbox-label">I agree to the <a href="#">Terms of Service</a></span>
-            </label>
-          </div>
-
-          <button type="submit" class="btn-primary btn-full">
-            <span>Create Account</span>
-            <i data-lucide="user-plus"></i>
-          </button>
-        </form>
-      </div>
-
-      <div class="auth-footer">
-        <p>Secured with end-to-end encryption</p>
-      </div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M24 4L4 14V34L24 44L44 34V14L24 4Z" stroke="url(#lg)" stroke-width="2" fill="none"/>
+        <path d="M24 12L12 18V30L24 36L36 30V18L24 12Z" fill="url(#lg)" opacity="0.3"/>
+        <path d="M24 18L18 21V27L24 30L30 27V21L24 18Z" fill="url(#lg)"/>
+        <defs><linearGradient id="lg" x1="4" y1="4" x2="44" y2="44"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+      </svg>
+      <h1>NetherPanel</h1>
+      <p>Minecraft Server Management</p>
     </div>
 
-    <div class="auth-decor">
-      <div class="decor-orb orb-1"></div>
-      <div class="decor-orb orb-2"></div>
-      <div class="decor-orb orb-3"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Sign In</button>
+      <button class="auth-tab" data-tab="register">Create Account</button>
     </div>
+
+    <form id="login-form" class="auth-form active">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-email" class="form-input" placeholder="Enter username" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
+      </div>
+      <button type="submit" class="btn-primary" style="margin-top:0.5rem">Sign In</button>
+    </form>
+
+    <form id="register-form" class="auth-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="reg-username" class="form-input" placeholder="Choose a username" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" class="form-input" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" class="form-input" placeholder="Min 8 characters" required minlength="8">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="reg-password-confirm" class="form-input" placeholder="Repeat password" required>
+      </div>
+      <button type="submit" class="btn-primary" style="margin-top:0.5rem">Create Account</button>
+    </form>
   </div>
 
   <div class="toast-container" id="toast-container"></div>

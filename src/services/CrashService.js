@@ -3,6 +3,8 @@ const ServerService = require('./ServerService');
 const fs = require('fs');
 const path = require('path');
 
+const monitorIntervals = new Map();
+
 class CrashService {
   static getDb() {
     return getDb();
@@ -178,28 +180,42 @@ class CrashService {
   }
 
   static monitorServer(serverId) {
+    if (monitorIntervals.has(serverId)) return;
+
     const server = ServerService.getServer(serverId);
     if (!server) return;
 
     const checkInterval = setInterval(() => {
       const currentServer = ServerService.getServer(serverId);
-      if (!currentServer) {
+      if (!currentServer || currentServer.status === 'stopped') {
         clearInterval(checkInterval);
+        monitorIntervals.delete(serverId);
         return;
       }
 
       if (currentServer.status === 'crashed') {
-        const crashes = this.getCrashes(serverId, 1);
-        if (crashes.length > 0) {
-          const latestCrash = crashes[0];
-          if (latestCrash.error_output && latestCrash.error_output.includes('OutOfMemoryError')) {
-            console.log(`[CrashService] Server ${serverId} crashed due to OOM`);
-          }
+        clearInterval(checkInterval);
+        monitorIntervals.delete(serverId);
+        const crashes = this.getCrashes(serverId, 3);
+        const recentCrashes = crashes.filter(c => {
+          const d = new Date(String(c.detected_at).replace(' ', 'T') + 'Z');
+          return (Date.now() - d.getTime()) < 300000;
+        });
+
+        if (recentCrashes.length < 3) {
+          console.log(`[CrashService] Auto-restarting server ${serverId}...`);
+          ServerService.startServer(serverId, currentServer.user_id).then(() => {
+            this.monitorServer(serverId);
+          }).catch(err => {
+            console.error(`[CrashService] Auto-restart failed for server ${serverId}:`, err.message);
+            this.monitorServer(serverId);
+          });
+        } else {
+          console.log(`[CrashService] Server ${serverId} crashed ${recentCrashes.length} times in 5 minutes, not auto-restarting`);
         }
       }
-    }, 30000);
-
-    return () => clearInterval(checkInterval);
+    }, 15000);
+    monitorIntervals.set(serverId, checkInterval);
   }
 }
 
