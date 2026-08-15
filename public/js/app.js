@@ -127,6 +127,7 @@ const NetherApp = {
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
       this.loadSettingsForm();
+      this.syncThemeControls();
     });
     document.getElementById('close-settings-modal')?.addEventListener('click', () => {
       modal.classList.remove('active');
@@ -139,6 +140,25 @@ const NetherApp = {
     document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
     document.getElementById('cf-enabled')?.addEventListener('change', () => this.updateCfDomainSample());
     document.getElementById('cf-domain')?.addEventListener('input', () => this.updateCfDomainSample());
+    document.querySelectorAll('input[name="panel-theme"]').forEach(r => {
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        this.applyTheme(r.value);
+        try { localStorage.setItem('netherpanel_theme', r.value); } catch (e) {}
+      });
+    });
+  },
+
+  applyTheme(theme) {
+    if (theme === 'skypanel') document.documentElement.setAttribute('data-theme', 'skypanel');
+    else document.documentElement.removeAttribute('data-theme');
+  },
+
+  syncThemeControls() {
+    const current = document.documentElement.getAttribute('data-theme') || 'jtg';
+    document.querySelectorAll('input[name="panel-theme"]').forEach(r => {
+      r.checked = (r.value === current);
+    });
   },
 
   async loadSettingsForm() {

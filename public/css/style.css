@@ -48,7 +48,61 @@
   --transition: 0.2s ease;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Inter', sans-serif;
   --nav-height: 56px;
+}
+
+/* ============================================
+   SkyPanel theme — black/white, serif headings
+   ============================================ */
+:root[data-theme="skypanel"] {
+  --bg-primary: #08090b;
+  --bg-secondary: #0e1013;
+  --bg-tertiary: #131417;
+  --bg-card: #131417;
+  --bg-card-hover: #191b1f;
+  --bg-elevated: #1c1e22;
+  --bg-overlay: rgba(8, 9, 11, 0.9);
+  --accent-blue: #f2f2f0;
+  --accent-blue-hover: #ffffff;
+  --accent-blue-dark: #d4d4d8;
+  --accent-blue-glow: rgba(242, 242, 240, 0.25);
+  --accent-purple: #a1a1aa;
+  --accent-purple-hover: #d4d4d8;
+  --accent-purple-dark: #71717a;
+  --accent-purple-glow: rgba(161, 161, 170, 0.25);
+  --text-primary: #f2f2f0;
+  --text-secondary: #d4d4d8;
+  --text-muted: #8b8d94;
+  --text-dim: #5c5e66;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-hover: rgba(255, 255, 255, 0.22);
+  --shadow-glow-blue: 0 0 20px rgba(242, 242, 240, 0.15);
+  --shadow-glow-purple: 0 0 20px rgba(161, 161, 170, 0.15);
+  --font-display: 'Instrument Serif', Georgia, serif;
+}
+
+:root[data-theme="skypanel"] h1,
+:root[data-theme="skypanel"] h2,
+:root[data-theme="skypanel"] h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+:root[data-theme="skypanel"] .panel-grid-bg {
+  background-image:
+    linear-gradient(rgba(242,242,240,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242,242,240,0.04) 1px, transparent 1px);
+}
+
+:root[data-theme="skypanel"] .auth-page {
+  background: linear-gradient(135deg, #08090b 0%, #0e1013 50%, #0a0b0e 100%);
+}
+
+:root[data-theme="skypanel"] .stat-icon.blue,
+:root[data-theme="skypanel"] .stat-icon.purple {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1975,6 +2029,47 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 
 .game-type-card-label strong { font-size: 0.95rem; }
 .game-type-card-label span { font-size: 0.78rem; color: var(--text-muted); }
+
+/* Theme Selector (Settings modal) */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.theme-option { position: relative; }
+
+.theme-option input { display: none; }
+
+.theme-option-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.9rem;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.theme-option input:checked + .theme-option-label {
+  border-color: var(--accent-blue);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.theme-swatches { display: flex; gap: 6px; }
+
+.theme-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.theme-option-label strong { font-size: 0.85rem; }
+.theme-option-label span { font-size: 0.72rem; color: var(--text-muted); }
 
 /* Software Grid */
 .software-grid {

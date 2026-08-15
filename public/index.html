@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>NetherPanel - Dashboard</title>
   <meta name="theme-color" content="#030305">
+  <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="css/style.css?v=5">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=6">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -224,7 +225,36 @@
         <button class="modal-close" id="close-settings-modal"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body">
-        <h3 class="settings-section-title">Cloudflare &amp; Domain</h3>
+        <h3 class="settings-section-title">Appearance</h3>
+        <div class="theme-selector">
+          <label class="theme-option">
+            <input type="radio" name="panel-theme" value="jtg" checked>
+            <div class="theme-option-label">
+              <div class="theme-swatches">
+                <span class="theme-swatch" style="background:#0a0a0d"></span>
+                <span class="theme-swatch" style="background:#38bdf8"></span>
+                <span class="theme-swatch" style="background:#a78bfa"></span>
+                <span class="theme-swatch" style="background:#ffffff"></span>
+              </div>
+              <strong>JTG (Cyan)</strong>
+              <span>Near-black with cyan accents</span>
+            </div>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="panel-theme" value="skypanel">
+            <div class="theme-option-label">
+              <div class="theme-swatches">
+                <span class="theme-swatch" style="background:#08090b"></span>
+                <span class="theme-swatch" style="background:#131417"></span>
+                <span class="theme-swatch" style="background:#26282e"></span>
+                <span class="theme-swatch" style="background:#f2f2f0"></span>
+              </div>
+              <strong>SkyPanel (Mono)</strong>
+              <span>Black/white, serif headings</span>
+            </div>
+          </label>
+        </div>
+        <h3 class="settings-section-title" style="margin-top:1.25rem">Cloudflare &amp; Domain</h3>
         <div class="form-group">
           <label class="checkbox-row">
             <input type="checkbox" id="cf-enabled">
@@ -258,6 +288,6 @@
   </div>
 
   <div class="toast-container" id="toast-container"></div>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>
