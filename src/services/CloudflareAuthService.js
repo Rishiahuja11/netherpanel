@@ -166,9 +166,15 @@ class CloudflareAuthService {
     if (!token || !String(token).trim()) throw new Error('API token is required');
     token = String(token).trim();
 
-    const { status, body } = await requestJson(`${CF_API}/user/tokens/verify`, { token });
-    if (status !== 200 || !body?.success) {
-      throw new Error(`API token is invalid: ${body?.errors?.[0]?.message || `HTTP ${status}`}`);
+    const verify = await requestJson(`${CF_API}/user/tokens/verify`, { token });
+    if (verify.status !== 200 || !verify.body?.success) {
+      // Account-owned tokens (cfat_*) are not visible to /user/tokens/verify,
+      // which only checks user tokens. Fall back to GET /accounts, which
+      // succeeds for any valid account-scoped token.
+      const accounts = await requestJson(`${CF_API}/accounts`, { token });
+      if (accounts.status !== 200 || !accounts.body?.success) {
+        throw new Error(`API token is invalid: ${verify.body?.errors?.[0]?.message || `HTTP ${verify.status}`}`);
+      }
     }
 
     SettingsService.set('cloudflare_api_token', token, 'cloudflare');
