@@ -185,7 +185,7 @@ const NetherApp = {
   },
 
   applyTheme(theme) {
-    if (theme === 'skypanel') document.documentElement.setAttribute('data-theme', 'skypanel');
+    if (theme && theme !== 'jtg') document.documentElement.setAttribute('data-theme', theme);
     else document.documentElement.removeAttribute('data-theme');
   },
 
