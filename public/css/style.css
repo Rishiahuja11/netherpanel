@@ -2862,14 +2862,8 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .notif-item.type-success .notif-title { color: var(--accent-green); }
 
 /* ============================================
-   Webhook event toggles + API tokens
+   API tokens
    ============================================ */
-.event-toggle-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.35rem 0.75rem;
-  margin-top: 0.25rem;
-}
 .new-token-display {
   display: flex;
   flex-direction: column;

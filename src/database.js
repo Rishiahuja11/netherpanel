@@ -324,8 +324,7 @@ async function initDatabase() {
     { key: 'cloudflare_server_ip', value: '', category: 'cloudflare' },
     { key: 'resource_ram_limit', value: '0', category: 'resource' },
     { key: 'resource_cpu_limit', value: '', category: 'resource' },
-    { key: 'webhook_url', value: '', category: 'webhook' },
-    { key: 'webhook_events', value: '', category: 'webhook' },
+    { key: 'cloudflare_email', value: '', category: 'cloudflare' },
   ];
 
   for (const setting of defaultSettings) {
@@ -334,6 +333,9 @@ async function initDatabase() {
       db.prepare('INSERT INTO settings (key, value, category) VALUES (?, ?, ?)').run(setting.key, setting.value, setting.category);
     }
   }
+
+  // Remove legacy webhook settings
+  db.prepare("DELETE FROM settings WHERE key IN ('webhook_url', 'webhook_events')").run();
 
   db.save();
 

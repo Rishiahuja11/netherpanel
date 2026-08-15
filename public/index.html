@@ -407,33 +407,26 @@
           <input type="text" id="cf-domain" class="form-input" placeholder="smp45.qzz.io">
         </div>
         <div class="form-group">
-          <label>Cloudflare API Token</label>
-          <input type="password" id="cf-api-token" class="form-input" placeholder="Zone.DNS edit token">
+          <label>Cloudflare Account Login</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <input type="text" id="cf-email" class="form-input" placeholder="Cloudflare email" style="flex:1;min-width:160px" autocomplete="off">
+            <input type="password" id="cf-password" class="form-input" placeholder="Password" style="flex:1;min-width:140px" autocomplete="off">
+            <button class="btn-primary" id="btn-cf-login" style="width:auto;padding:0.5rem 1rem"><i data-lucide="log-in"></i> Log in</button>
+          </div>
+          <div style="display:none;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem" id="cf-2fa-row">
+            <input type="text" id="cf-2fa-code" class="form-input" placeholder="2FA code from authenticator" style="flex:1;min-width:180px" maxlength="8" autocomplete="off">
+            <button class="btn-primary" id="btn-cf-2fa" style="width:auto;padding:0.5rem 1rem"><i data-lucide="shield-check"></i> Verify</button>
+          </div>
+          <span class="form-hint">Log in with your Cloudflare account email and password. If 2FA is enabled you'll be asked for the code from your authenticator app. This replaces API tokens — the panel stores the session securely. <span id="cf-login-result" class="form-hint"></span></span>
         </div>
         <div class="form-group">
           <label>Zone ID</label>
           <input type="text" id="cf-zone-id" class="form-input">
+          <span class="form-hint" id="cf-zone-hint"></span>
         </div>
         <div class="form-group">
           <label>Server IP</label>
           <input type="text" id="cf-server-ip" class="form-input" placeholder="Your server public IP">
-        </div>
-        <h3 class="settings-section-title" style="margin-top:1.25rem">Notifications</h3>
-        <div class="form-group">
-          <label>Webhook URL <span style="color:var(--text-muted)">(generic JSON POST / Discord)</span></label>
-          <input type="url" id="webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/...">
-          <span class="form-hint">Sends a JSON payload for each enabled event. Leave empty to disable webhooks. In-app notifications always work.</span>
-        </div>
-        <div class="form-group">
-          <label>Webhook Events</label>
-          <div class="event-toggle-grid" id="webhook-events">
-            <label class="checkbox-row"><input type="checkbox" value="server_start"><span>Server started</span></label>
-            <label class="checkbox-row"><input type="checkbox" value="server_stop"><span>Server stopped</span></label>
-            <label class="checkbox-row"><input type="checkbox" value="server_crash"><span>Server crashed</span></label>
-            <label class="checkbox-row"><input type="checkbox" value="server_created"><span>Server created</span></label>
-            <label class="checkbox-row"><input type="checkbox" value="backup_created"><span>Backup created</span></label>
-          </div>
-          <span class="form-hint">Empty = all events enabled.</span>
         </div>
         <h3 class="settings-section-title" style="margin-top:1.25rem">API Tokens</h3>
         <div class="form-group" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
@@ -476,6 +469,6 @@
 
   <div class="toast-container" id="toast-container"></div>
   <script src="js/notifications.js?v=1"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

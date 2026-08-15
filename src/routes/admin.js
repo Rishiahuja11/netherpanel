@@ -7,6 +7,7 @@ const ScheduleService = require('../services/ScheduleService');
 const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
 const CloudflareService = require('../services/CloudflareService');
+const CloudflareAuthService = require('../services/CloudflareAuthService');
 const SettingsService = require('../services/SettingsService');
 const { getDb } = require('../database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
@@ -205,12 +206,38 @@ router.post('/cloudflare/test', async (req, res) => {
     const db = getDb();
     const cf = CloudflareService.fromSettings(db);
     if (!cf) {
-      return res.status(400).json({ error: 'Cloudflare not configured. Save API token, Zone ID, and Server IP first.' });
+      return res.status(400).json({ error: 'Cloudflare not configured. Log in or save Zone ID / Server IP first.' });
     }
     const result = await cf.testConnection();
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/cloudflare/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    const result = await CloudflareAuthService.login(email, password);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/cloudflare/login/2fa', async (req, res) => {
+  try {
+    const { pendingAuthId, code } = req.body;
+    if (!pendingAuthId || !code) {
+      return res.status(400).json({ error: 'Login session and 2FA code are required' });
+    }
+    const result = await CloudflareAuthService.verify2fa(pendingAuthId, code);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
