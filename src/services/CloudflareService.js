@@ -1,4 +1,5 @@
 const https = require('https');
+const SettingsService = require('./SettingsService');
 
 const CF_API = 'https://api.cloudflare.com/client/v4';
 
@@ -7,17 +8,20 @@ class CloudflareService {
     this.apiToken = apiToken;
     this.zoneId = zoneId;
     this.serverIp = serverIp;
-    this.domain = 'smp45.qzz.io';
+    this.domain = SettingsService.getDomain();
   }
 
   static fromSettings(db) {
+    const enabled = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_enabled'")?.get()?.value;
+    if (enabled === 'false' || enabled === '0') return null;
+
     const token = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_api_token'")?.get()?.value;
     const zoneId = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_zone_id'")?.get()?.value;
     const ip = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_server_ip'")?.get()?.value;
     const domain = db.prepare("SELECT value FROM settings WHERE key = 'cloudflare_domain'")?.get()?.value;
     if (!token || !zoneId || !ip) return null;
     const cf = new CloudflareService(token, zoneId, ip);
-    cf.domain = domain || 'smp45.qzz.io';
+    cf.domain = domain || SettingsService.getDomain();
     return cf;
   }
 

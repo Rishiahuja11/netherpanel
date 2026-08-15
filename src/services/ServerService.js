@@ -6,6 +6,7 @@ const https = require('https');
 const { getDb } = require('../database');
 const UserService = require('./UserService');
 const CloudflareService = require('./CloudflareService');
+const SettingsService = require('./SettingsService');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
@@ -72,25 +73,50 @@ class ServerService {
     return path.join(SERVERS_DIR, String(serverId));
   }
 
-  static getUsedPorts() {
+  static allocateRandomPort(gameType = 'java') {
     const db = this.getDb();
-    const rows = db.prepare('SELECT port FROM servers').all();
-    const used = new Set(rows.map(r => r.port));
-    for (let p = 25565; p < 25700; p++) {
+    const used = new Set(db.prepare('SELECT port FROM servers').all().map(r => r.port));
+
+    const ranges = gameType === 'bedrock' ? [[19132, 19232]] : [[25565, 25765]];
+    const candidates = [];
+    for (const [lo, hi] of ranges) {
+      for (let p = lo; p <= hi; p++) {
+        if (!used.has(p)) candidates.push(p);
+      }
+    }
+
+    if (candidates.length > 0) {
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
+    for (let i = 0; i < 1000; i++) {
+      const p = 1024 + Math.floor(Math.random() * (65535 - 1024));
       if (!used.has(p)) return p;
     }
-    for (let p = 19132; p < 19200; p++) {
-      if (!used.has(p)) return p;
+    throw new Error('No free port available');
+  }
+
+  static getAddress(server) {
+    if (!server) return '';
+    const cfEnabled = SettingsService.isCloudflareEnabled();
+    if (cfEnabled && server.subdomain) {
+      const base = `${server.subdomain}.${SettingsService.getDomain()}`;
+      return (server.port === 25565 || server.port === 19132) ? base : `${base}:${server.port}`;
     }
-    for (let p = 30000; p < 30100; p++) {
-      if (!used.has(p)) return p;
-    }
-    return 25565;
+    return `localhost:${server.port}`;
+  }
+
+  static enrichServer(server) {
+    if (!server) return server;
+    server.address = this.getAddress(server);
+    server.cloudflare_enabled = SettingsService.isCloudflareEnabled();
+    server.domain = SettingsService.getDomain();
+    return server;
   }
 
   static async createServer(userId, data) {
     const db = this.getDb();
-    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', port, ramMin = 1024, ramMax = 2048, subdomain = null } = data;
+    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', ramMin = 1024, ramMax = 2048, subdomain = null } = data;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const existing = db.prepare('SELECT id FROM servers WHERE slug = ?').get(slug);
@@ -111,13 +137,7 @@ class ServerService {
       throw new Error(`Maximum server limit (${maxServers}) reached`);
     }
 
-    const actualPort = port || this.getUsedPorts();
-    if (port) {
-      const portUsed = db.prepare('SELECT id FROM servers WHERE port = ?').get(port);
-      if (portUsed) {
-        throw new Error('This port is already in use');
-      }
-    }
+    const actualPort = this.allocateRandomPort(gameType);
 
     const result = db.prepare(
       'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path, subdomain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -136,6 +156,7 @@ class ServerService {
 
     const propsContent = [
       `server-port=${actualPort}`,
+      `server-portv6=${actualPort}`,
       `motd=${name}`,
       `level-name=world`,
       `online-mode=true`,
@@ -153,7 +174,7 @@ class ServerService {
         if (cf) {
           const dns = await cf.createSubdomain(subdomain);
           if (dns.success) {
-            console.log(`[Cloudflare] DNS record created: ${subdomain}.smp45.qzz.io -> ${cf.serverIp}`);
+            console.log(`[Cloudflare] DNS record created: ${subdomain}.${cf.domain} -> ${cf.serverIp}`);
           } else {
             console.error('[Cloudflare] Failed to create DNS record:', dns);
           }
@@ -541,12 +562,12 @@ class ServerService {
 
   static getServer(id) {
     const db = this.getDb();
-    return db.prepare('SELECT * FROM servers WHERE id = ?').get(id);
+    return this.enrichServer(db.prepare('SELECT * FROM servers WHERE id = ?').get(id));
   }
 
   static getUserServers(userId) {
     const db = this.getDb();
-    return db.prepare('SELECT * FROM servers WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+    return db.prepare('SELECT * FROM servers WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(s => this.enrichServer(s));
   }
 
   static async startServer(serverId, userId) {
@@ -580,8 +601,10 @@ class ServerService {
           throw new Error('PocketMine phar not found. Please reinstall server.');
         }
         const phpBin = await this.ensurePocketMinePhp();
-        child = spawn(phpBin, ['PocketMine-MP.phar', '--no-wizard'], {
+        child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
+          `cd '${serverDir}' && '${phpBin}' PocketMine-MP.phar --no-wizard`], {
           cwd: serverDir,
+          detached: true,
           stdio: ['pipe', 'pipe', 'pipe']
         });
       } else if (serverType === 'nukkit' || serverType === 'powernukkit') {
@@ -592,6 +615,7 @@ class ServerService {
         child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
           `cd '${serverDir}' && ${JAVA_PATH} -Xmx${server.ram_max}M -Xms${server.ram_min || 512}M -jar server.jar nogui`], {
           cwd: serverDir,
+          detached: true,
           stdio: ['pipe', 'pipe', 'pipe']
         });
       } else {
@@ -604,6 +628,7 @@ class ServerService {
         }
         child = spawn(exePath, [], {
           cwd: serverDir,
+          detached: true,
           stdio: ['pipe', 'pipe', 'pipe']
         });
       }
@@ -618,6 +643,7 @@ class ServerService {
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
         `cd '${serverDir}' && ${JAVA_PATH} ${args.join(' ')}`], {
         cwd: serverDir,
+        detached: true,
         stdio: ['pipe', 'pipe', 'pipe']
       });
     }
@@ -668,6 +694,20 @@ class ServerService {
     return this.getServer(serverId);
   }
 
+  static killProcessGroup(pid, signal) {
+    try {
+      process.kill(-pid, signal);
+      return true;
+    } catch (e) {
+      try {
+        process.kill(pid, signal);
+        return true;
+      } catch (e2) {
+        return false;
+      }
+    }
+  }
+
   static async stopServer(serverId, userId) {
     const db = this.getDb();
     const server = this.getServer(serverId);
@@ -678,11 +718,11 @@ class ServerService {
     const proc = serverProcesses.get(serverId);
     if (proc) {
       intentionalStops.add(serverId);
-      proc.kill('SIGTERM');
+      this.killProcessGroup(proc.pid, 'SIGTERM');
 
       await new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          proc.kill('SIGKILL');
+          this.killProcessGroup(proc.pid, 'SIGKILL');
           resolve();
         }, 10000);
 
@@ -716,7 +756,7 @@ class ServerService {
     const proc = serverProcesses.get(serverId);
     if (proc) {
       intentionalStops.add(serverId);
-      proc.kill('SIGKILL');
+      this.killProcessGroup(proc.pid, 'SIGKILL');
     }
 
     db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
@@ -758,7 +798,7 @@ class ServerService {
     const values = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (['name', 'version', 'port', 'ram_min', 'ram_max', 'java_args', 'subdomain', 'startup_cmd'].includes(key)) {
+      if (['name', 'version', 'ram_min', 'ram_max', 'java_args', 'subdomain', 'startup_cmd'].includes(key)) {
         fields.push(`${key} = ?`);
         values.push(value);
       }
@@ -796,7 +836,7 @@ class ServerService {
         const cf = CloudflareService.fromSettings(db);
         if (cf) {
           cf.deleteSubdomain(server.subdomain).then(dns => {
-            if (dns.success) console.log(`[Cloudflare] DNS record deleted: ${server.subdomain}.smp45.qzz.io`);
+            if (dns.success) console.log(`[Cloudflare] DNS record deleted: ${server.subdomain}.${cf.domain}`);
           }).catch(e => console.error('[Cloudflare] Error deleting DNS:', e.message));
         }
       } catch (e) {

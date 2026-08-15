@@ -13,15 +13,16 @@ let saveInterval = null;
 class Database {
   constructor(sqliteDb) {
     this.db = sqliteDb;
+    this.inTx = false;
   }
 
   prepare(sql) {
-    return new PreparedStatement(this.db, sql);
+    return new PreparedStatement(this, sql);
   }
 
   exec(sql) {
     this.db.run(sql);
-    this.save();
+    if (!this.inTx) this.save();
   }
 
   pragma(str) {
@@ -35,13 +36,20 @@ class Database {
   transaction(fn) {
     return (...args) => {
       this.db.run('BEGIN TRANSACTION');
+      this.inTx = true;
       try {
         const result = fn(...args);
         this.db.run('COMMIT');
+        this.inTx = false;
         this.save();
         return result;
       } catch (err) {
-        this.db.run('ROLLBACK');
+        this.inTx = false;
+        try {
+          this.db.run('ROLLBACK');
+        } catch (rollbackErr) {
+          // Ignore rollback errors
+        }
         throw err;
       }
     };
@@ -55,8 +63,9 @@ class Database {
 }
 
 class PreparedStatement {
-  constructor(sqliteDb, sql) {
-    this.db = sqliteDb;
+  constructor(database, sql) {
+    this.database = database;
+    this.db = database.db;
     this.sql = sql;
   }
 
@@ -69,9 +78,11 @@ class PreparedStatement {
 
     const changes = this.db.getRowsModified();
 
-    const data = this.db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    if (!this.database.inTx) {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(DB_PATH, buffer);
+    }
 
     return { lastInsertRowid, changes };
   }
@@ -283,6 +294,11 @@ async function initDatabase() {
     { key: 'auto_start_servers', value: 'false', category: 'server' },
     { key: 'max_servers_per_user', value: '5', category: 'limits' },
     { key: 'backup_retention_days', value: '30', category: 'backup' },
+    { key: 'cloudflare_enabled', value: 'true', category: 'cloudflare' },
+    { key: 'cloudflare_domain', value: 'smp45.qzz.io', category: 'cloudflare' },
+    { key: 'cloudflare_api_token', value: '', category: 'cloudflare' },
+    { key: 'cloudflare_zone_id', value: '', category: 'cloudflare' },
+    { key: 'cloudflare_server_ip', value: '', category: 'cloudflare' },
   ];
 
   for (const setting of defaultSettings) {

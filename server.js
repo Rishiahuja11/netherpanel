@@ -264,7 +264,6 @@ async function startServer() {
 
   process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
-    process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
@@ -274,8 +273,8 @@ async function startServer() {
   httpServer.listen(PORT, HOST, () => {
     console.log(`
   ╔══════════════════════════════════════════╗
-  ║           NetherPanel v1.0.0             ║
-  ║      Minecraft Server Panel              ║
+  ║           NetherPanel v4.0.0             ║
+  ║      Minecraft Server Panel (Termux)     ║
   ║                                          ║
   ║  Server running on port ${PORT}             ║
   ║  API: http://localhost:${PORT}/api          ║

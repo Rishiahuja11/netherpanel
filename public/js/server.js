@@ -38,12 +38,17 @@ const NetherServer = {
 
       document.getElementById('server-title').textContent = server.name;
 
-      const addr = server.subdomain
-        ? (server.port === 25565 || server.port === 19132
-          ? `${server.subdomain}.smp45.qzz.io`
-          : `${server.subdomain}.smp45.qzz.io:${server.port}`)
-        : `localhost:${server.port}`;
+      const addr = server.address || `localhost:${server.port}`;
       document.getElementById('server-addr-text').textContent = addr;
+
+      const subHint = document.getElementById('setting-subdomain-hint');
+      const subInput = document.getElementById('setting-subdomain');
+      if (subHint) {
+        subHint.textContent = server.cloudflare_enabled
+          ? `myserver.${server.domain || 'smp45.qzz.io'}`
+          : 'Subdomains disabled — enable Cloudflare in Settings';
+      }
+      if (subInput) subInput.disabled = !server.cloudflare_enabled;
 
       const statusBadge = document.getElementById('server-status-badge');
       statusBadge.className = `server-status-badge ${server.status}`;
@@ -920,13 +925,11 @@ const NetherServer = {
     if (this.serverData) {
       const nameEl = document.getElementById('setting-name');
       const javaArgsEl = document.getElementById('setting-java-args');
-      const portEl = document.getElementById('setting-port');
       const ramMaxEl = document.getElementById('setting-ram-max');
       const subdomainEl = document.getElementById('setting-subdomain');
       const startupCmdEl = document.getElementById('setting-startup-cmd');
       if (nameEl) nameEl.value = this.serverData.name || '';
       if (javaArgsEl) javaArgsEl.value = this.serverData.java_args || `-Xmx${this.serverData.ram_max}M -Xms${this.serverData.ram_min}M`;
-      if (portEl) portEl.value = this.serverData.port || 25565;
       if (ramMaxEl) ramMaxEl.value = this.serverData.ram_max || 2048;
       if (subdomainEl) subdomainEl.value = this.serverData.subdomain || '';
       if (startupCmdEl) startupCmdEl.value = this.serverData.startup_cmd || '';
@@ -940,13 +943,11 @@ const NetherServer = {
         const body = {};
         const nameEl = document.getElementById('setting-name');
         const javaArgsEl = document.getElementById('setting-java-args');
-        const portEl = document.getElementById('setting-port');
         const ramMaxEl = document.getElementById('setting-ram-max');
         const subdomainEl = document.getElementById('setting-subdomain');
         const startupCmdEl = document.getElementById('setting-startup-cmd');
         if (nameEl?.value) body.name = nameEl.value;
         if (javaArgsEl?.value) body.java_args = javaArgsEl.value;
-        if (portEl?.value) body.port = parseInt(portEl.value);
         if (ramMaxEl?.value) body.ram_max = parseInt(ramMaxEl.value);
         if (subdomainEl?.value !== undefined) body.subdomain = subdomainEl.value;
         if (startupCmdEl?.value !== undefined) body.startup_cmd = startupCmdEl.value;

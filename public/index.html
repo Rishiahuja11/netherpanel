@@ -23,6 +23,7 @@
       </a>
     </div>
     <div class="nav-right">
+      <button class="nav-icon-btn" id="btn-settings" title="Settings" style="display:none"><i data-lucide="settings"></i></button>
       <div class="user-menu">
         <button class="user-avatar" id="user-menu-toggle">
           <div class="avatar-circle" id="user-avatar">?</div>
@@ -160,13 +161,18 @@
 
         <div class="wizard-panel" data-panel="3">
           <div class="form-group">
-            <label>Server Port</label>
-            <input type="number" id="server-port" class="form-input" value="25565" min="1024" max="65535">
+            <label>Port</label>
+            <div class="port-auto-box" id="port-auto-box">
+              <i data-lucide="shuffle" style="width:16px;height:16px;color:var(--primary)"></i>
+              <span>Auto (random free port)</span>
+            </div>
+            <span class="form-hint">A random free port is assigned automatically when the server is created.</span>
           </div>
           <div class="form-group">
-            <label>Subdomain <span style="color:var(--error)">*</span></label>
-            <input type="text" id="server-subdomain" class="form-input" placeholder="myserver" required>
+            <label>Subdomain <span style="color:var(--text-muted)">(optional)</span></label>
+            <input type="text" id="server-subdomain" class="form-input" placeholder="myserver">
             <span class="form-hint">Your server address: <strong id="subdomain-preview">myserver.smp45.qzz.io</strong></span>
+            <span class="form-hint" id="subdomain-cf-hint" style="display:none;color:var(--warning)">Subdomains need Cloudflare enabled — turn it on in Settings (gear icon).</span>
           </div>
         </div>
 
@@ -196,7 +202,7 @@
             <div class="review-row"><span class="review-label">Game</span><span class="review-value" id="review-game">Java</span></div>
             <div class="review-row"><span class="review-label">Software</span><span class="review-value" id="review-software">Paper</span></div>
             <div class="review-row"><span class="review-label">Version</span><span class="review-value" id="review-version">-</span></div>
-            <div class="review-row"><span class="review-label">Port</span><span class="review-value" id="review-port">25565</span></div>
+            <div class="review-row"><span class="review-label">Port</span><span class="review-value" id="review-port">Auto (random)</span></div>
             <div class="review-row"><span class="review-label">Address</span><span class="review-value" id="review-address">-</span></div>
             <div class="review-row" id="review-backup-row" style="display:none"><span class="review-label">Backup</span><span class="review-value" id="review-backup">-</span></div>
           </div>
@@ -209,7 +215,47 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-content" style="max-width:560px">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" id="close-settings-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <h3 class="settings-section-title">Cloudflare &amp; Domain</h3>
+        <div class="form-group">
+          <label class="checkbox-row">
+            <input type="checkbox" id="cf-enabled">
+            <span>Enable Cloudflare subdomains</span>
+          </label>
+          <span class="form-hint">When enabled, servers get an address like <strong id="cf-domain-sample">myserver.smp45.qzz.io</strong>. When disabled, servers show <strong>localhost:port</strong>.</span>
+        </div>
+        <div class="form-group">
+          <label>Domain</label>
+          <input type="text" id="cf-domain" class="form-input" placeholder="smp45.qzz.io">
+        </div>
+        <div class="form-group">
+          <label>Cloudflare API Token</label>
+          <input type="password" id="cf-api-token" class="form-input" placeholder="Zone.DNS edit token">
+        </div>
+        <div class="form-group">
+          <label>Zone ID</label>
+          <input type="text" id="cf-zone-id" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Server IP</label>
+          <input type="text" id="cf-server-ip" class="form-input" placeholder="Your server public IP">
+        </div>
+        <div class="settings-actions">
+          <button class="btn-secondary" id="btn-cf-test"><i data-lucide="plug-zap"></i> Test Connection</button>
+          <span id="cf-test-result" class="form-hint"></span>
+          <button class="btn-primary" id="btn-save-settings" style="margin-left:auto">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container" id="toast-container"></div>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

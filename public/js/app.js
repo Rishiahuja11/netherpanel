@@ -4,6 +4,7 @@ const NetherApp = {
   wizardBackupFile: null,
   selectedGameType: 'java',
   servers: [],
+  panelConfig: { cloudflare_enabled: true, domain: 'smp45.qzz.io' },
 
   JAVA_SOFTWARE: {
     paper: { name: 'Paper', desc: 'High performance, plugin support' },
@@ -41,6 +42,8 @@ const NetherApp = {
     this.initWizardBackupImport();
     this.initGameTypeSelector();
     this.initLogout();
+    this.initSettingsModal();
+    this.loadPanelConfig();
     this.updateSoftwareOptions();
     this.loadServers();
     setInterval(() => this.loadServerStats(), 15000);
@@ -72,6 +75,8 @@ const NetherApp = {
     document.getElementById('user-avatar-lg').textContent = initials;
     document.getElementById('dropdown-user-name').textContent = name;
     document.getElementById('dropdown-user-email').textContent = this.user?.email || '-';
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) settingsBtn.style.display = this.user?.role === 'admin' ? 'flex' : 'none';
   },
 
   initLucideIcons() { if (typeof lucide !== 'undefined') lucide.createIcons(); },
@@ -91,6 +96,121 @@ const NetherApp = {
       localStorage.removeItem('user');
       window.location.href = 'login.html';
     });
+  },
+
+  async loadPanelConfig() {
+    try {
+      const res = await fetch('/api/client/config');
+      if (res.ok) {
+        this.panelConfig = await res.json();
+        this.updateSubdomainHint();
+      }
+    } catch (err) {
+      console.error('Failed to load panel config:', err);
+    }
+  },
+
+  updateSubdomainHint() {
+    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
+    const hint = document.getElementById('subdomain-cf-hint');
+    const input = document.getElementById('server-subdomain');
+    if (hint) hint.style.display = cfEnabled ? 'none' : '';
+    if (input) input.disabled = !cfEnabled;
+    const preview = document.getElementById('subdomain-preview');
+    if (preview && !cfEnabled) preview.textContent = 'localhost:<port>';
+  },
+
+  initSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    document.getElementById('btn-settings')?.addEventListener('click', () => {
+      if (!modal) return;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      this.loadSettingsForm();
+    });
+    document.getElementById('close-settings-modal')?.addEventListener('click', () => {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+    modal?.addEventListener('click', e => {
+      if (e.target === modal) { modal.classList.remove('active'); document.body.style.overflow = ''; }
+    });
+    document.getElementById('btn-save-settings')?.addEventListener('click', () => this.saveSettings());
+    document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
+    document.getElementById('cf-enabled')?.addEventListener('change', () => this.updateCfDomainSample());
+    document.getElementById('cf-domain')?.addEventListener('input', () => this.updateCfDomainSample());
+  },
+
+  async loadSettingsForm() {
+    try {
+      const settings = await this.api('GET', '/api/admin/settings');
+      const map = {};
+      settings.forEach(s => { map[s.key] = s; });
+      const setVal = (id, key, def) => {
+        const el = document.getElementById(id);
+        if (el && map[key]) el.value = map[key].value || '';
+        else if (el && def) el.value = def;
+      };
+      setVal('cf-api-token', 'cloudflare_api_token');
+      setVal('cf-zone-id', 'cloudflare_zone_id');
+      setVal('cf-server-ip', 'cloudflare_server_ip');
+      setVal('cf-domain', 'cloudflare_domain', 'smp45.qzz.io');
+      const enabledEl = document.getElementById('cf-enabled');
+      if (enabledEl) enabledEl.checked = (map['cloudflare_enabled']?.value || 'true') === 'true';
+      const result = document.getElementById('cf-test-result');
+      if (result) result.textContent = '';
+      this.updateCfDomainSample();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  collectCloudflareSettings() {
+    return [
+      { key: 'cloudflare_enabled', value: document.getElementById('cf-enabled')?.checked ? 'true' : 'false', category: 'cloudflare' },
+      { key: 'cloudflare_domain', value: document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io', category: 'cloudflare' },
+      { key: 'cloudflare_api_token', value: document.getElementById('cf-api-token')?.value?.trim() || '', category: 'cloudflare' },
+      { key: 'cloudflare_zone_id', value: document.getElementById('cf-zone-id')?.value?.trim() || '', category: 'cloudflare' },
+      { key: 'cloudflare_server_ip', value: document.getElementById('cf-server-ip')?.value?.trim() || '', category: 'cloudflare' }
+    ];
+  },
+
+  async saveSettings(silent) {
+    try {
+      const settings = this.collectCloudflareSettings();
+      await this.api('PUT', '/api/admin/settings', { settings });
+      this.panelConfig.cloudflare_enabled = settings.find(s => s.key === 'cloudflare_enabled').value === 'true';
+      this.panelConfig.domain = settings.find(s => s.key === 'cloudflare_domain').value;
+      this.updateSubdomainHint();
+      if (!silent) this.showToast('Saved', 'Settings updated', 'success');
+      return true;
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+      return false;
+    }
+  },
+
+  async testCloudflare() {
+    const result = document.getElementById('cf-test-result');
+    if (result) result.textContent = 'Testing...';
+    const saved = await this.saveSettings(true);
+    if (!saved) return;
+    try {
+      const data = await this.api('POST', '/api/admin/cloudflare/test');
+      if (data && data.success) {
+        if (result) { result.textContent = `Connected to zone "${data.zoneName}"`; result.style.color = 'var(--success)'; }
+      } else {
+        if (result) { result.textContent = data?.error || 'Connection failed'; result.style.color = 'var(--error)'; }
+      }
+    } catch (err) {
+      if (result) { result.textContent = err.message; result.style.color = 'var(--error)'; }
+    }
+  },
+
+  updateCfDomainSample() {
+    const domain = document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io';
+    const sample = document.getElementById('cf-domain-sample');
+    if (sample) sample.textContent = `myserver.${domain}`;
   },
 
   initCreateServerModal() {
@@ -113,7 +233,6 @@ const NetherApp = {
       input.addEventListener('change', () => {
         this.selectedGameType = input.value;
         this.updateSoftwareOptions();
-        this.updatePort();
       });
     });
   },
@@ -166,11 +285,6 @@ const NetherApp = {
       console.error('Failed to fetch versions:', err);
       sel.innerHTML = '<option value="">Failed to load versions</option>';
     }
-  },
-
-  updatePort() {
-    const port = document.getElementById('server-port');
-    if (port) port.value = this.selectedGameType === 'bedrock' ? 19132 : 25565;
   },
 
   initWizardNavigation() {
@@ -253,20 +367,17 @@ const NetherApp = {
     const name = document.getElementById('server-name')?.value || 'My Server';
     const sw = document.querySelector('input[name="software"]:checked')?.value || 'paper';
     const ver = document.getElementById('server-version')?.value || '1.21.4';
-    const port = document.getElementById('server-port')?.value || '25565';
-    const sub = document.getElementById('server-subdomain')?.value?.trim();
+    const domain = this.panelConfig?.domain || 'smp45.qzz.io';
+    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
+    const sub = cfEnabled ? document.getElementById('server-subdomain')?.value?.trim() : '';
     const allSw = { ...this.JAVA_SOFTWARE, ...this.BEDROCK_SOFTWARE };
-    const addr = sub
-      ? (port === '25565' || port === '19132'
-        ? `${sub}.smp45.qzz.io`
-        : `${sub}.smp45.qzz.io:${port}`)
-      : `your-ip:${port}`;
+    const addr = sub ? `${sub}.${domain}` : 'Auto-assigned on create';
 
     document.getElementById('review-name').textContent = name;
     document.getElementById('review-game').textContent = this.selectedGameType === 'bedrock' ? 'Bedrock' : 'Java';
     document.getElementById('review-software').textContent = allSw[sw]?.name || sw;
     document.getElementById('review-version').textContent = ver;
-    document.getElementById('review-port').textContent = port;
+    document.getElementById('review-port').textContent = 'Auto (random)';
     document.getElementById('review-address').textContent = addr;
 
     const backupRow = document.getElementById('review-backup-row');
@@ -279,15 +390,15 @@ const NetherApp = {
     }
 
     const preview = document.getElementById('subdomain-preview');
-    if (preview) preview.textContent = sub ? `${sub}.smp45.qzz.io` : 'myserver.smp45.qzz.io';
+    if (preview) preview.textContent = sub ? `${sub}.${domain}` : `myserver.${domain}`;
   },
 
   async createServer() {
     const name = document.getElementById('server-name')?.value?.trim();
     const software = document.querySelector('input[name="software"]:checked')?.value;
     const version = document.getElementById('server-version')?.value;
-    const port = parseInt(document.getElementById('server-port')?.value || '25565');
-    const subdomain = document.getElementById('server-subdomain')?.value?.trim();
+    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
+    const subdomain = cfEnabled ? document.getElementById('server-subdomain')?.value?.trim() : '';
 
     if (!name) return this.showToast('Error', 'Server name is required', 'error');
     if (subdomain && !/^[a-z0-9-]+$/.test(subdomain)) return this.showToast('Error', 'Subdomain can only contain lowercase letters, numbers, and hyphens', 'error');
@@ -296,7 +407,7 @@ const NetherApp = {
       this.showToast('Creating', `Setting up "${name}"...`, 'info');
       const server = await this.api('POST', '/api/servers', {
         name, version, server_type: software,
-        game_type: this.selectedGameType, port,
+        game_type: this.selectedGameType,
         ram_min: 0, ram_max: 2048, subdomain
       });
 
@@ -386,11 +497,7 @@ const NetherApp = {
 
     grid.innerHTML = this.servers.map(s => {
       const isRunning = s.status === 'running';
-      const addr = s.subdomain
-        ? (s.port === 25565 || s.port === 19132
-          ? `${s.subdomain}.smp45.qzz.io`
-          : `${s.subdomain}.smp45.qzz.io:${s.port}`)
-        : `localhost:${s.port}`;
+      const addr = s.address || `localhost:${s.port}`;
       return `
       <div class="server-card" data-status="${s.status}" data-server-id="${s.id}">
         <div class="server-card-header">

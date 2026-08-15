@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb } = require('../database');
 const ServerService = require('../services/ServerService');
 const ModService = require('../services/ModService');
+const SettingsService = require('../services/SettingsService');
 const { optionalAuth } = require('../middleware/auth');
 
 router.use(optionalAuth);
@@ -17,6 +18,19 @@ router.get('/', (req, res) => {
   });
 });
 
+router.get('/config', (req, res) => {
+  try {
+    const db = getDb();
+    res.json({
+      panel_name: db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel',
+      cloudflare_enabled: SettingsService.isCloudflareEnabled(),
+      domain: SettingsService.getDomain()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/servers', (req, res) => {
   try {
     const db = getDb();
@@ -26,11 +40,11 @@ router.get('/servers', (req, res) => {
       servers = ServerService.getUserServers(req.user.id);
     } else {
       servers = db.prepare(`
-        SELECT id, name, slug, version, server_type, port, status, created_at 
+        SELECT id, name, slug, version, server_type, port, subdomain, status, created_at 
         FROM servers 
         ORDER BY created_at DESC 
         LIMIT 50
-      `).all();
+      `).all().map(s => ServerService.enrichServer(s));
     }
 
     servers.forEach(server => {
@@ -46,10 +60,10 @@ router.get('/servers', (req, res) => {
 router.get('/servers/:id', (req, res) => {
   try {
     const db = getDb();
-    const server = db.prepare(`
-      SELECT id, name, slug, version, server_type, port, status, created_at 
+    const server = ServerService.enrichServer(db.prepare(`
+      SELECT id, name, slug, version, server_type, port, subdomain, status, created_at 
       FROM servers WHERE id = ?
-    `).get(parseInt(req.params.id));
+    `).get(parseInt(req.params.id)));
 
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });

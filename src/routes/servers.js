@@ -130,7 +130,7 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, version, server_type, game_type, port, ram_min, ram_max, subdomain } = req.body;
+    const { name, version, server_type, game_type, ram_min, ram_max, subdomain } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Server name is required' });
@@ -141,7 +141,6 @@ router.post('/', async (req, res) => {
       version,
       serverType: server_type,
       gameType: game_type || 'java',
-      port,
       ramMin: ram_min,
       ramMax: ram_max,
       subdomain
