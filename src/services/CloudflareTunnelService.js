@@ -2,7 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn, exec } = require('child_process');
+const { spawn, exec, execSync } = require('child_process');
 const SettingsService = require('./SettingsService');
 
 const CF_API = 'https://api.cloudflare.com/client/v4';
@@ -69,15 +69,26 @@ function panelPort() {
   return parseInt(process.env.PORT || process.env.PANEL_PORT || '3000', 10) || 3000;
 }
 
+function killOldTunnels(match, excludePid) {
+  try {
+    const out = execSync(`pgrep -f "${match}"`, { stdio: ['ignore', 'pipe', 'ignore'] });
+    const pids = out.toString().trim().split(/\s+/).filter(Boolean).map(Number);
+    for (const pid of pids) {
+      if (pid === excludePid || pid === process.pid) continue;
+      try { process.kill(pid, 'SIGTERM'); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
 function launchTunnel(args, match) {
   return new Promise((resolve) => {
     for (const pid of running) {
       try { process.kill(pid, 'SIGTERM'); } catch (e) {}
       running.delete(pid);
     }
-    exec(`pkill -f "${match}"`, () => {});
     try {
       const child = spawn('cloudflared', args, { detached: true, stdio: 'ignore' });
+      killOldTunnels(match, child.pid);
       const pid = child.pid;
       let settled = false;
       child.on('spawn', () => {

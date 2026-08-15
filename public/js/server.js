@@ -509,7 +509,7 @@ const NetherServer = {
     let html = '';
     if (currentPath) {
       const parent = currentPath.split('/').slice(0, -1).join('/');
-      html += `<div class="file-item parent" onclick="NetherServer.loadFiles('${parent}')">
+      html += `<div class="file-item parent" data-path="${this.escapeAttr(parent)}">
         <i data-lucide="arrow-up"></i>
         <span class="file-name">..</span>
       </div>`;
@@ -527,12 +527,9 @@ const NetherServer = {
       const size = file.isDirectory ? '' : this.formatBytes(file.size);
       const cls = file.isDirectory ? 'file-item folder' : 'file-item';
       const fullPath = currentPath ? currentPath + '/' + file.name : file.name;
-      const clickAction = file.isDirectory
-        ? `NetherServer.loadFiles('${fullPath}')`
-        : `NetherServer.openFile('${fullPath}')`;
-      html += `<div class="${cls}" onclick="${clickAction}">
+      html += `<div class="${cls}" data-path="${this.escapeAttr(fullPath)}">
         <i data-lucide="${icon}" style="color: ${color}"></i>
-        <span class="file-name">${file.name}</span>
+        <span class="file-name">${this.escapeHtml(file.name)}</span>
         <span class="file-size">${size}</span>
       </div>`;
     });
@@ -542,6 +539,17 @@ const NetherServer = {
     }
 
     list.innerHTML = html;
+    list.querySelectorAll('.file-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const p = el.dataset.path;
+        if (p === undefined) return;
+        if (el.classList.contains('folder') || el.classList.contains('parent')) {
+          NetherServer.loadFiles(p);
+        } else {
+          NetherServer.openFile(p);
+        }
+      });
+    });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   },
 
@@ -564,7 +572,9 @@ const NetherServer = {
       const data = await res.json();
 
       if (editor) {
-        editor.innerHTML = `<textarea spellcheck="false" id="file-editor-content">${data.content || ''}</textarea>`;
+        editor.innerHTML = '<textarea spellcheck="false" id="file-editor-content"></textarea>';
+        const ta = document.getElementById('file-editor-content');
+        if (ta) ta.value = data.content || '';
       }
 
       const saveBtn = document.getElementById('file-save-btn');
@@ -636,22 +646,31 @@ const NetherServer = {
     }
   },
 
-  downloadFile(filePath) {
-    const a = document.createElement('a');
-    a.href = `/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(filePath)}`;
-    a.setAttribute('download', '');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  async downloadUrl(url, filename) {
+    try {
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${this.authToken}` } });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.setAttribute('download', filename || 'download');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch (err) {
+      NetherServer.showToast('Error', 'Failed to download file', 'error');
+    }
   },
 
-  downloadBackup(backupId) {
-    const a = document.createElement('a');
-    a.href = `/api/servers/${this.serverId}/backups/${backupId}/download`;
-    a.setAttribute('download', '');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  async downloadFile(filePath) {
+    const filename = filePath.split('/').pop() || 'download';
+    await this.downloadUrl(`/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(filePath)}`, filename);
+  },
+
+  async downloadBackup(backupId) {
+    await this.downloadUrl(`/api/servers/${this.serverId}/backups/${backupId}/download`, `backup-${backupId}.zip`);
   },
 
   formatBytes(bytes) {
@@ -728,6 +747,14 @@ const NetherServer = {
       });
     }
 
+    const avail = document.getElementById('available-mods');
+    if (avail) {
+      avail.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-install');
+        if (btn) NetherServer.installModFromSearch(btn.dataset.modId, btn.dataset.modName);
+      });
+    }
+
     this.loadInstalledMods();
     this.searchMods('');
   },
@@ -766,18 +793,24 @@ const NetherServer = {
       <div class="mod-card installed" data-mod-id="${mod.id}">
         <div class="mod-icon"><i data-lucide="puzzle"></i></div>
         <div class="mod-info">
-          <h4 class="mod-name">${mod.name}</h4>
+          <h4 class="mod-name">${this.escapeHtml(mod.name)}</h4>
           <div class="mod-meta">
-            <span class="mod-version-badge">v${mod.version}</span>
-            <span class="mod-author">${mod.slug || ''}</span>
+            <span class="mod-version-badge">v${this.escapeHtml(mod.version)}</span>
+            <span class="mod-author">${this.escapeHtml(mod.slug || '')}</span>
           </div>
         </div>
         <div class="mod-actions">
           <button class="btn-sm" disabled><i data-lucide="check-circle"></i> Installed</button>
-          <button class="btn-sm danger" onclick="NetherServer.removeMod(${mod.id})" title="Remove"><i data-lucide="trash-2"></i></button>
+          <button class="btn-sm danger" data-mod-id="${mod.id}" title="Remove"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
     `).join('');
+
+    container.querySelectorAll('.btn-sm.danger[data-mod-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        NetherServer.removeMod(parseInt(el.dataset.modId, 10));
+      });
+    });
 
     lucide.createIcons({ nodes: [container] });
   },
@@ -818,20 +851,20 @@ const NetherServer = {
       }
 
       const cards = hits.map(mod => `
-        <div class="mod-card" data-mod-id="${mod.id}">
+        <div class="mod-card" data-mod-id="${this.escapeAttr(mod.id)}">
           <div class="mod-icon">
-            ${mod.icon_url ? `<img src="${mod.icon_url}" alt="${mod.title}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'puzzle\\'></i>'">` : '<i data-lucide="puzzle"></i>'}
+            ${mod.icon_url ? `<img src="${this.escapeAttr(mod.icon_url)}" alt="${this.escapeAttr(mod.title)}" onerror="this.parentElement.innerHTML='<i data-lucide=puzzle></i>'">` : '<i data-lucide="puzzle"></i>'}
           </div>
           <div class="mod-info">
-            <h4 class="mod-name">${mod.title}</h4>
-            <p class="mod-desc">${mod.description}</p>
+            <h4 class="mod-name">${this.escapeHtml(mod.title)}</h4>
+            <p class="mod-desc">${this.escapeHtml(mod.description)}</p>
             <div class="mod-meta">
               <span class="mod-downloads"><i data-lucide="download"></i> ${this.formatNumber(mod.downloads)}</span>
-              <span class="mod-author">by ${mod.author}</span>
+              <span class="mod-author">by ${this.escapeHtml(mod.author)}</span>
             </div>
           </div>
           <div class="mod-actions">
-            <button class="btn-sm btn-install" onclick="NetherServer.installModFromSearch('${mod.id}', '${mod.title.replace(/'/g, "\\'")}')">
+            <button class="btn-sm btn-install" data-mod-id="${this.escapeAttr(mod.id)}" data-mod-name="${this.escapeAttr(mod.title)}">
               <i data-lucide="download"></i> Install
             </button>
           </div>
@@ -954,7 +987,10 @@ const NetherServer = {
         const startupCmdEl = document.getElementById('setting-startup-cmd');
         if (nameEl?.value) body.name = nameEl.value;
         if (javaArgsEl?.value) body.java_args = javaArgsEl.value;
-        if (ramMaxEl?.value) body.ram_max = parseInt(ramMaxEl.value);
+        if (ramMaxEl?.value) {
+          const ram = parseInt(ramMaxEl.value, 10);
+          if (!isNaN(ram) && ram > 0) body.ram_max = ram;
+        }
         if (subdomainEl?.value !== undefined) body.subdomain = subdomainEl.value;
         if (startupCmdEl?.value !== undefined) body.startup_cmd = startupCmdEl.value;
         try {
@@ -1044,13 +1080,8 @@ const NetherServer = {
     const downloadBtn = document.getElementById('download-backup-btn');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', () => {
-        const a = document.createElement('a');
-        a.href = `/api/servers/${this.serverId}/download`;
-        a.setAttribute('download', '');
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
         NetherServer.showToast('Downloading', 'Backup zip is downloading...', 'info');
+        this.downloadUrl(`/api/servers/${this.serverId}/download`, `${this.serverData?.name || 'server'}.zip`);
       });
     }
 
@@ -1118,19 +1149,31 @@ const NetherServer = {
           <div class="backup-info">
             <div class="backup-icon"><i data-lucide="database"></i></div>
             <div>
-              <h4 class="backup-name">${b.name}</h4>
+              <h4 class="backup-name">${this.escapeHtml(b.name)}</h4>
               <div class="backup-meta">
-                <span><i data-lucide="calendar"></i> ${new Date(b.created_at).toLocaleString()}</span>
+                <span><i data-lucide="calendar"></i> ${this.formatDate(b.created_at)}</span>
               </div>
             </div>
           </div>
           <div class="backup-actions">
-            <button class="btn-sm" onclick="NetherServer.downloadBackup(${b.id})" title="Download"><i data-lucide="download"></i></button>
-            <button class="btn-sm" onclick="NetherServer.restoreBackup(${b.id})" title="Restore"><i data-lucide="rotate-ccw"></i></button>
-            <button class="btn-sm danger" onclick="NetherServer.deleteBackup(${b.id})" title="Delete"><i data-lucide="trash-2"></i></button>
+            <button class="btn-sm" data-action="download" title="Download"><i data-lucide="download"></i></button>
+            <button class="btn-sm" data-action="restore" title="Restore"><i data-lucide="rotate-ccw"></i></button>
+            <button class="btn-sm danger" data-action="delete" title="Delete"><i data-lucide="trash-2"></i></button>
           </div>
         </div>
       `).join('');
+
+      container.querySelectorAll('.backup-card').forEach(card => {
+        const id = parseInt(card.dataset.backupId, 10);
+        card.querySelectorAll('[data-action]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            if (action === 'download') NetherServer.downloadBackup(id);
+            else if (action === 'restore') NetherServer.restoreBackup(id);
+            else if (action === 'delete') NetherServer.deleteBackup(id);
+          });
+        });
+      });
       lucide.createIcons({ nodes: [container] });
     } catch (err) {
       container.innerHTML = '<div class="mods-empty-state"><p>Failed to load backups</p></div>';
@@ -1182,10 +1225,6 @@ const NetherServer = {
   },
 
   initSettingsDanger() {},
-
-  escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  },
 
   initPlayers() {
     const tabs = document.querySelectorAll('.players-tab');
@@ -1407,8 +1446,18 @@ const NetherServer = {
 
   escapeHtml(str) {
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str == null ? '' : String(str);
     return div.innerHTML;
+  },
+
+  escapeAttr(str) {
+    return this.escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  },
+
+  formatDate(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString();
   },
 
   showToast(title, message, type = 'info') {

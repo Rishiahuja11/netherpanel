@@ -76,6 +76,15 @@ class ServerService {
     return path.join(SERVERS_DIR, String(serverId));
   }
 
+  static resolveInServerDir(serverId, relPath = '') {
+    const serverDir = path.resolve(this.getServerDir(serverId));
+    const fullPath = path.resolve(serverDir, relPath || '.');
+    if (fullPath !== serverDir && !fullPath.startsWith(serverDir + path.sep)) {
+      throw new Error('Invalid path');
+    }
+    return fullPath;
+  }
+
   static allocateRandomPort(gameType = 'java') {
     const db = this.getDb();
     const used = new Set(db.prepare('SELECT port FROM servers').all().map(r => r.port));
@@ -903,12 +912,8 @@ class ServerService {
   }
 
   static getFiles(serverId, subPath = '') {
-    const serverDir = this.getServerDir(serverId);
-    const targetDir = path.join(serverDir, subPath);
-
-    if (!targetDir.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
+    const serverDir = path.resolve(this.getServerDir(serverId));
+    const targetDir = this.resolveInServerDir(serverId, subPath);
 
     if (!fs.existsSync(targetDir)) {
       return [];
@@ -930,12 +935,7 @@ class ServerService {
   }
 
   static readFile(serverId, filePath) {
-    const serverDir = this.getServerDir(serverId);
-    const fullPath = path.join(serverDir, filePath);
-
-    if (!fullPath.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
+    const fullPath = this.resolveInServerDir(serverId, filePath);
 
     if (!fs.existsSync(fullPath)) {
       throw new Error('File not found');
@@ -954,12 +954,7 @@ class ServerService {
   }
 
   static writeFile(serverId, filePath, content) {
-    const serverDir = this.getServerDir(serverId);
-    const fullPath = path.join(serverDir, filePath);
-
-    if (!fullPath.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
+    const fullPath = this.resolveInServerDir(serverId, filePath);
 
     const dir = path.dirname(fullPath);
     if (!fs.existsSync(dir)) {
@@ -971,12 +966,7 @@ class ServerService {
   }
 
   static deleteFile(serverId, filePath) {
-    const serverDir = this.getServerDir(serverId);
-    const fullPath = path.join(serverDir, filePath);
-
-    if (!fullPath.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
+    const fullPath = this.resolveInServerDir(serverId, filePath);
 
     if (!fs.existsSync(fullPath)) {
       throw new Error('File not found');
@@ -993,13 +983,8 @@ class ServerService {
   }
 
   static renameFile(serverId, oldPath, newPath) {
-    const serverDir = this.getServerDir(serverId);
-    const fullOldPath = path.join(serverDir, oldPath);
-    const fullNewPath = path.join(serverDir, newPath);
-
-    if (!fullOldPath.startsWith(serverDir) || !fullNewPath.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
+    const fullOldPath = this.resolveInServerDir(serverId, oldPath);
+    const fullNewPath = this.resolveInServerDir(serverId, newPath);
 
     if (!fs.existsSync(fullOldPath)) {
       throw new Error('File not found');
@@ -1010,13 +995,7 @@ class ServerService {
   }
 
   static mkdir(serverId, dirPath) {
-    const serverDir = this.getServerDir(serverId);
-    const fullPath = path.join(serverDir, dirPath);
-
-    if (!fullPath.startsWith(serverDir)) {
-      throw new Error('Invalid path');
-    }
-
+    const fullPath = this.resolveInServerDir(serverId, dirPath);
     fs.mkdirSync(fullPath, { recursive: true });
     return true;
   }

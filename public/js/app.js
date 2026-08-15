@@ -158,6 +158,7 @@ const NetherApp = {
     document.getElementById('btn-cf-login')?.addEventListener('click', () => this.cloudflareLogin());
     document.getElementById('btn-cf-2fa')?.addEventListener('click', () => this.cloudflareVerify2fa());
     document.getElementById('btn-cf-gh')?.addEventListener('click', () => this.cloudflareGitHub());
+    document.getElementById('btn-cf-g')?.addEventListener('click', () => this.cloudflareGoogle());
     document.getElementById('btn-cf-tunnel')?.addEventListener('click', () => this.createTunnel());
     document.getElementById('cf-password')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.cloudflareLogin();
@@ -299,6 +300,11 @@ const NetherApp = {
   cloudflareGitHub() {
     window.open('https://oidc.iam.cfapi.net/api/v1/sso/init?client=github&env=production', '_blank', 'noopener');
     this.setCfLoginResult('GitHub login opens in a new tab. It can\u2019t give the panel a token \u2014 log in with email & password here for automatic tunnel setup.', false);
+  },
+
+  cloudflareGoogle() {
+    window.open('https://oidc.iam.cfapi.net/api/v1/sso/init?client=google&env=production', '_blank', 'noopener');
+    this.setCfLoginResult('Google login opens in a new tab. It can\u2019t give the panel a token \u2014 log in with email & password here for automatic tunnel setup.', false);
   },
 
   async createTunnel() {
@@ -500,7 +506,7 @@ const NetherApp = {
       }
       const versions = await res.json();
       if (Array.isArray(versions) && versions.length > 0) {
-        sel.innerHTML = versions.map(x => `<option value="${x}">${x}</option>`).join('');
+        sel.innerHTML = versions.map(x => `<option value="${this.escapeAttr(x)}">${this.escapeHtml(x)}</option>`).join('');
       } else {
         sel.innerHTML = '<option value="">No versions available</option>';
       }
@@ -746,7 +752,7 @@ const NetherApp = {
               ? `<button class="action-btn-sm" title="Stop" onclick="NetherApp.serverAction(${s.id}, 'stop')"><i data-lucide="square"></i></button>
                  <button class="action-btn-sm" title="Restart" onclick="NetherApp.serverAction(${s.id}, 'restart')"><i data-lucide="refresh-cw"></i></button>`
               : `<button class="action-btn-sm" title="Start" onclick="NetherApp.serverAction(${s.id}, 'start')"><i data-lucide="play"></i></button>`}
-            <button class="action-btn-sm danger" title="Delete" onclick="NetherApp.deleteServer(${s.id}, '${s.name.replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
+            <button class="action-btn-sm danger" title="Delete" data-name="${this.escapeAttr(s.name)}" onclick="NetherApp.deleteServer(${s.id}, this.dataset.name)"><i data-lucide="trash-2"></i></button>
             <a href="server.html?id=${s.id}" class="action-btn-sm" title="Manage"><i data-lucide="settings"></i></a>
           </div>
         </div>
@@ -787,8 +793,12 @@ const NetherApp = {
 
   escapeHtml(str) {
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str == null ? '' : String(str);
     return div.innerHTML;
+  },
+
+  escapeAttr(str) {
+    return this.escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   },
 
   showToast(title, message, type = 'info') {

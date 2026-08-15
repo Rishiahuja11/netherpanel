@@ -415,13 +415,14 @@
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
             <button class="btn-secondary" id="btn-cf-gh" style="width:auto;padding:0.5rem 1rem"><i data-lucide="github"></i> Continue with GitHub</button>
+            <button class="btn-secondary" id="btn-cf-g" style="width:auto;padding:0.5rem 1rem"><i data-lucide="globe"></i> Continue with Google</button>
           </div>
           <div style="display:none;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem" id="cf-2fa-row">
             <input type="text" id="cf-2fa-code" class="form-input" placeholder="2FA code from authenticator" style="flex:1;min-width:180px" maxlength="8" autocomplete="off">
             <button class="btn-primary" id="btn-cf-2fa" style="width:auto;padding:0.5rem 1rem"><i data-lucide="shield-check"></i> Verify</button>
           </div>
           <span class="form-hint">Log in with your Cloudflare account email and password. If 2FA is enabled you'll be asked for the code from your authenticator app. This replaces API tokens — the panel stores the session securely. <span id="cf-login-result" class="form-hint"></span></span>
-          <span class="form-hint">"Continue with GitHub" opens Cloudflare's official GitHub login in a new tab. GitHub login can only happen in your browser and won't give the panel a token — use email &amp; password (or an API token) for automatic tunnel creation.</span>
+          <span class="form-hint">"Continue with GitHub/Google" opens Cloudflare's official social login in a new tab. Social login can only happen in your browser and won't give the panel a token — use email &amp; password (or an API token) for automatic tunnel creation.</span>
         </div>
         <div class="form-group">
           <label>Tunnel</label>
@@ -481,6 +482,6 @@
 
   <div class="toast-container" id="toast-container"></div>
   <script src="js/notifications.js?v=1"></script>
-  <script src="js/app.js?v=14"></script>
+  <script src="js/app.js?v=15"></script>
 </body>
 </html>

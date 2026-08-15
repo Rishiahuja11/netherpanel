@@ -170,6 +170,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Server name is required' });
     }
 
+    if (subdomain !== undefined && subdomain !== null && subdomain !== '' && !/^[a-z0-9-]+$/.test(subdomain)) {
+      return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
+    }
+
     const server = await ServerService.createServer(req.user.id, {
       name,
       version,
@@ -197,6 +201,10 @@ router.put('/:id', (req, res) => {
 
     if (server.user_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (req.body.subdomain !== undefined && req.body.subdomain !== null && req.body.subdomain !== '' && !/^[a-z0-9-]+$/.test(req.body.subdomain)) {
+      return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
     }
 
     const updated = ServerService.updateServer(server.id, req.body);
@@ -673,6 +681,21 @@ router.post('/:id/restore-upload', upload.single('file'), async (req, res) => {
     const tmpPath = req.file.path;
 
     const zip = new AdmZip(tmpPath);
+    const entries = zip.getEntries();
+    const maxSize = 2 * 1024 * 1024 * 1024;
+    let totalSize = 0;
+    for (const entry of entries) {
+      if (entry.entryName.includes('..')) {
+        fs.unlinkSync(tmpPath);
+        return res.status(400).json({ error: 'Backup contains an invalid path' });
+      }
+      totalSize += entry.header.size;
+      if (totalSize > maxSize) {
+        fs.unlinkSync(tmpPath);
+        return res.status(400).json({ error: 'Backup is too large to restore' });
+      }
+    }
+
     zip.extractAllTo(serverDir, true);
     fs.unlinkSync(tmpPath);
 
