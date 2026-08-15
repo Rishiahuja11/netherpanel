@@ -267,6 +267,30 @@ async function initDatabase() {
       FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      type TEXT DEFAULT 'info',
+      server_id INTEGER,
+      read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS api_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      scopes TEXT DEFAULT 'all',
+      expires_at DATETIME,
+      last_used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS server_templates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -301,6 +325,8 @@ async function initDatabase() {
     { key: 'cloudflare_server_ip', value: '', category: 'cloudflare' },
     { key: 'resource_ram_limit', value: '0', category: 'resource' },
     { key: 'resource_cpu_limit', value: '', category: 'resource' },
+    { key: 'webhook_url', value: '', category: 'webhook' },
+    { key: 'webhook_events', value: '', category: 'webhook' },
   ];
 
   for (const setting of defaultSettings) {

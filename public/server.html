@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#030305">
   <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -26,11 +26,23 @@
         <div class="server-address-bar" id="server-address">
           <i data-lucide="globe"></i>
           <span id="server-addr-text">...</span>
-          <button class="copy-btn" onclick="copyAddress()"><i data-lucide="copy"></i></button>
+          <button class="copy-btn" onclick="copyAddress()" title="Copy address"><i data-lucide="copy"></i></button>
+          <button class="copy-btn" onclick="shareServer()" title="Share link"><i data-lucide="share-2"></i></button>
         </div>
       </div>
     </div>
     <div class="nav-right">
+      <a href="status.html" class="nav-icon-btn" title="Public status page" target="_blank"><i data-lucide="activity"></i></a>
+      <div class="notif-wrap" id="notif-wrap">
+        <button class="nav-icon-btn" id="btn-notifications" title="Notifications"><i data-lucide="bell"></i><span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-dropdown-header">
+            <span>Notifications</span>
+            <button class="btn-sm" id="btn-mark-read"><i data-lucide="check-check"></i> Mark all read</button>
+          </div>
+          <div class="notif-list" id="notif-list"><div class="notif-empty">No notifications</div></div>
+        </div>
+      </div>
       <div class="power-controls">
         <button class="power-btn start" id="btn-start" title="Start"><i data-lucide="play"></i></button>
         <button class="power-btn restart" id="btn-restart" title="Restart"><i data-lucide="refresh-cw"></i></button>
@@ -69,6 +81,7 @@
       <button class="server-tab" data-tab="mods"><i data-lucide="puzzle"></i><span>Mods</span></button>
       <button class="server-tab" data-tab="logs"><i data-lucide="scroll-text"></i><span>Logs</span></button>
       <button class="server-tab" data-tab="backups"><i data-lucide="database"></i><span>Backups</span></button>
+      <button class="server-tab" data-tab="stats"><i data-lucide="activity"></i><span>Stats</span></button>
       <button class="server-tab" data-tab="settings"><i data-lucide="settings"></i><span>Settings</span></button>
     </div>
   </div>
@@ -262,6 +275,50 @@
       </div>
     </div>
 
+    <!-- Stats Tab -->
+    <div class="server-tab-content" id="tab-stats">
+      <div class="stats-layout">
+        <div class="stats-cards">
+          <div class="stat-card">
+            <div class="stat-icon blue"><i data-lucide="cpu"></i></div>
+            <div>
+              <div class="stat-value" id="stats-cpu">0%</div>
+              <div class="stat-label">CPU Usage</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green"><i data-lucide="memory-stick"></i></div>
+            <div>
+              <div class="stat-value" id="stats-ram">0 MB</div>
+              <div class="stat-label">Memory Used</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple"><i data-lucide="timer"></i></div>
+            <div>
+              <div class="stat-value" id="stats-uptime">-</div>
+              <div class="stat-label">Uptime</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon cyan"><i data-lucide="users"></i></div>
+            <div>
+              <div class="stat-value" id="stats-players">-</div>
+              <div class="stat-label">Players Online</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-header">
+            <h3>CPU / Memory History</h3>
+            <span class="form-hint">Last 60 seconds</span>
+          </div>
+          <canvas id="stats-chart" height="220"></canvas>
+        </div>
+        <div class="stats-note" id="stats-note"></div>
+      </div>
+    </div>
+
     <!-- Settings Tab -->
     <div class="server-tab-content" id="tab-settings">
       <div class="settings-layout">
@@ -320,6 +377,7 @@
   </main>
 
   <div class="toast-container" id="toast-container"></div>
-  <script src="js/server.js?v=7"></script>
+  <script src="js/notifications.js?v=1"></script>
+  <script src="js/server.js?v=8"></script>
 </body>
 </html>

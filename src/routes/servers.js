@@ -10,12 +10,45 @@ const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
 const PlayerService = require('../services/PlayerService');
 const SystemInfoService = require('../services/SystemInfoService');
+const NotificationService = require('../services/NotificationService');
 const { authenticateToken } = require('../middleware/auth');
 const { getDb } = require('../database');
 
 const upload = multer({ dest: path.join(__dirname, '../../data/tmp/uploads') });
 
 router.use(authenticateToken);
+
+function requireScope(category) {
+  return (req, res, next) => {
+    if (!req.isApiToken) return next();
+    if (req.tokenScopes.includes('all') || req.tokenScopes.includes(category)) return next();
+    return res.status(403).json({ error: `API token scope '${category}' required for this action` });
+  };
+}
+
+const scopeByPath = [
+  [/\/start$/, 'control'],
+  [/\/stop$/, 'control'],
+  [/\/restart$/, 'control'],
+  [/\/kill$/, 'control'],
+  [/\/command$/, 'control'],
+  [/\/files/, 'files'],
+  [/\/properties/, 'files'],
+  [/\/restore-upload/, 'files'],
+  [/\/backups/, 'backups'],
+  [/\/schedules/, 'schedules'],
+  [/\/mods/, 'mods'],
+  [/\/players/, 'players']
+];
+
+function tokenScopeGuard(req, res, next) {
+  if (!req.isApiToken || req.method === 'GET') return next();
+  const hit = scopeByPath.find(([re]) => re.test(req.path));
+  if (hit) return requireScope(hit[1])(req, res, next);
+  return next();
+}
+
+router.use(tokenScopeGuard);
 
 router.get('/', (req, res) => {
   try {
@@ -145,6 +178,8 @@ router.post('/', async (req, res) => {
       ramMax: ram_max,
       subdomain
     });
+
+    NotificationService.notify('server_created', { server, userId: req.user.id });
 
     res.status(201).json(server);
   } catch (err) {

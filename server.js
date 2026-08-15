@@ -58,11 +58,16 @@ async function startServer() {
   const serverRoutes = require('./src/routes/servers');
   const adminRoutes = require('./src/routes/admin');
   const clientRoutes = require('./src/routes/client');
+  const meRoutes = require('./src/routes/me');
+  const { apiRouter: publicApiRoutes, pageRouter: publicPageRoutes } = require('./src/routes/public');
 
   app.use('/api/auth', authRoutes);
   app.use('/api/servers', serverRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/client', clientRoutes);
+  app.use('/api/me', meRoutes);
+  app.use('/api/public', publicApiRoutes);
+  app.use('/', publicPageRoutes);
 
   app.get('/api', (req, res) => {
     res.json({
@@ -86,6 +91,8 @@ async function startServer() {
 
   const ServerService = require('./src/services/ServerService');
   ServerService.setIo(io);
+  const NotificationService = require('./src/services/NotificationService');
+  NotificationService.setIo(io);
   const ScheduleService = require('./src/services/ScheduleService');
   const CrashService = require('./src/services/CrashService');
   const UserService = require('./src/services/UserService');

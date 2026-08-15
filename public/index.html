@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#030305">
   <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -26,6 +26,17 @@
       </a>
     </div>
     <div class="nav-right">
+      <a href="status.html" class="nav-icon-btn" title="Public status page" target="_blank"><i data-lucide="activity"></i></a>
+      <div class="notif-wrap" id="notif-wrap">
+        <button class="nav-icon-btn" id="btn-notifications" title="Notifications"><i data-lucide="bell"></i><span class="notif-badge" id="notif-badge" style="display:none">0</span></button>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-dropdown-header">
+            <span>Notifications</span>
+            <button class="btn-sm" id="btn-mark-read"><i data-lucide="check-check"></i> Mark all read</button>
+          </div>
+          <div class="notif-list" id="notif-list"><div class="notif-empty">No notifications</div></div>
+        </div>
+      </div>
       <button class="nav-icon-btn" id="btn-settings" title="Settings" style="display:none"><i data-lucide="settings"></i></button>
       <div class="user-menu">
         <button class="user-avatar" id="user-menu-toggle">
@@ -225,7 +236,7 @@
         <h2>Settings</h2>
         <button class="modal-close" id="close-settings-modal"><i data-lucide="x"></i></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="max-height:72vh;overflow-y:auto">
         <h3 class="settings-section-title">Appearance</h3>
         <div class="theme-selector">
           <label class="theme-option">
@@ -290,6 +301,53 @@
           <label>Server IP</label>
           <input type="text" id="cf-server-ip" class="form-input" placeholder="Your server public IP">
         </div>
+        <h3 class="settings-section-title" style="margin-top:1.25rem">Notifications</h3>
+        <div class="form-group">
+          <label>Webhook URL <span style="color:var(--text-muted)">(generic JSON POST / Discord)</span></label>
+          <input type="url" id="webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/...">
+          <span class="form-hint">Sends a JSON payload for each enabled event. Leave empty to disable webhooks. In-app notifications always work.</span>
+        </div>
+        <div class="form-group">
+          <label>Webhook Events</label>
+          <div class="event-toggle-grid" id="webhook-events">
+            <label class="checkbox-row"><input type="checkbox" value="server_start"><span>Server started</span></label>
+            <label class="checkbox-row"><input type="checkbox" value="server_stop"><span>Server stopped</span></label>
+            <label class="checkbox-row"><input type="checkbox" value="server_crash"><span>Server crashed</span></label>
+            <label class="checkbox-row"><input type="checkbox" value="server_created"><span>Server created</span></label>
+            <label class="checkbox-row"><input type="checkbox" value="backup_created"><span>Backup created</span></label>
+          </div>
+          <span class="form-hint">Empty = all events enabled.</span>
+        </div>
+        <h3 class="settings-section-title" style="margin-top:1.25rem">API Tokens</h3>
+        <div class="form-group" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:1;min-width:150px">
+            <label>Token name</label>
+            <input type="text" id="token-name" class="form-input" placeholder="CI / automation">
+          </div>
+          <div style="min-width:150px">
+            <label>Scope</label>
+            <select id="token-scope" class="form-select">
+              <option value="all">Full access</option>
+              <option value="control">Control (start/stop)</option>
+              <option value="files">Files</option>
+              <option value="backups">Backups</option>
+              <option value="schedules">Schedules</option>
+              <option value="mods">Mods</option>
+              <option value="players">Players</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="btn-create-token" style="width:auto;padding:0.5rem 1rem"><i data-lucide="key-round"></i> Create</button>
+        </div>
+        <div class="new-token-display" id="new-token-display" style="display:none">
+          <span style="font-size:0.78rem;color:var(--success)">Copy your new token now — it won't be shown again.</span>
+          <div style="display:flex;gap:0.5rem">
+            <input type="text" class="form-input" id="new-token-value" readonly style="font-family:var(--font-mono);font-size:0.75rem">
+            <button class="btn-sm" id="btn-copy-token" title="Copy"><i data-lucide="copy"></i></button>
+          </div>
+        </div>
+        <div class="token-list" id="token-list">
+          <div class="notif-empty">No API tokens</div>
+        </div>
         <div class="settings-actions">
           <button class="btn-secondary" id="btn-cf-test"><i data-lucide="plug-zap"></i> Test Connection</button>
           <span id="cf-test-result" class="form-hint"></span>
@@ -300,6 +358,7 @@
   </div>
 
   <div class="toast-container" id="toast-container"></div>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/notifications.js?v=1"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ const { getDb } = require('../database');
 const UserService = require('./UserService');
 const CloudflareService = require('./CloudflareService');
 const SettingsService = require('./SettingsService');
+const NotificationService = require('./NotificationService');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
@@ -596,7 +597,7 @@ class ServerService {
     return `taskset -c ${range} `;
   }
 
-  static async startServer(serverId, userId) {
+  static async startServer(serverId, userId, opts = {}) {
     const db = this.getDb();
     const server = this.getServer(serverId);
     if (!server) {
@@ -715,8 +716,10 @@ class ServerService {
         const crashOutput = buffer.slice(-50).map(b => b.line).join('');
         this.logCrash(serverId, code, signal, crashOutput);
         UserService.logActivity(userId, 'server_crash', 'server', serverId, `Server crashed (exit code: ${code}, signal: ${signal})`);
+        NotificationService.notify('server_crash', { server, code, signal, userId });
       } else {
         UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
+        NotificationService.notify('server_stop', { server, userId });
       }
     });
 
@@ -727,6 +730,9 @@ class ServerService {
     });
 
     UserService.logActivity(userId, 'server_start', 'server', serverId, 'Server started');
+    if (!opts.silent) {
+      NotificationService.notify('server_start', { server, userId });
+    }
     return this.getServer(serverId);
   }
 

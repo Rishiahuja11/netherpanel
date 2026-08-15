@@ -5,6 +5,7 @@ const { createWriteStream } = require('fs');
 const { getDb } = require('../database');
 const ServerService = require('./ServerService');
 const UserService = require('./UserService');
+const NotificationService = require('./NotificationService');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
@@ -48,6 +49,7 @@ class BackupService {
         ).run(serverId, backupName, filename, size);
 
         UserService.logActivity(userId, 'backup_create', 'backup', result.lastInsertRowid, `Created backup "${backupName}"`);
+        NotificationService.notify('backup_created', { server, backupName, userId });
 
         resolve({
           id: result.lastInsertRowid,

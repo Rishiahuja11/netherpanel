@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NetherPanel - Server Status</title>
+  <meta name="theme-color" content="#030305">
+  <meta name="robots" content="index, follow">
+  <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="css/style.css?v=8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="status-page-body">
+  <div class="panel-grid-bg"></div>
+  <div class="panel-grain"></div>
+
+  <nav class="status-page-nav">
+    <a href="index.html" class="nav-logo">
+      <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
+        <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#ng)" stroke-width="1.5" fill="none"/>
+        <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#ng)"/>
+        <defs><linearGradient id="ng" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+      </svg>
+      <span id="status-panel-name">NetherPanel</span>
+    </a>
+    <span class="status-pill" id="status-refresh"><i data-lucide="refresh-cw"></i> Live</span>
+  </nav>
+
+  <header class="status-header">
+    <h1>Server Status</h1>
+    <p id="status-subtitle">Live status of all servers.</p>
+    <div class="status-summary" id="status-summary">
+      <span class="status-pill online" id="status-online-count"><i data-lucide="play-circle"></i> 0 online</span>
+      <span class="status-pill offline" id="status-offline-count"><i data-lucide="power"></i> 0 offline</span>
+    </div>
+  </header>
+
+  <main class="status-grid" id="status-grid">
+    <div class="status-loading" id="status-loading"><div class="spinner"></div><span>Loading server status...</span></div>
+  </main>
+
+  <div class="status-empty" id="status-empty" style="display:none">
+    <i data-lucide="server-off" style="width:40px;height:40px;opacity:0.4"></i>
+    <p style="margin-top:0.75rem">No servers to show.</p>
+  </div>
+
+  <footer class="status-footer">
+    <p id="status-footer-text">Powered by NetherPanel · Updated just now</p>
+  </footer>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script>
+  (function () {
+    function showToast(title, message, type) {
+      var container = document.getElementById('toast-container');
+      if (!container) return;
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + (type || 'info');
+      toast.innerHTML = '<div class="toast-message"><div class="toast-title">' + title + '</div><div class="toast-desc">' + message + '</div></div>';
+      container.appendChild(toast);
+      setTimeout(function () { toast.classList.add('leaving'); setTimeout(function () { toast.remove(); }, 300); }, 3000);
+    }
+
+    function fmtBytes(bytes) {
+      if (!bytes && bytes !== 0) return '-';
+      if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+      if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
+      return Math.round(bytes / 1024) + ' KB';
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str == null ? '' : String(str);
+      return div.innerHTML;
+    }
+
+    function renderCard(s, online) {
+      var ramPct = s.ram_percent != null ? Math.max(0, Math.min(100, s.ram_percent)) : 0;
+      var motd = s.motd && !/^\s*$/.test(String(s.motd).replace(/§./g, '')) ? String(s.motd).replace(/§./g, '') : '';
+      return '' +
+      '<div class="status-card">' +
+        '<div class="status-card-head">' +
+          '<div>' +
+            '<h3 class="status-card-name">' + escapeHtml(s.name) + '</h3>' +
+            '<div class="status-card-ver">' + escapeHtml(s.server_type + ' ' + s.game_type) + ' · ' + escapeHtml(s.version || '?') + '</div>' +
+          '</div>' +
+          '<div class="status-pulse ' + (online ? 'online' : 'offline') + '"></div>' +
+        '</div>' +
+        '<div class="status-card-motd">' + escapeHtml(motd) + '</div>' +
+        '<div class="status-card-stats">' +
+          '<div class="status-chip"><i data-lucide="users"></i><span><b>' + (online ? s.online_players : 0) + '</b> / ' + (s.max_players || '?') + ' players</span></div>' +
+          '<div class="status-chip"><i data-lucide="activity"></i><span><b>' + (online ? (s.query_latency != null ? s.query_latency + 'ms' : 'live') : 'offline') + '</b></span></div>' +
+          '<div class="status-chip"><i data-lucide="memory-stick"></i><span><b>' + (online && s.ram_used ? fmtBytes(s.ram_used) : '-') + '</b> / ' + (s.ram_max || '?') + ' MB</span></div>' +
+          '<div class="status-chip"><i data-lucide="globe"></i><span class="status-addr">' + escapeHtml(s.address) + '</span></div>' +
+        '</div>' +
+        '<div class="status-bar"><div class="status-bar-fill" style="width:' + ramPct + '%"></div></div>' +
+        '<div class="status-card-foot"><span>' + escapeHtml(s.status) + '</span><span>' + escapeHtml(s.game_type) + ' · ' + escapeHtml(s.server_type) + '</span></div>' +
+      '</div>';
+    }
+
+    function load() {
+      fetch('/api/public/status')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (data) {
+          var grid = document.getElementById('status-grid');
+          var empty = document.getElementById('status-empty');
+          var servers = (data && data.servers) || [];
+          var onlineCount = 0, offlineCount = 0;
+          servers.forEach(function (s) { if (s.status === 'running') onlineCount++; else offlineCount++; });
+          document.getElementById('status-online-count').innerHTML = '<i data-lucide="play-circle"></i> ' + onlineCount + ' online';
+          document.getElementById('status-offline-count').innerHTML = '<i data-lucide="power"></i> ' + offlineCount + ' offline';
+          document.getElementById('status-panel-name').textContent = data.panel_name || 'NetherPanel';
+          document.getElementById('status-subtitle').textContent = 'Live status of all servers on ' + (data.panel_name || 'NetherPanel') + '.';
+          if (servers.length === 0) {
+            grid.innerHTML = '';
+            empty.style.display = '';
+          } else {
+            empty.style.display = 'none';
+            grid.innerHTML = servers.map(function (s) { return renderCard(s, s.status === 'running'); }).join('');
+          }
+          var footer = document.getElementById('status-footer-text');
+          footer.textContent = 'Powered by NetherPanel · Updated ' + new Date(data.updated_at).toLocaleTimeString();
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        })
+        .catch(function (e) {
+          var grid = document.getElementById('status-grid');
+          grid.innerHTML = '<div class="status-empty"><i data-lucide="server-off" style="width:40px;height:40px;opacity:0.4"></i><p style="margin-top:0.75rem">Failed to load server status.</p></div>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    }
+
+    load();
+    setInterval(load, 10000);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  })();
+  </script>
+</body>
+</html>

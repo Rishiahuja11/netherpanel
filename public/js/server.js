@@ -25,6 +25,7 @@ const NetherServer = {
     this.initPlayers();
     this.initLogsControls();
     this.initSettingsDanger();
+    this.initStats();
   },
 
   async loadServerInfo() {
@@ -119,6 +120,11 @@ const NetherServer = {
 
         if (target === 'console' && this.term) {
           setTimeout(() => this.fitAddon.fit(), 100);
+        }
+        if (target === 'stats') {
+          this.startStats();
+        } else {
+          this.stopStats();
         }
       });
     });
@@ -1438,6 +1444,107 @@ const NetherServer = {
         setTimeout(() => toast.remove(), 300);
       }
     }, 5000);
+  },
+
+  initStats() {
+    this.statsTimer = null;
+    this.statsHistory = { cpu: [], ram: [] };
+  },
+
+  startStats() {
+    if (this.statsTimer) return;
+    this.pollStats();
+    this.statsTimer = setInterval(() => this.pollStats(), 2000);
+  },
+
+  stopStats() {
+    if (this.statsTimer) {
+      clearInterval(this.statsTimer);
+      this.statsTimer = null;
+    }
+  },
+
+  async pollStats() {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/resources`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to load stats');
+      const stats = await res.json();
+      const cpu = stats.cpu || 0;
+      const ramMB = stats.memory ? (stats.memory / 1024 / 1024) : 0;
+
+      this.statsHistory.cpu.push(cpu);
+      this.statsHistory.ram.push(ramMB);
+      if (this.statsHistory.cpu.length > 60) {
+        this.statsHistory.cpu.shift();
+        this.statsHistory.ram.shift();
+      }
+
+      const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setText('stats-cpu', `${cpu.toFixed(1)}%`);
+      setText('stats-ram', `${ramMB.toFixed(0)} MB`);
+      setText('stats-uptime', stats.uptime || '-');
+      setText('stats-players', this.serverData?.status === 'running' ? 'online' : 'offline');
+      this.drawChart();
+    } catch (e) {
+      this.stopStats();
+      const note = document.getElementById('stats-note');
+      if (note) note.textContent = 'Live stats paused — server stopped or resources unavailable.';
+    }
+  },
+
+  drawChart() {
+    const canvas = document.getElementById('stats-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth || 600;
+    const h = canvas.clientHeight || 220;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const pad = { top: 10, right: 10, bottom: 20, left: 44 };
+    const plotW = w - pad.left - pad.right;
+    const plotH = h - pad.top - pad.bottom;
+    const n = this.statsHistory.cpu.length;
+    if (!n) return;
+
+    const maxRam = Math.max(1, ...this.statsHistory.ram) * 1.15;
+    const maxCpu = 100;
+
+    const drawAxis = (label, color) => {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, pad.top + plotH);
+      ctx.lineTo(pad.left + plotW, pad.top + plotH);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(label, 4, pad.top + 10);
+    };
+
+    const line = (series, max, color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      series.forEach((v, i) => {
+        const x = pad.left + (i / 59) * plotW;
+        const y = pad.top + plotH - (v / max) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    };
+
+    drawAxis('CPU', '#38bdf8');
+    line(this.statsHistory.cpu, maxCpu, '#38bdf8');
+    drawAxis('RAM', '#a78bfa');
+    line(this.statsHistory.ram, maxRam, '#a78bfa');
   }
 };
 
@@ -1448,6 +1555,18 @@ function copyAddress() {
       NetherServer.showToast('Copied', 'Address copied to clipboard', 'success');
     });
   }
+}
+
+function shareServer() {
+  const slug = NetherServer.serverData?.slug;
+  if (!slug) {
+    NetherServer.showToast('Error', 'Share link unavailable', 'error');
+    return;
+  }
+  const url = `${window.location.origin}/s/${slug}`;
+  navigator.clipboard.writeText(url).then(() => {
+    NetherServer.showToast('Copied', `Share link copied: ${url}`, 'success');
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

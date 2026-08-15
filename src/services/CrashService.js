@@ -204,7 +204,7 @@ class CrashService {
 
         if (recentCrashes.length < 3) {
           console.log(`[CrashService] Auto-restarting server ${serverId}...`);
-          ServerService.startServer(serverId, currentServer.user_id).then(() => {
+          ServerService.startServer(serverId, currentServer.user_id, { silent: true }).then(() => {
             this.monitorServer(serverId);
           }).catch(err => {
             console.error(`[CrashService] Auto-restart failed for server ${serverId}:`, err.message);

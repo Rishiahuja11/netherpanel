@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NetherPanel - Server</title>
+  <meta name="theme-color" content="#030305">
+  <meta name="robots" content="noindex, follow">
+  <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="css/style.css?v=8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="status-page-body">
+  <div class="panel-grid-bg"></div>
+  <div class="panel-grain"></div>
+
+  <nav class="status-page-nav">
+    <a href="status.html" class="nav-logo">
+      <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
+        <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#ng)" stroke-width="1.5" fill="none"/>
+        <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#ng)"/>
+        <defs><linearGradient id="ng" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+      </svg>
+      <span>NetherPanel</span>
+    </a>
+    <a href="status.html" class="status-pill" style="text-decoration:none"><i data-lucide="layout-grid"></i> All servers</a>
+  </nav>
+
+  <main class="status-loading" id="share-loading" style="text-align:center;padding:3rem 1rem">
+    <div class="spinner"></div>
+    <span style="color:var(--text-muted)">Loading server...</span>
+  </main>
+
+  <div class="share-card" id="share-card" style="display:none">
+    <div class="status-pulse online" id="share-pulse" style="display:inline-block;width:12px;height:12px;margin-bottom:0.25rem"></div>
+    <h1 class="share-name" id="share-name">-</h1>
+    <div class="share-ver" id="share-ver">-</div>
+    <div class="share-motd" id="share-motd"></div>
+    <div class="share-addr-box">
+      <span id="share-addr">-</span>
+      <button onclick="copyShareAddr()" title="Copy address"><i data-lucide="copy"></i></button>
+    </div>
+    <div class="share-grid">
+      <div class="share-cell"><span>Players</span><b id="share-players">-</b></div>
+      <div class="share-cell"><span>Latency</span><b id="share-latency">-</b></div>
+      <div class="share-cell"><span>Software</span><b id="share-software">-</b></div>
+      <div class="share-cell"><span>Version</span><b id="share-version">-</b></div>
+    </div>
+  </div>
+
+  <div class="status-empty" id="share-not-found" style="display:none">
+    <i data-lucide="server-off" style="width:40px;height:40px;opacity:0.4"></i>
+    <p style="margin-top:0.75rem">Server not found.</p>
+  </div>
+
+  <footer class="status-footer"><p>Powered by NetherPanel</p></footer>
+
+  <div class="toast-container" id="toast-container"></div>
+  <script>
+  (function () {
+    var slug = window.location.pathname.split('/').filter(Boolean).pop();
+
+    function showToast(title, message, type) {
+      var container = document.getElementById('toast-container');
+      if (!container) return;
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + (type || 'info');
+      toast.innerHTML = '<div class="toast-message"><div class="toast-title">' + title + '</div><div class="toast-desc">' + message + '</div></div>';
+      container.appendChild(toast);
+      setTimeout(function () { toast.classList.add('leaving'); setTimeout(function () { toast.remove(); }, 300); }, 3000);
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str == null ? '' : String(str);
+      return div.innerHTML;
+    }
+
+    function fmtBytes(bytes) {
+      if (!bytes && bytes !== 0) return '-';
+      if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+      if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
+      return Math.round(bytes / 1024) + ' KB';
+    }
+
+    function load() {
+      fetch('/api/public/status/' + encodeURIComponent(slug))
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (s) {
+          document.getElementById('share-loading').style.display = 'none';
+          document.getElementById('share-card').style.display = 'block';
+          var online = s.status === 'running';
+          var onlinePlayers = online ? (s.online_players || 0) : 0;
+          var maxPlayers = s.max_players || '?';
+
+          var pulse = document.getElementById('share-pulse');
+          pulse.className = 'status-pulse ' + (online ? 'online' : 'offline');
+          document.getElementById('share-name').textContent = s.name;
+          document.getElementById('share-ver').textContent = s.server_type + ' · ' + s.game_type + ' · ' + s.version;
+          var motd = s.motd && !/^\s*$/.test(String(s.motd).replace(/§./g, '')) ? String(s.motd).replace(/§./g, '') : (online ? 'Server is online' : 'Server is offline');
+          document.getElementById('share-motd').textContent = motd;
+          document.getElementById('share-addr').textContent = s.address;
+          document.getElementById('share-players').textContent = onlinePlayers + ' / ' + maxPlayers;
+          document.getElementById('share-latency').textContent = online && s.query_latency != null ? s.query_latency + 'ms' : (online ? 'live' : '-');
+          document.getElementById('share-software').textContent = s.server_type;
+          document.getElementById('share-version').textContent = s.version || '?';
+          document.title = s.name + ' - NetherPanel';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        })
+        .catch(function () {
+          document.getElementById('share-loading').style.display = 'none';
+          document.getElementById('share-not-found').style.display = '';
+        });
+    }
+
+    window.copyShareAddr = function () {
+      var text = document.getElementById('share-addr').textContent;
+      if (text) navigator.clipboard.writeText(text).then(function () { showToast('Copied', 'Address copied to clipboard', 'success'); });
+    };
+
+    load();
+    setInterval(load, 10000);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  })();
+  </script>
+</body>
+</html>

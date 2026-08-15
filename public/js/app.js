@@ -155,6 +155,16 @@ const NetherApp = {
     });
     document.getElementById('btn-save-settings')?.addEventListener('click', () => this.saveSettings());
     document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
+    document.getElementById('btn-create-token')?.addEventListener('click', () => this.createApiToken());
+    document.getElementById('btn-copy-token')?.addEventListener('click', () => {
+      const val = document.getElementById('new-token-value');
+      if (!val || !val.value) return;
+      if (navigator.clipboard) navigator.clipboard.writeText(val.value).then(() => this.showToast('Copied', 'API token copied to clipboard', 'success'));
+    });
+    document.getElementById('token-list')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-delete-token]');
+      if (btn) this.deleteApiToken(btn.dataset.deleteToken);
+    });
     document.getElementById('cf-enabled')?.addEventListener('change', () => this.updateCfDomainSample());
     document.getElementById('cf-domain')?.addEventListener('input', () => this.updateCfDomainSample());
     document.querySelectorAll('input[name="panel-theme"]').forEach(r => {
@@ -194,17 +204,26 @@ const NetherApp = {
       setVal('cf-domain', 'cloudflare_domain', 'smp45.qzz.io');
       setVal('resource-ram-limit', 'resource_ram_limit', '0');
       setVal('resource-cpu-limit', 'resource_cpu_limit', '');
+      setVal('webhook-url', 'webhook_url', '');
+      const eventInputs = document.querySelectorAll('#webhook-events input[type="checkbox"]');
+      const enabledEvents = (map['webhook_events']?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+      eventInputs.forEach(cb => {
+        cb.checked = enabledEvents.length === 0 || enabledEvents.includes(cb.value);
+      });
       const enabledEl = document.getElementById('cf-enabled');
       if (enabledEl) enabledEl.checked = (map['cloudflare_enabled']?.value || 'true') === 'true';
       const result = document.getElementById('cf-test-result');
       if (result) result.textContent = '';
       this.updateCfDomainSample();
+      this.loadApiTokens();
     } catch (err) {
       this.showToast('Error', err.message, 'error');
     }
   },
 
   collectCloudflareSettings() {
+    const selectedEvents = Array.from(document.querySelectorAll('#webhook-events input[type="checkbox"]:checked'))
+      .map(cb => cb.value);
     return [
       { key: 'cloudflare_enabled', value: document.getElementById('cf-enabled')?.checked ? 'true' : 'false', category: 'cloudflare' },
       { key: 'cloudflare_domain', value: document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io', category: 'cloudflare' },
@@ -212,7 +231,9 @@ const NetherApp = {
       { key: 'cloudflare_zone_id', value: document.getElementById('cf-zone-id')?.value?.trim() || '', category: 'cloudflare' },
       { key: 'cloudflare_server_ip', value: document.getElementById('cf-server-ip')?.value?.trim() || '', category: 'cloudflare' },
       { key: 'resource_ram_limit', value: document.getElementById('resource-ram-limit')?.value?.trim() || '0', category: 'resource' },
-      { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' }
+      { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' },
+      { key: 'webhook_url', value: document.getElementById('webhook-url')?.value?.trim() || '', category: 'webhook' },
+      { key: 'webhook_events', value: selectedEvents.join(','), category: 'webhook' }
     ];
   },
 
@@ -255,6 +276,59 @@ const NetherApp = {
     const domain = document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io';
     const sample = document.getElementById('cf-domain-sample');
     if (sample) sample.textContent = `myserver.${domain}`;
+  },
+
+  async loadApiTokens() {
+    const list = document.getElementById('token-list');
+    if (!list) return;
+    try {
+      const tokens = await this.api('GET', '/api/me/tokens');
+      if (!tokens.length) {
+        list.innerHTML = '<div class="notif-empty">No API tokens</div>';
+        return;
+      }
+      list.innerHTML = tokens.map(t => `
+        <div class="token-row">
+          <div class="token-info">
+            <span class="token-name">${this.escapeHtml(t.name)}</span>
+            <span class="token-scope">${this.escapeHtml(t.scopes)}</span>
+            <span class="token-meta">${t.last_used_at ? 'Last used ' + new Date(t.last_used_at).toLocaleString() : 'Never used'}${t.expires_at ? ' · expires ' + new Date(t.expires_at).toLocaleDateString() : ''}</span>
+          </div>
+          <button class="btn-sm danger" data-delete-token="${t.id}" title="Delete"><i data-lucide="trash-2"></i></button>
+        </div>`).join('');
+      this.initLucideIcons();
+    } catch (err) {
+      list.innerHTML = `<div class="notif-empty">Failed to load tokens: ${this.escapeHtml(err.message)}</div>`;
+    }
+  },
+
+  async createApiToken() {
+    const name = document.getElementById('token-name')?.value?.trim();
+    if (!name) return this.showToast('Error', 'Token name is required', 'error');
+    const scope = document.getElementById('token-scope')?.value || 'all';
+    try {
+      const data = await this.api('POST', '/api/me/tokens', { name, scopes: [scope] });
+      const display = document.getElementById('new-token-display');
+      const value = document.getElementById('new-token-value');
+      if (display) display.style.display = '';
+      if (value) value.value = data.token || '';
+      document.getElementById('token-name').value = '';
+      this.showToast('Created', `Token "${name}" created`, 'success');
+      this.loadApiTokens();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  async deleteApiToken(id) {
+    if (!confirm('Delete this API token? It will immediately stop working.')) return;
+    try {
+      await this.api('DELETE', `/api/me/tokens/${id}`);
+      this.showToast('Deleted', 'API token deleted', 'success');
+      this.loadApiTokens();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
   },
 
   initCreateServerModal() {
