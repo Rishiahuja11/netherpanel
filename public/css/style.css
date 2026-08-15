@@ -50,6 +50,10 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-display: 'Inter', sans-serif;
   --nav-height: 56px;
+  --primary: #ffffff;
+  --on-primary: #000000;
+  --primary-glow: rgba(255,255,255,0.25);
+  --accent-cyan: #22d3ee;
 }
 
 /* ============================================
@@ -103,6 +107,314 @@
 :root[data-theme="skypanel"] .stat-icon.blue,
 :root[data-theme="skypanel"] .stat-icon.purple {
   background: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="skypanel"] {
+  --primary: #f2f2f0;
+  --on-primary: #0a0a0a;
+  --primary-glow: rgba(242, 242, 240, 0.25);
+}
+
+/* ============================================
+   Pterodactyl theme — dark slate + AdminLTE blue
+   ============================================ */
+:root[data-theme="pterodactyl"] {
+  --bg-primary: #15171c;
+  --bg-secondary: #1c1f26;
+  --bg-tertiary: #242830;
+  --bg-card: #1c1f26;
+  --bg-card-hover: #262b34;
+  --bg-elevated: #2a2f39;
+  --bg-overlay: rgba(21, 23, 28, 0.9);
+  --accent-blue: #3c8dbc;
+  --accent-blue-hover: #4aa1d4;
+  --accent-blue-dark: #3076a0;
+  --accent-blue-glow: rgba(60, 141, 188, 0.3);
+  --accent-purple: #8aa4bd;
+  --accent-purple-hover: #a8c0d6;
+  --accent-purple-dark: #6c87a1;
+  --accent-purple-glow: rgba(138, 164, 189, 0.25);
+  --text-primary: #eef2f6;
+  --text-secondary: #d5dce4;
+  --text-muted: #9aa7b4;
+  --text-dim: #66727f;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow-glow-blue: 0 0 20px rgba(60, 141, 188, 0.18);
+  --shadow-glow-purple: 0 0 20px rgba(138, 164, 189, 0.18);
+  --primary: #3c8dbc;
+  --on-primary: #ffffff;
+  --primary-glow: rgba(60, 141, 188, 0.45);
+  --accent-cyan: #4aa1d4;
+}
+
+/* ============================================
+   Pelican theme — navy + sky blue
+   ============================================ */
+:root[data-theme="pelican"] {
+  --bg-primary: #0c1620;
+  --bg-secondary: #12202e;
+  --bg-tertiary: #192c3d;
+  --bg-card: #12202e;
+  --bg-card-hover: #1a3145;
+  --bg-elevated: #1e3a52;
+  --bg-overlay: rgba(12, 22, 32, 0.9);
+  --accent-blue: #2aa4dd;
+  --accent-blue-hover: #5bcaee;
+  --accent-blue-dark: #1d8cc2;
+  --accent-blue-glow: rgba(42, 164, 221, 0.3);
+  --accent-purple: #7db4e6;
+  --accent-purple-hover: #a0cbf0;
+  --accent-purple-dark: #5a96d0;
+  --accent-purple-glow: rgba(125, 180, 230, 0.25);
+  --text-primary: #f2f9fd;
+  --text-secondary: #d6e9f5;
+  --text-muted: #93b3c8;
+  --text-dim: #5f7e95;
+  --border: rgba(160, 210, 230, 0.16);
+  --border-hover: rgba(91, 202, 238, 0.35);
+  --shadow-glow-blue: 0 0 20px rgba(42, 164, 221, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(125, 180, 230, 0.2);
+  --primary: #2aa4dd;
+  --on-primary: #071018;
+  --primary-glow: rgba(91, 202, 238, 0.4);
+  --accent-cyan: #5bcaee;
+}
+
+/* ============================================
+   PufferPanel theme — dark gray + green
+   ============================================ */
+:root[data-theme="pufferpanel"] {
+  --bg-primary: #17181b;
+  --bg-secondary: #1d1f23;
+  --bg-tertiary: #26282e;
+  --bg-card: #1d1f23;
+  --bg-card-hover: #272a31;
+  --bg-elevated: #2b2e35;
+  --bg-overlay: rgba(23, 24, 27, 0.9);
+  --accent-blue: #4caf50;
+  --accent-blue-hover: #66bb6a;
+  --accent-blue-dark: #388e3c;
+  --accent-blue-glow: rgba(76, 175, 80, 0.3);
+  --accent-green: #4caf50;
+  --accent-green-hover: #66bb6a;
+  --accent-green-dark: #388e3c;
+  --accent-green-glow: rgba(76, 175, 80, 0.3);
+  --accent-purple: #7cba7f;
+  --accent-purple-hover: #9bd09e;
+  --accent-purple-dark: #5da060;
+  --accent-purple-glow: rgba(124, 186, 127, 0.25);
+  --text-primary: #eef2ee;
+  --text-secondary: #d5dcd5;
+  --text-muted: #98a398;
+  --text-dim: #626c62;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow-glow-blue: 0 0 20px rgba(76, 175, 80, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(124, 186, 127, 0.2);
+  --primary: #4caf50;
+  --on-primary: #08130a;
+  --primary-glow: rgba(102, 187, 106, 0.4);
+  --accent-cyan: #66bb6a;
+}
+
+/* ============================================
+   MCSManager theme — dark blue + Ant blue
+   ============================================ */
+:root[data-theme="mcsmanager"] {
+  --bg-primary: #0d1420;
+  --bg-secondary: #141d2e;
+  --bg-tertiary: #1c2940;
+  --bg-card: #141d2e;
+  --bg-card-hover: #1d2b45;
+  --bg-elevated: #21304d;
+  --bg-overlay: rgba(13, 20, 32, 0.9);
+  --accent-blue: #1890ff;
+  --accent-blue-hover: #4da6ff;
+  --accent-blue-dark: #0d78dd;
+  --accent-blue-glow: rgba(24, 144, 255, 0.3);
+  --accent-green: #3ddc84;
+  --accent-green-glow: rgba(61, 220, 132, 0.25);
+  --accent-purple: #6f9fd8;
+  --accent-purple-hover: #92b8e8;
+  --accent-purple-dark: #5480b5;
+  --accent-purple-glow: rgba(111, 159, 216, 0.25);
+  --text-primary: #eef4fb;
+  --text-secondary: #d3e0ee;
+  --text-muted: #93a6bc;
+  --text-dim: #5e7086;
+  --border: rgba(120, 160, 220, 0.16);
+  --border-hover: rgba(77, 166, 255, 0.35);
+  --shadow-glow-blue: 0 0 20px rgba(24, 144, 255, 0.22);
+  --shadow-glow-purple: 0 0 20px rgba(111, 159, 216, 0.2);
+  --primary: #1890ff;
+  --on-primary: #03101f;
+  --primary-glow: rgba(77, 166, 255, 0.4);
+  --accent-cyan: #1890ff;
+}
+
+/* ============================================
+   Crafty theme — charcoal + Material blue
+   ============================================ */
+:root[data-theme="crafty"] {
+  --bg-primary: #121417;
+  --bg-secondary: #1a1e24;
+  --bg-tertiary: #232930;
+  --bg-card: #1a1e24;
+  --bg-card-hover: #242b33;
+  --bg-elevated: #283039;
+  --bg-overlay: rgba(18, 20, 23, 0.9);
+  --accent-blue: #2196f3;
+  --accent-blue-hover: #42a5f5;
+  --accent-blue-dark: #1e88e5;
+  --accent-blue-glow: rgba(33, 150, 243, 0.3);
+  --accent-orange: #ffaf00;
+  --accent-purple: #6fa8dc;
+  --accent-purple-hover: #93c0ec;
+  --accent-purple-dark: #5488bb;
+  --accent-purple-glow: rgba(111, 168, 220, 0.25);
+  --text-primary: #eef3f8;
+  --text-secondary: #d3dde6;
+  --text-muted: #93a2b1;
+  --text-dim: #5e6b79;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow-glow-blue: 0 0 20px rgba(33, 150, 243, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(111, 168, 220, 0.2);
+  --primary: #2196f3;
+  --on-primary: #03101f;
+  --primary-glow: rgba(66, 165, 245, 0.4);
+  --accent-cyan: #42a5f5;
+}
+
+/* ============================================
+   MineOS theme — slate + bootstrap blue
+   ============================================ */
+:root[data-theme="mineos"] {
+  --bg-primary: #14181c;
+  --bg-secondary: #1b2126;
+  --bg-tertiary: #242c32;
+  --bg-card: #1b2126;
+  --bg-card-hover: #252e35;
+  --bg-elevated: #2a343c;
+  --bg-overlay: rgba(20, 24, 28, 0.9);
+  --accent-blue: #0088cc;
+  --accent-blue-hover: #00a3f0;
+  --accent-blue-dark: #0071ab;
+  --accent-blue-glow: rgba(0, 136, 204, 0.3);
+  --accent-purple: #5aa8c9;
+  --accent-purple-hover: #80c0dd;
+  --accent-purple-dark: #418aaa;
+  --accent-purple-glow: rgba(90, 168, 201, 0.25);
+  --text-primary: #eef4f8;
+  --text-secondary: #d3dde4;
+  --text-muted: #93a3ae;
+  --text-dim: #5f6d77;
+  --border: rgba(150, 200, 230, 0.14);
+  --border-hover: rgba(0, 163, 240, 0.35);
+  --shadow-glow-blue: 0 0 20px rgba(0, 136, 204, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(90, 168, 201, 0.2);
+  --primary: #0088cc;
+  --on-primary: #04131c;
+  --primary-glow: rgba(0, 163, 240, 0.4);
+  --accent-cyan: #00a3f0;
+}
+
+/* ============================================
+   LinuxGSM theme — charcoal + brand orange
+   ============================================ */
+:root[data-theme="linuxgsm"] {
+  --bg-primary: #121212;
+  --bg-secondary: #191919;
+  --bg-tertiary: #242424;
+  --bg-card: #191919;
+  --bg-card-hover: #252525;
+  --bg-elevated: #2b2b2b;
+  --bg-overlay: rgba(18, 18, 18, 0.9);
+  --accent-blue: #f07f13;
+  --accent-blue-hover: #ff9a3d;
+  --accent-blue-dark: #d96e08;
+  --accent-blue-glow: rgba(240, 127, 19, 0.3);
+  --accent-orange: #f07f13;
+  --accent-purple: #ffb054;
+  --accent-purple-hover: #ffc37a;
+  --accent-purple-dark: #e89a3d;
+  --accent-purple-glow: rgba(255, 176, 84, 0.25);
+  --text-primary: #f5f2ee;
+  --text-secondary: #ddd7d0;
+  --text-muted: #a39b91;
+  --text-dim: #6b655d;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow-glow-blue: 0 0 20px rgba(240, 127, 19, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(255, 176, 84, 0.2);
+  --primary: #f07f13;
+  --on-primary: #1d0e02;
+  --primary-glow: rgba(255, 154, 61, 0.4);
+  --accent-cyan: #ff9a3d;
+}
+
+/* ============================================
+   GameAP theme — navy + blurple
+   ============================================ */
+:root[data-theme="gameap"] {
+  --bg-primary: #131722;
+  --bg-secondary: #1a2030;
+  --bg-tertiary: #232a3d;
+  --bg-card: #1a2030;
+  --bg-card-hover: #242c42;
+  --bg-elevated: #293149;
+  --bg-overlay: rgba(19, 23, 34, 0.9);
+  --accent-blue: #7289da;
+  --accent-blue-hover: #8fa4e6;
+  --accent-blue-dark: #5b6fc4;
+  --accent-blue-glow: rgba(114, 137, 218, 0.3);
+  --accent-purple: #9aa5d8;
+  --accent-purple-hover: #b6bfe8;
+  --accent-purple-dark: #7c87bf;
+  --accent-purple-glow: rgba(154, 165, 216, 0.25);
+  --text-primary: #eef1fb;
+  --text-secondary: #d5dbee;
+  --text-muted: #97a0ba;
+  --text-dim: #5f6882;
+  --border: rgba(150, 165, 220, 0.16);
+  --border-hover: rgba(143, 164, 230, 0.35);
+  --shadow-glow-blue: 0 0 20px rgba(114, 137, 218, 0.22);
+  --shadow-glow-purple: 0 0 20px rgba(154, 165, 216, 0.2);
+  --primary: #7289da;
+  --on-primary: #0b1020;
+  --primary-glow: rgba(143, 164, 230, 0.4);
+  --accent-cyan: #8fa4e6;
+}
+
+/* ============================================
+   Blueprint theme — slate + amber
+   ============================================ */
+:root[data-theme="blueprint"] {
+  --bg-primary: #131a22;
+  --bg-secondary: #1a2330;
+  --bg-tertiary: #222d3d;
+  --bg-card: #1a2330;
+  --bg-card-hover: #243144;
+  --bg-elevated: #283749;
+  --bg-overlay: rgba(19, 26, 34, 0.9);
+  --accent-blue: #f9a040;
+  --accent-blue-hover: #ffb86b;
+  --accent-blue-dark: #e08c2b;
+  --accent-blue-glow: rgba(249, 160, 64, 0.3);
+  --accent-orange: #f9a040;
+  --accent-purple: #8ba3c0;
+  --accent-purple-hover: #a9bdd4;
+  --accent-purple-dark: #6f86a3;
+  --accent-purple-glow: rgba(139, 163, 192, 0.25);
+  --text-primary: #f2f5f8;
+  --text-secondary: #d7dfe7;
+  --text-muted: #9aa8b6;
+  --text-dim: #626f7d;
+  --border: rgba(200, 215, 230, 0.14);
+  --border-hover: rgba(255, 184, 107, 0.35);
+  --shadow-glow-blue: 0 0 20px rgba(249, 160, 64, 0.2);
+  --shadow-glow-purple: 0 0 20px rgba(139, 163, 192, 0.2);
+  --primary: #f9a040;
+  --on-primary: #221203;
+  --primary-glow: rgba(255, 184, 107, 0.4);
+  --accent-cyan: #ffb86b;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -386,8 +698,8 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
   gap: 0.5rem;
   width: 100%;
   padding: 0.75rem 1.5rem;
-  background: #ffffff;
-  color: #000000;
+  background: var(--primary, #ffffff);
+  color: var(--on-primary, #000000);
   font-weight: 600;
   font-size: 0.9rem;
   border-radius: var(--radius-md);
@@ -398,7 +710,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(255,255,255,0.25);
+  box-shadow: 0 4px 15px var(--primary-glow, rgba(255,255,255,0.25));
 }
 
 .btn-primary:active { transform: scale(0.98); }
