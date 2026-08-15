@@ -88,6 +88,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 @keyframes statusPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); } 50% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); } 20%, 40%, 60%, 80% { transform: translateX(2px); } }
 @keyframes progressShrink { from { width: 100%; } to { width: 0; } }
+@keyframes gridScroll { 0% { background-position: 0 0, 0 0; } 100% { background-position: 0 40px, 40px 40px; } }
 
 .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
 .animate-slideUp { animation: slideUp 0.4s ease forwards; }
@@ -99,6 +100,44 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .stagger-3 { animation-delay: 0.15s; }
 .stagger-4 { animation-delay: 0.2s; }
 .stagger-5 { animation-delay: 0.25s; }
+
+/* ============================================
+   Ambient Layers (JTG grid + SkyPanel grain)
+   ============================================ */
+.panel-grid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridScroll 18s linear infinite;
+}
+
+.panel-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* SkyPanel "precision panel" — inset top highlight on cards */
+.stat-card, .server-card, .auth-card, .modal, .modal-content, .game-type-card, .settings-card {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), var(--shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
 
 /* ============================================
    Auth Page
@@ -463,6 +502,8 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
   padding-top: calc(var(--nav-height) + 1rem);
   padding-bottom: 2rem;
   min-height: 100vh;
+  position: relative;
+  z-index: 2;
 }
 
 .dashboard-header {
@@ -852,6 +893,8 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .server-main {
   padding: 1rem;
   min-height: calc(100vh - var(--nav-height) - 44px);
+  position: relative;
+  z-index: 2;
 }
 
 .server-tab-content {
