@@ -157,8 +157,11 @@ const NetherApp = {
     document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
     document.getElementById('btn-cf-login')?.addEventListener('click', () => this.cloudflareLogin());
     document.getElementById('btn-cf-2fa')?.addEventListener('click', () => this.cloudflareVerify2fa());
-    document.getElementById('btn-cf-gh')?.addEventListener('click', () => this.cloudflareGitHub());
-    document.getElementById('btn-cf-g')?.addEventListener('click', () => this.cloudflareGoogle());
+    document.getElementById('btn-cf-token-save')?.addEventListener('click', () => this.saveCfToken());
+    document.getElementById('btn-cf-token-create')?.addEventListener('click', () => this.createCfToken());
+    document.getElementById('cf-api-token')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.saveCfToken();
+    });
     document.getElementById('btn-cf-tunnel')?.addEventListener('click', () => this.createTunnel());
     document.getElementById('cf-password')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.cloudflareLogin();
@@ -297,14 +300,45 @@ const NetherApp = {
     el.style.color = ok ? 'var(--success)' : 'var(--error)';
   },
 
-  cloudflareGitHub() {
-    window.open('https://oidc.iam.cfapi.net/api/v1/sso/init?client=github&env=production', '_blank', 'noopener');
-    this.setCfLoginResult('GitHub login opens in a new tab. It can\u2019t give the panel a token \u2014 log in with email & password here for automatic tunnel setup.', false);
+  setCfTokenResult(text, ok) {
+    const el = document.getElementById('cf-token-result');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = ok ? 'var(--success)' : 'var(--error)';
   },
 
-  cloudflareGoogle() {
-    window.open('https://oidc.iam.cfapi.net/api/v1/sso/init?client=google&env=production', '_blank', 'noopener');
-    this.setCfLoginResult('Google login opens in a new tab. It can\u2019t give the panel a token \u2014 log in with email & password here for automatic tunnel setup.', false);
+  createCfToken() {
+    window.open('https://dash.cloudflare.com/profile/api-tokens/create', '_blank', 'noopener');
+    this.setCfTokenResult('Cloudflare token wizard opened in a new tab. Select the permissions listed below, then paste the token and click "Save & Connect".', true);
+  },
+
+  async saveCfToken() {
+    const token = document.getElementById('cf-api-token')?.value?.trim();
+    if (!token) return this.setCfTokenResult('Paste a Cloudflare API token first.', false);
+    const btn = document.getElementById('btn-cf-token-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'Connecting...'; }
+    try {
+      const data = await this.api('POST', '/api/admin/cloudflare/token', { token });
+      if (data && data.success) {
+        document.getElementById('cf-api-token').value = '';
+        this.setCfTokenResult('Token connected. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.'), true);
+        if (data.zoneId) {
+          const zoneInput = document.getElementById('cf-zone-id');
+          if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
+        }
+        if (data.tunnel) {
+          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
+          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
+          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
+        }
+      } else {
+        this.setCfTokenResult(data?.error || 'Connection failed.', false);
+      }
+    } catch (err) {
+      this.setCfTokenResult(err.message, false);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & Connect'; }
+    }
   },
 
   async createTunnel() {

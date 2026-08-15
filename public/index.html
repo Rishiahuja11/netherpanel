@@ -413,16 +413,21 @@
             <input type="password" id="cf-password" class="form-input" placeholder="Password" style="flex:1;min-width:140px" autocomplete="off">
             <button class="btn-primary" id="btn-cf-login" style="width:auto;padding:0.5rem 1rem"><i data-lucide="log-in"></i> Log in</button>
           </div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
-            <button class="btn-secondary" id="btn-cf-gh" style="width:auto;padding:0.5rem 1rem"><i data-lucide="github"></i> Continue with GitHub</button>
-            <button class="btn-secondary" id="btn-cf-g" style="width:auto;padding:0.5rem 1rem"><i data-lucide="globe"></i> Continue with Google</button>
-          </div>
           <div style="display:none;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem" id="cf-2fa-row">
             <input type="text" id="cf-2fa-code" class="form-input" placeholder="2FA code from authenticator" style="flex:1;min-width:180px" maxlength="8" autocomplete="off">
             <button class="btn-primary" id="btn-cf-2fa" style="width:auto;padding:0.5rem 1rem"><i data-lucide="shield-check"></i> Verify</button>
           </div>
-          <span class="form-hint">Log in with your Cloudflare account email and password. If 2FA is enabled you'll be asked for the code from your authenticator app. This replaces API tokens — the panel stores the session securely. <span id="cf-login-result" class="form-hint"></span></span>
-          <span class="form-hint">"Continue with GitHub/Google" opens Cloudflare's official social login in a new tab. Social login can only happen in your browser and won't give the panel a token — use email &amp; password (or an API token) for automatic tunnel creation.</span>
+          <span class="form-hint">Log in with your Cloudflare account email and password. If 2FA is enabled you'll be asked for the code from your authenticator app. The panel then detects your zone and creates the tunnel automatically. <span id="cf-login-result" class="form-hint"></span></span>
+        </div>
+        <div class="form-group">
+          <label>Or use an API token</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+            <input type="password" id="cf-api-token" class="form-input" placeholder="Paste your Cloudflare API token" style="flex:1;min-width:220px" autocomplete="off">
+            <button class="btn-primary" id="btn-cf-token-save" style="width:auto;padding:0.5rem 1rem"><i data-lucide="key"></i> Save &amp; Connect</button>
+            <button class="btn-secondary" id="btn-cf-token-create" style="width:auto;padding:0.5rem 1rem"><i data-lucide="plus-circle"></i> Create API token</button>
+          </div>
+          <span class="form-hint" id="cf-token-result"></span>
+          <span class="form-hint">"Create API token" opens Cloudflare's token wizard. Select these permissions: <strong>Zone &gt; Zone &gt; Read</strong>, <strong>Zone &gt; DNS &gt; Edit</strong>, <strong>Account &gt; Cloudflare Tunnel &gt; Edit</strong> (Zone resources: all zones, Account resources: all accounts). Paste the token above and click "Save &amp; Connect" — the panel verifies it, detects your zone, and creates the tunnel.</span>
         </div>
         <div class="form-group">
           <label>Tunnel</label>
@@ -482,6 +487,6 @@
 
   <div class="toast-container" id="toast-container"></div>
   <script src="js/notifications.js?v=1"></script>
-  <script src="js/app.js?v=15"></script>
+  <script src="js/app.js?v=16"></script>
 </body>
 </html>

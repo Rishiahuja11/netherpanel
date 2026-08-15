@@ -242,6 +242,19 @@ router.post('/cloudflare/login/2fa', async (req, res) => {
   }
 });
 
+router.post('/cloudflare/token', async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || !String(token).trim()) {
+      return res.status(400).json({ error: 'API token is required' });
+    }
+    const result = await CloudflareAuthService.useApiToken(String(token).trim());
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post('/cloudflare/tunnel', async (req, res) => {
   try {
     const result = await CloudflareTunnelService.setup();

@@ -162,6 +162,35 @@ class CloudflareAuthService {
     return { success: true, email, zones, zoneId: matched ? matched.id : null, tunnel, apiTokenCreated };
   }
 
+  static async useApiToken(token) {
+    if (!token || !String(token).trim()) throw new Error('API token is required');
+    token = String(token).trim();
+
+    const { status, body } = await requestJson(`${CF_API}/user/tokens/verify`, { token });
+    if (status !== 200 || !body?.success) {
+      throw new Error(`API token is invalid: ${body?.errors?.[0]?.message || `HTTP ${status}`}`);
+    }
+
+    SettingsService.set('cloudflare_api_token', token, 'cloudflare');
+    SettingsService.set('cloudflare_api_token_source', 'api', 'cloudflare');
+    SettingsService.set('cloudflare_email', '', 'cloudflare');
+
+    let zones = [];
+    try {
+      const r = await requestJson(`${CF_API}/zones?per_page=50`, { token });
+      zones = (r.body?.result || []).map(z => ({ id: z.id, name: z.name }));
+    } catch (e) {}
+
+    const domain = SettingsService.getDomain();
+    const matched = zones.find(z => z.name === domain || domain.endsWith(`.${z.name}`));
+    if (matched) SettingsService.set('cloudflare_zone_id', matched.id, 'cloudflare');
+
+    const tunnel = await CloudflareTunnelService.setup(token);
+    if (tunnel.success) SettingsService.set('cloudflare_tunnel_url', tunnel.url, 'cloudflare');
+
+    return { success: true, zones, zoneId: matched ? matched.id : null, tunnel, apiTokenCreated: true };
+  }
+
   static clearPending(id) {
     pending2FA.delete(id);
   }
