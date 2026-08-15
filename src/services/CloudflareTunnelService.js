@@ -206,22 +206,25 @@ class CloudflareTunnelService {
   }
 
   static async start() {
-    if (fs.existsSync(path.join(cloudflaredDir(), 'token'))) {
-      return { success: true, running: await launchTokenTunnel(), legacy: true };
-    }
     const token = SettingsService.get('cloudflare_api_token', '');
     const tunnelId = SettingsService.get('cloudflare_tunnel_id', '');
     const secret = SettingsService.get('cloudflare_tunnel_secret', '');
     const accountId = SettingsService.get('cloudflare_account_id', '');
-    if (!token || !tunnelId || !secret || !accountId) return { success: false, skipped: true };
-    try {
-      writeCredentials(accountId, tunnelId, secret);
-      writeConfig(tunnelId, `panel.${SettingsService.getDomain()}`, panelPort());
-      const launched = await launchNamedTunnel(tunnelId);
-      return { success: true, tunnelId, running: launched };
-    } catch (e) {
-      return { success: false, error: e.message };
+    if (token && tunnelId && secret && accountId) {
+      try {
+        killOldTunnels('cloudflared tunnel run --token-file', -1);
+        writeCredentials(accountId, tunnelId, secret);
+        writeConfig(tunnelId, `panel.${SettingsService.getDomain()}`, panelPort());
+        const launched = await launchNamedTunnel(tunnelId);
+        return { success: true, tunnelId, running: launched };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
     }
+    if (fs.existsSync(path.join(cloudflaredDir(), 'token'))) {
+      return { success: true, running: await launchTokenTunnel(), legacy: true };
+    }
+    return { success: false, skipped: true };
   }
 
   static isRunning() {
