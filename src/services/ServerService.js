@@ -1,6 +1,7 @@
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const http = require('http');
 const https = require('https');
 const { getDb } = require('../database');
@@ -570,6 +571,31 @@ class ServerService {
     return db.prepare('SELECT * FROM servers WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(s => this.enrichServer(s));
   }
 
+  static computeRamLimits(server, globalRam) {
+    let max = server.ram_max || 1024;
+    let min = server.ram_min || 512;
+    if (globalRam > 0) {
+      max = Math.min(max, globalRam);
+      min = Math.min(min, max);
+    }
+    return { max, min };
+  }
+
+  static buildCpuPrefix(cpuLimit) {
+    const raw = String(cpuLimit || '').trim();
+    if (!raw) return '';
+    let range;
+    if (/^\d+$/.test(raw)) {
+      const cores = Math.max(1, Math.min(parseInt(raw, 10), os.cpus().length));
+      range = `0-${cores - 1}`;
+    } else if (/^\d+-\d+$/.test(raw)) {
+      range = raw;
+    } else {
+      return '';
+    }
+    return `taskset -c ${range} `;
+  }
+
   static async startServer(serverId, userId) {
     const db = this.getDb();
     const server = this.getServer(serverId);
@@ -590,6 +616,10 @@ class ServerService {
     const serverDir = this.getServerDir(serverId);
     const isBedrock = server.game_type === 'bedrock';
 
+    const globalRam = SettingsService.getRamLimit();
+    const cpuPrefix = this.buildCpuPrefix(SettingsService.getCpuLimit());
+    const { max: ramMax, min: ramMin } = this.computeRamLimits(server, globalRam);
+
     consoleBuffers.set(serverId, []);
 
     let child;
@@ -601,8 +631,9 @@ class ServerService {
           throw new Error('PocketMine phar not found. Please reinstall server.');
         }
         const phpBin = await this.ensurePocketMinePhp();
+        const phpMemArg = globalRam > 0 ? ` -d memory_limit=${ramMax}M` : '';
         child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-          `cd '${serverDir}' && '${phpBin}' PocketMine-MP.phar --no-wizard`], {
+          `cd '${serverDir}' && ${cpuPrefix}'${phpBin}'${phpMemArg} PocketMine-MP.phar --no-wizard`], {
           cwd: serverDir,
           detached: true,
           stdio: ['pipe', 'pipe', 'pipe']
@@ -613,7 +644,7 @@ class ServerService {
           throw new Error('Server jar not found. Please reinstall server.');
         }
         child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-          `cd '${serverDir}' && ${JAVA_PATH} -Xmx${server.ram_max}M -Xms${server.ram_min || 512}M -jar server.jar nogui`], {
+          `cd '${serverDir}' && ${cpuPrefix}${JAVA_PATH} -Xmx${ramMax}M -Xms${ramMin}M -jar server.jar nogui`], {
           cwd: serverDir,
           detached: true,
           stdio: ['pipe', 'pipe', 'pipe']
@@ -637,11 +668,16 @@ class ServerService {
       if (!fs.existsSync(jarPath)) {
         throw new Error('Server jar not found. Please reinstall server.');
       }
-      const javaArgs = server.java_args || `-Xmx${server.ram_max}M -Xms${server.ram_min}M`;
+      const javaArgsRaw = server.java_args || `-Xmx${ramMax}M -Xms${ramMin}M`;
+      let javaArgs = javaArgsRaw;
+      if (globalRam > 0) {
+        javaArgs = javaArgsRaw.replace(/-Xmx\S+/g, '').replace(/-Xms\S+/g, '').replace(/\s+/g, ' ').trim();
+        javaArgs = `${javaArgs} -Xmx${ramMax}M -Xms${ramMin}M`.trim();
+      }
       const args = javaArgs.split(' ').filter(a => a);
       args.push('-jar', 'server.jar', 'nogui');
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-        `cd '${serverDir}' && ${JAVA_PATH} ${args.join(' ')}`], {
+        `cd '${serverDir}' && ${cpuPrefix}${JAVA_PATH} ${args.join(' ')}`], {
         cwd: serverDir,
         detached: true,
         stdio: ['pipe', 'pipe', 'pipe']

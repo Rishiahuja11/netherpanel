@@ -24,7 +24,9 @@ router.get('/config', (req, res) => {
     res.json({
       panel_name: db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel',
       cloudflare_enabled: SettingsService.isCloudflareEnabled(),
-      domain: SettingsService.getDomain()
+      domain: SettingsService.getDomain(),
+      resource_ram_limit: SettingsService.getRamLimit(),
+      resource_cpu_limit: SettingsService.getCpuLimit()
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

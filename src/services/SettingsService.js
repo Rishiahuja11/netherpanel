@@ -6,7 +6,9 @@ const DEFAULTS = {
   cloudflare_domain: 'smp45.qzz.io',
   cloudflare_api_token: '',
   cloudflare_zone_id: '',
-  cloudflare_server_ip: ''
+  cloudflare_server_ip: '',
+  resource_ram_limit: '0',
+  resource_cpu_limit: ''
 };
 
 class SettingsService {
@@ -52,6 +54,14 @@ class SettingsService {
 
   static getDomain() {
     return this.get('cloudflare_domain', 'smp45.qzz.io');
+  }
+
+  static getRamLimit() {
+    return this.getInt('resource_ram_limit', 0);
+  }
+
+  static getCpuLimit() {
+    return this.get('resource_cpu_limit', '');
   }
 }
 

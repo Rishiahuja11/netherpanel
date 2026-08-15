@@ -299,6 +299,8 @@ async function initDatabase() {
     { key: 'cloudflare_api_token', value: '', category: 'cloudflare' },
     { key: 'cloudflare_zone_id', value: '', category: 'cloudflare' },
     { key: 'cloudflare_server_ip', value: '', category: 'cloudflare' },
+    { key: 'resource_ram_limit', value: '0', category: 'resource' },
+    { key: 'resource_cpu_limit', value: '', category: 'resource' },
   ];
 
   for (const setting of defaultSettings) {

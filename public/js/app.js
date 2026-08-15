@@ -4,7 +4,7 @@ const NetherApp = {
   wizardBackupFile: null,
   selectedGameType: 'java',
   servers: [],
-  panelConfig: { cloudflare_enabled: true, domain: 'smp45.qzz.io' },
+  panelConfig: { cloudflare_enabled: true, domain: 'smp45.qzz.io', resource_ram_limit: 0, resource_cpu_limit: '' },
 
   JAVA_SOFTWARE: {
     paper: { name: 'Paper', desc: 'High performance, plugin support' },
@@ -104,6 +104,7 @@ const NetherApp = {
       if (res.ok) {
         this.panelConfig = await res.json();
         this.updateSubdomainHint();
+        this.updateResourceHint();
       }
     } catch (err) {
       console.error('Failed to load panel config:', err);
@@ -118,6 +119,22 @@ const NetherApp = {
     if (input) input.disabled = !cfEnabled;
     const preview = document.getElementById('subdomain-preview');
     if (preview && !cfEnabled) preview.textContent = 'localhost:<port>';
+  },
+
+  updateResourceHint() {
+    const ram = parseInt(this.panelConfig?.resource_ram_limit, 10) || 0;
+    const cpu = String(this.panelConfig?.resource_cpu_limit || '').trim();
+    const hint = document.getElementById('resource-limit-hint');
+    if (!hint) return;
+    const parts = [];
+    if (ram > 0) parts.push(`${ram} MB RAM`);
+    if (cpu) parts.push(`${cpu} CPU core${cpu === '1' ? '' : 's'}`);
+    if (parts.length) {
+      hint.style.display = '';
+      hint.textContent = `Global limit: ${parts.join(' · ')} (set in Settings)`;
+    } else {
+      hint.style.display = 'none';
+    }
   },
 
   initSettingsModal() {
@@ -175,6 +192,8 @@ const NetherApp = {
       setVal('cf-zone-id', 'cloudflare_zone_id');
       setVal('cf-server-ip', 'cloudflare_server_ip');
       setVal('cf-domain', 'cloudflare_domain', 'smp45.qzz.io');
+      setVal('resource-ram-limit', 'resource_ram_limit', '0');
+      setVal('resource-cpu-limit', 'resource_cpu_limit', '');
       const enabledEl = document.getElementById('cf-enabled');
       if (enabledEl) enabledEl.checked = (map['cloudflare_enabled']?.value || 'true') === 'true';
       const result = document.getElementById('cf-test-result');
@@ -191,7 +210,9 @@ const NetherApp = {
       { key: 'cloudflare_domain', value: document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io', category: 'cloudflare' },
       { key: 'cloudflare_api_token', value: document.getElementById('cf-api-token')?.value?.trim() || '', category: 'cloudflare' },
       { key: 'cloudflare_zone_id', value: document.getElementById('cf-zone-id')?.value?.trim() || '', category: 'cloudflare' },
-      { key: 'cloudflare_server_ip', value: document.getElementById('cf-server-ip')?.value?.trim() || '', category: 'cloudflare' }
+      { key: 'cloudflare_server_ip', value: document.getElementById('cf-server-ip')?.value?.trim() || '', category: 'cloudflare' },
+      { key: 'resource_ram_limit', value: document.getElementById('resource-ram-limit')?.value?.trim() || '0', category: 'resource' },
+      { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' }
     ];
   },
 
@@ -201,7 +222,10 @@ const NetherApp = {
       await this.api('PUT', '/api/admin/settings', { settings });
       this.panelConfig.cloudflare_enabled = settings.find(s => s.key === 'cloudflare_enabled').value === 'true';
       this.panelConfig.domain = settings.find(s => s.key === 'cloudflare_domain').value;
+      this.panelConfig.resource_ram_limit = settings.find(s => s.key === 'resource_ram_limit').value;
+      this.panelConfig.resource_cpu_limit = settings.find(s => s.key === 'resource_cpu_limit').value;
       this.updateSubdomainHint();
+      this.updateResourceHint();
       if (!silent) this.showToast('Saved', 'Settings updated', 'success');
       return true;
     } catch (err) {
