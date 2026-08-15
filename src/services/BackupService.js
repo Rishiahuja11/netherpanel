@@ -30,7 +30,7 @@ class BackupService {
       throw new Error('Server not found');
     }
 
-    const backupName = name || `backup-${Date.now()}`;
+    const backupName = String(name || `backup-${Date.now()}`).replace(/[^a-zA-Z0-9 _.-]/g, '_').slice(0, 100) || `backup-${Date.now()}`;
     const filename = `${backupName}.zip`;
     const backupDir = this.getBackupDir(serverId);
     const backupPath = path.join(backupDir, filename);
@@ -118,10 +118,13 @@ class BackupService {
     return db.prepare('SELECT * FROM backups WHERE id = ?').get(id);
   }
 
-  static deleteBackup(id, userId) {
+  static deleteBackup(id, userId, serverId) {
     const db = this.getDb();
     const backup = this.getBackup(id);
     if (!backup) {
+      throw new Error('Backup not found');
+    }
+    if (serverId !== undefined && backup.server_id !== serverId) {
       throw new Error('Backup not found');
     }
 
@@ -138,9 +141,12 @@ class BackupService {
     return backup;
   }
 
-  static async restoreBackup(id, userId) {
+  static async restoreBackup(id, userId, serverId) {
     const backup = this.getBackup(id);
     if (!backup) {
+      throw new Error('Backup not found');
+    }
+    if (serverId !== undefined && backup.server_id !== serverId) {
       throw new Error('Backup not found');
     }
 
@@ -174,12 +180,11 @@ class BackupService {
     const retentionDays = SettingsService.getInt('backup_retention_days', 30);
     if (retentionDays <= 0) return 0;
 
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+    const cutoffExpr = `datetime('now', '-' || ${retentionDays} || ' days')`;
 
     const oldBackups = db.prepare(
-      'SELECT * FROM backups WHERE server_id = ? AND created_at < ?'
-    ).all(serverId, cutoffDate.toISOString());
+      `SELECT * FROM backups WHERE server_id = ? AND created_at < ${cutoffExpr}`
+    ).all(serverId);
 
     for (const backup of oldBackups) {
       const backupDir = this.getBackupDir(serverId);
@@ -190,8 +195,8 @@ class BackupService {
     }
 
     db.prepare(
-      'DELETE FROM backups WHERE server_id = ? AND created_at < ?'
-    ).run(serverId, cutoffDate.toISOString());
+      `DELETE FROM backups WHERE server_id = ? AND created_at < ${cutoffExpr}`
+    ).run(serverId);
 
     return oldBackups.length;
   }

@@ -31,7 +31,10 @@ class NotificationService {
     db.save();
 
     if (io) {
-      io.emit('notification', { userId, title, body, type, event, created_at: new Date().toISOString() });
+      const message = { userId, title, body, type, event, created_at: new Date().toISOString() };
+      io.sockets.sockets.forEach((s) => {
+        if (s.userId === userId) s.emit('notification', message);
+      });
     }
   }
 

@@ -56,7 +56,7 @@ class UserService {
     return db.prepare('SELECT id, username, email, role, avatar, created_at FROM users').all();
   }
 
-  static update(id, data) {
+  static update(id, data, allowRoleChange = false) {
     const db = this.getDb();
     const fields = [];
     const values = [];
@@ -69,7 +69,10 @@ class UserService {
       fields.push('email = ?');
       values.push(data.email);
     }
-    if (data.role) {
+    if (data.role && allowRoleChange) {
+      if (!['admin', 'user'].includes(data.role)) {
+        throw new Error('Invalid role');
+      }
       fields.push('role = ?');
       values.push(data.role);
     }

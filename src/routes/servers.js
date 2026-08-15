@@ -35,6 +35,7 @@ const scopeByPath = [
   [/\/files/, 'files'],
   [/\/properties/, 'files'],
   [/\/restore-upload/, 'files'],
+  [/\/download/, 'files'],
   [/\/backups/, 'backups'],
   [/\/schedules/, 'schedules'],
   [/\/mods/, 'mods'],
@@ -42,7 +43,7 @@ const scopeByPath = [
 ];
 
 function tokenScopeGuard(req, res, next) {
-  if (!req.isApiToken || req.method === 'GET') return next();
+  if (!req.isApiToken) return next();
   const hit = scopeByPath.find(([re]) => re.test(req.path));
   if (hit) return requireScope(hit[1])(req, res, next);
   return next();
@@ -83,9 +84,9 @@ router.get('/types', (req, res) => {
 
 router.get('/versions', async (req, res) => {
   try {
-    const software = req.query.software || 'paper';
+    const software = String(req.query.software || 'paper').toLowerCase();
     let versions = [];
-    switch (software.toLowerCase()) {
+    switch (software) {
       case 'paper':
         versions = await ServerService.getPaperVersions();
         break;
@@ -591,7 +592,7 @@ router.delete('/:id/backups/:backupId', (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    BackupService.deleteBackup(parseInt(req.params.backupId), req.user.id);
+    BackupService.deleteBackup(parseInt(req.params.backupId), req.user.id, server.id);
     res.json({ message: 'Backup deleted' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -609,7 +610,7 @@ router.post('/:id/backups/:backupId/restore', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const backup = await BackupService.restoreBackup(parseInt(req.params.backupId), req.user.id);
+    const backup = await BackupService.restoreBackup(parseInt(req.params.backupId), req.user.id, server.id);
     res.json({ message: 'Backup restored', backup });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -696,12 +697,16 @@ router.post('/:id/files/upload', upload.array('files', 10), (req, res) => {
 
     const uploaded = [];
     if (req.files) {
-      req.files.forEach(file => {
-        const dest = path.join(targetDir, file.originalname);
+      for (const file of req.files) {
+        const safeName = path.basename(file.originalname || '');
+        if (!safeName || safeName === '.' || safeName === '..' || safeName.includes('/') || safeName.includes('\\')) {
+          throw new Error('Invalid file name');
+        }
+        const dest = path.join(targetDir, safeName);
         fs.copyFileSync(file.path, dest);
         fs.unlinkSync(file.path);
-        uploaded.push(file.originalname);
-      });
+        uploaded.push(safeName);
+      }
     }
     res.json({ message: `${uploaded.length} file(s) uploaded`, files: uploaded });
   } catch (err) {
@@ -793,7 +798,7 @@ router.put('/:id/schedules/:scheduleId', (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const schedule = ScheduleService.updateSchedule(parseInt(req.params.scheduleId), req.body);
+    const schedule = ScheduleService.updateSchedule(parseInt(req.params.scheduleId), req.body, server.id);
     res.json(schedule);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -811,7 +816,7 @@ router.delete('/:id/schedules/:scheduleId', (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    ScheduleService.deleteSchedule(parseInt(req.params.scheduleId), req.user.id);
+    ScheduleService.deleteSchedule(parseInt(req.params.scheduleId), req.user.id, server.id);
     res.json({ message: 'Schedule deleted' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -829,7 +834,7 @@ router.post('/:id/schedules/:scheduleId/run', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const result = await ScheduleService.runScheduleNow(parseInt(req.params.scheduleId), req.user.id);
+    const result = await ScheduleService.runScheduleNow(parseInt(req.params.scheduleId), req.user.id, server.id);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -907,7 +912,7 @@ router.delete('/:id/mods/:modId', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await ModService.removeMod(parseInt(req.params.modId), req.user.id);
+    await ModService.removeMod(parseInt(req.params.modId), req.user.id, server.id);
     res.json({ message: 'Mod removed' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -926,7 +931,7 @@ router.put('/:id/mods/:modId/toggle', (req, res) => {
     }
 
     const { enabled } = req.body;
-    const mod = ModService.toggleMod(parseInt(req.params.modId), enabled, req.user.id);
+    const mod = ModService.toggleMod(parseInt(req.params.modId), enabled, req.user.id, server.id);
     res.json(mod);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -962,7 +967,7 @@ router.get('/:id/crashes/:crashId', (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const analysis = CrashService.analyzeCrash(parseInt(req.params.crashId));
+    const analysis = CrashService.analyzeCrash(parseInt(req.params.crashId), server.id);
     res.json(analysis);
   } catch (err) {
     res.status(400).json({ error: err.message });

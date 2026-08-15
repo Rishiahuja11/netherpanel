@@ -415,10 +415,13 @@ class ModService {
     return mod;
   }
 
-  static async removeMod(modId, userId) {
+  static async removeMod(modId, userId, serverId) {
     const db = this.getDb();
     const mod = db.prepare('SELECT * FROM mods WHERE id = ?').get(modId);
     if (!mod) {
+      throw new Error('Mod not found');
+    }
+    if (serverId !== undefined && mod.server_id !== serverId) {
       throw new Error('Mod not found');
     }
 
@@ -442,10 +445,13 @@ class ModService {
     return db.prepare('SELECT * FROM mods WHERE server_id = ? ORDER BY name').all(serverId);
   }
 
-  static toggleMod(modId, enabled, userId) {
+  static toggleMod(modId, enabled, userId, serverId) {
     const db = this.getDb();
     const mod = db.prepare('SELECT * FROM mods WHERE id = ?').get(modId);
     if (!mod) {
+      throw new Error('Mod not found');
+    }
+    if (serverId !== undefined && mod.server_id !== serverId) {
       throw new Error('Mod not found');
     }
 

@@ -35,6 +35,9 @@ fi
 #    plugins search <id|name> <query> Search plugins/mods to install
 #    plugins install <id|name> <mod_id> [version_id]
 #                                     Install a plugin/mod
+#    cf login [email] [password]      Log into Cloudflare (creates API token + tunnel)
+#    cf tunnel                        Create/start the Cloudflare Tunnel
+#    cf status                        Show Cloudflare login/tunnel status
 #
 #  Examples:
 #    ./netherpanel.sh servers
@@ -368,6 +371,75 @@ cmd_plugins_install() {
   echo "Installed: $(json_get "$body" name)"
 }
 
+cmd_cf_login() {
+  local email="${1:-}" password="${2:-}" code res body pending req
+  if [ -z "$email" ]; then
+    read -r -p "Cloudflare email: " email
+  fi
+  if [ -z "$password" ]; then
+    read -r -s -p "Cloudflare password: " password
+    echo
+  fi
+  [ -n "$email" ] && [ -n "$password" ] || { echo "Cloudflare email and password are required." >&2; return 1; }
+  res="$(api POST /api/admin/cloudflare/login "{\"email\":\"$(json_escape "$email")\",\"password\":\"$(json_escape "$password")\"}")" || return 1
+  body="$(printf '%s' "$res")"
+  pending="$(json_get "$body" requires2fa)"
+  if [ "$pending" = "true" ]; then
+    read -r -p "2FA code from authenticator: " code
+    req="{\"pendingAuthId\":\"$(json_get "$body" pendingAuthId)\",\"code\":\"$(json_escape "$code")\"}"
+    body="$(api POST /api/admin/cloudflare/login/2fa "$req")" || return 1
+  fi
+  if [ "$(json_get "$body" success)" = "true" ]; then
+    echo "Cloudflare login successful."
+    [ "$(json_get "$body" apiTokenCreated)" = "true" ] \
+      && echo "  Scoped API token created." \
+      || echo "  Could not create a scoped API token; using session token."
+    local url; url="$(json_get "$body" tunnel.url)"
+    [ -n "$url" ] && echo "  Tunnel: $url"
+  else
+    echo "Cloudflare login failed: $(json_get "$body" error)" >&2
+    return 1
+  fi
+}
+
+cmd_cf_tunnel() {
+  local body; body="$(api POST /api/admin/cloudflare/tunnel)" || return 1
+  if [ "$(json_get "$body" success)" = "true" ]; then
+    local url; url="$(json_get "$body" url)"
+    echo "Tunnel ready: ${url:-https://panel.<domain>}"
+  else
+    echo "Tunnel not created: $(json_get "$body" error)" >&2
+    return 1
+  fi
+}
+
+cmd_cf_status() {
+  local body; body="$(api GET /api/admin/settings)" || return 1
+  python3 - "$body" <<'PYEOF'
+import sys, json
+try:
+    rows = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(1)
+s = {}
+for r in rows:
+    s[r.get("key")] = r.get("value", "")
+def show(k, label, hide=False):
+    v = s.get(k, "")
+    if hide and v:
+        v = "********"
+    print("  %-24s %s" % (label + ":", v or "(not set)"))
+print("Cloudflare status:")
+show("cloudflare_email", "Email")
+show("cloudflare_domain", "Domain")
+show("cloudflare_zone_id", "Zone ID")
+show("cloudflare_api_token_source", "Token source")
+show("cloudflare_api_token", "API token", True)
+show("cloudflare_tunnel_id", "Tunnel ID")
+show("cloudflare_tunnel_url", "Tunnel URL")
+PYEOF
+}
+
 cmd_start() { local id; id="$(need_server "$1")" || return 1; api POST "/api/servers/$id/start" >/dev/null || return 1; echo "Server $1 started."; }
 cmd_stop()  { local id; id="$(need_server "$1")" || return 1; api POST "/api/servers/$id/stop" >/dev/null || return 1; echo "Server $1 stopped."; }
 cmd_restart(){ local id; id="$(need_server "$1")" || return 1; api POST "/api/servers/$id/restart" >/dev/null || return 1; echo "Server $1 restarted."; }
@@ -433,6 +505,14 @@ case "$CMD" in
       search) shift; cmd_plugins_search "$@" ;;
       install) shift; cmd_plugins_install "$@" ;;
       *) cmd_plugins "$@" ;;
+    esac
+    ;;
+  cf)
+    case "${1:-}" in
+      login) shift; cmd_cf_login "$@" ;;
+      tunnel) shift; cmd_cf_tunnel "$@" ;;
+      status) shift; cmd_cf_status "$@" ;;
+      *) echo "Usage: $0 cf login|tunnel|status" >&2; exit 1 ;;
     esac
     ;;
   *) echo "Unknown command: $CMD" >&2; echo "Run '$0 --help' for usage." >&2; exit 1 ;;

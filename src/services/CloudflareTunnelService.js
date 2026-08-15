@@ -65,34 +65,56 @@ function writeConfig(tunnelId, hostname, port) {
   fs.writeFileSync(path.join(dir, 'config.yml'), yaml);
 }
 
-function launchTunnel(args) {
-  exec('pkill -f cloudflared', () => {});
-  for (const pid of running) {
-    try { process.kill(pid, 'SIGTERM'); } catch (e) {}
-    running.delete(pid);
-  }
-  try {
-    const child = spawn('cloudflared', args, { detached: true, stdio: 'ignore' });
-    child.on('error', () => {});
-    child.unref();
-    running.add(child.pid);
-    return true;
-  } catch (e) {
-    return false;
-  }
+function panelPort() {
+  return parseInt(process.env.PORT || process.env.PANEL_PORT || '3000', 10) || 3000;
+}
+
+function launchTunnel(args, match) {
+  return new Promise((resolve) => {
+    for (const pid of running) {
+      try { process.kill(pid, 'SIGTERM'); } catch (e) {}
+      running.delete(pid);
+    }
+    exec(`pkill -f "${match}"`, () => {});
+    try {
+      const child = spawn('cloudflared', args, { detached: true, stdio: 'ignore' });
+      const pid = child.pid;
+      let settled = false;
+      child.on('spawn', () => {
+        running.add(pid);
+        settled = true;
+        resolve(true);
+      });
+      child.on('error', () => {
+        running.delete(pid);
+        settled = true;
+        resolve(false);
+      });
+      child.on('exit', () => {
+        running.delete(pid);
+      });
+      child.unref();
+      setTimeout(() => { if (!settled) resolve(false); }, 3000);
+    } catch (e) {
+      resolve(false);
+    }
+  });
 }
 
 function launchNamedTunnel(tunnelId) {
   const config = path.join(cloudflaredDir(), 'config.yml');
-  return launchTunnel(['tunnel', '--config', config, 'run', tunnelId]);
+  return launchTunnel(
+    ['tunnel', '--config', config, 'run', tunnelId],
+    `cloudflared tunnel --config ${config} run ${tunnelId}`
+  );
 }
 
 function launchTokenTunnel() {
-  return launchTunnel(['tunnel', 'run', '--token-file', path.join(cloudflaredDir(), 'token')]);
-}
-
-function isRunning() {
-  return running.size > 0;
+  const tokenFile = path.join(cloudflaredDir(), 'token');
+  return launchTunnel(
+    ['tunnel', 'run', '--token-file', tokenFile],
+    `cloudflared tunnel run --token-file ${tokenFile}`
+  );
 }
 
 class CloudflareTunnelService {
@@ -103,7 +125,7 @@ class CloudflareTunnelService {
     if (!token) return { success: false, skipped: true, error: 'No Cloudflare token. Log in first.' };
     if (!zoneId) return { success: false, skipped: true, error: 'No Zone ID matched. Set your domain and log in again.' };
 
-    const port = process.env.PORT || 3000;
+    const port = panelPort();
     const hostname = `panel.${domain}`;
 
     try {
@@ -120,21 +142,21 @@ class CloudflareTunnelService {
         const existing = list?.body?.result?.[0];
         if (existing && existing.id) {
           tunnelId = existing.id;
-          secret = existing.secret || SettingsService.get('cloudflare_tunnel_secret', '');
+          secret = existing.tunnel_secret || existing.credentials_file?.TunnelSecret || SettingsService.get('cloudflare_tunnel_secret', '');
         }
       }
 
       if (!tunnelId) {
         const created = await request(token, 'POST', `${CF_API}/accounts/${accountId}/cfd_tunnel`, {
           name: 'netherpanel',
-          config_src: 'cloudflared'
+          config_src: 'local'
         });
         const r = created?.body?.result;
         if (!r || !r.id) {
           return { success: false, error: `Tunnel creation failed: ${created?.body?.errors?.[0]?.message || `HTTP ${created.status}`}` };
         }
         tunnelId = r.id;
-        secret = r.secret || r.tunnel_secret || '';
+        secret = r.secret || r.tunnel_secret || r.credentials_file?.TunnelSecret || '';
       }
 
       if (!secret) {
@@ -165,7 +187,7 @@ class CloudflareTunnelService {
         }
       }
 
-      const launched = launchNamedTunnel(tunnelId);
+      const launched = await launchNamedTunnel(tunnelId);
       return { success: true, tunnelId, hostname, url: `https://${hostname}`, running: launched };
     } catch (err) {
       return { success: false, error: err.message };
@@ -174,7 +196,7 @@ class CloudflareTunnelService {
 
   static async start() {
     if (fs.existsSync(path.join(cloudflaredDir(), 'token'))) {
-      return { success: true, running: launchTokenTunnel(), legacy: true };
+      return { success: true, running: await launchTokenTunnel(), legacy: true };
     }
     const token = SettingsService.get('cloudflare_api_token', '');
     const tunnelId = SettingsService.get('cloudflare_tunnel_id', '');
@@ -183,8 +205,8 @@ class CloudflareTunnelService {
     if (!token || !tunnelId || !secret || !accountId) return { success: false, skipped: true };
     try {
       writeCredentials(accountId, tunnelId, secret);
-      writeConfig(tunnelId, `panel.${SettingsService.getDomain()}`, process.env.PORT || 3000);
-      const launched = launchNamedTunnel(tunnelId);
+      writeConfig(tunnelId, `panel.${SettingsService.getDomain()}`, panelPort());
+      const launched = await launchNamedTunnel(tunnelId);
       return { success: true, tunnelId, running: launched };
     } catch (e) {
       return { success: false, error: e.message };
@@ -192,7 +214,7 @@ class CloudflareTunnelService {
   }
 
   static isRunning() {
-    return isRunning();
+    return running.size > 0;
   }
 }
 

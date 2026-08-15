@@ -93,13 +93,57 @@ class CloudflareAuthService {
     throw new Error(`2FA verification failed: ${body?.error || `HTTP ${status}`}`);
   }
 
+  static async createApiToken(sessionToken) {
+    const { body } = await requestJson(`${CF_API}/permission_groups`, { token: sessionToken });
+    const groups = (body?.result || []).reduce((m, g) => { if (g && g.name) m[g.name] = g.id; return m; }, {});
+
+    const zoneGroups = [groups['Zone'], groups['DNS']].filter(Boolean);
+    const accountGroups = [groups['Cloudflare Tunnel']].filter(Boolean);
+    if (!zoneGroups.length || !accountGroups.length) {
+      throw new Error('Could not map Cloudflare permission groups for token creation');
+    }
+
+    const { status, body: res } = await requestJson(`${CF_API}/user/tokens`, {
+      method: 'POST',
+      token: sessionToken,
+      body: {
+        name: `netherpanel-${Date.now()}`,
+        policies: [
+          {
+            effect: 'allow',
+            resources: { 'com.cloudflare.api.account.zone.*': '*' },
+            permission_groups: zoneGroups.map(id => ({ id }))
+          },
+          {
+            effect: 'allow',
+            resources: { 'com.cloudflare.api.account.*': '*' },
+            permission_groups: accountGroups.map(id => ({ id }))
+          }
+        ]
+      }
+    });
+
+    const value = res?.result?.value;
+    if (status === 200 && value) return value;
+    throw new Error(`API token creation failed: ${res?.errors?.[0]?.message || `HTTP ${status}`}`);
+  }
+
   static async completeLogin(token, email) {
-    SettingsService.set('cloudflare_api_token', token, 'cloudflare');
+    let apiToken = token;
+    let apiTokenCreated = false;
+    try {
+      apiToken = await CloudflareAuthService.createApiToken(token);
+      apiTokenCreated = true;
+    } catch (e) {
+      // Fall back to the dash session token if scoped token creation is unavailable.
+    }
+    SettingsService.set('cloudflare_api_token', apiToken, 'cloudflare');
+    SettingsService.set('cloudflare_api_token_source', apiTokenCreated ? 'api' : 'session', 'cloudflare');
     SettingsService.set('cloudflare_email', email || '', 'cloudflare');
 
     let zones = [];
     try {
-      const { body } = await requestJson(`${CF_API}/zones?per_page=50`, { token });
+      const { body } = await requestJson(`${CF_API}/zones?per_page=50`, { token: apiToken });
       zones = (body?.result || []).map(z => ({ id: z.id, name: z.name }));
     } catch (e) {
       // Zone lookup is best-effort; token is still saved.
@@ -112,10 +156,10 @@ class CloudflareAuthService {
       SettingsService.set('cloudflare_zone_id', matched.id, 'cloudflare');
     }
 
-    const tunnel = await CloudflareTunnelService.setup(token);
+    const tunnel = await CloudflareTunnelService.setup(apiToken);
     if (tunnel.success) SettingsService.set('cloudflare_tunnel_url', tunnel.url, 'cloudflare');
 
-    return { success: true, email, zones, zoneId: matched ? matched.id : null, tunnel };
+    return { success: true, email, zones, zoneId: matched ? matched.id : null, tunnel, apiTokenCreated };
   }
 
   static clearPending(id) {

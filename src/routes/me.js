@@ -45,7 +45,13 @@ router.post('/tokens', (req, res) => {
 
   const raw = `np_${crypto.randomBytes(24).toString('hex')}`;
   const hash = crypto.createHash('sha256').update(raw).digest('hex');
-  const expires = expires_at ? new Date(expires_at).toISOString().slice(0, 19).replace('T', ' ') : null;
+  let expires = null;
+  if (expires_at) {
+    const d = new Date(expires_at);
+    if (!isNaN(d.getTime())) {
+      expires = d.toISOString().slice(0, 19).replace('T', ' ');
+    }
+  }
 
   const result = db.prepare(
     'INSERT INTO api_tokens (user_id, name, token_hash, scopes, expires_at) VALUES (?, ?, ?, ?, ?)'

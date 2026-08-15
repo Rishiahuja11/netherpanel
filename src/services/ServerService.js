@@ -58,6 +58,7 @@ const SERVER_TYPES = {
 const serverProcesses = new Map();
 const consoleBuffers = new Map();
 const intentionalStops = new Set();
+const startingSet = new Set();
 
 class ServerService {
   static SERVER_TYPES = SERVER_TYPES;
@@ -574,6 +575,17 @@ class ServerService {
     return `taskset -c ${range} `;
   }
 
+  static validateJavaArgs(raw) {
+    if (!raw || !String(raw).trim()) return true;
+    const tokens = String(raw).split(/\s+/).filter(Boolean);
+    return tokens.length > 0 && tokens.every(t => /^-[A-Za-z0-9_.:+=%@-]+$/.test(t));
+  }
+
+  static sanitizeJavaArgs(raw) {
+    if (!raw) return [];
+    return String(raw).split(/\s+/).filter(t => /^-[A-Za-z0-9_.:+=%@-]+$/.test(t));
+  }
+
   static async startServer(serverId, userId, opts = {}) {
     const db = this.getDb();
     const server = this.getServer(serverId);
@@ -589,6 +601,10 @@ class ServerService {
         if (e.message === 'Server is already running') throw e;
         db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('stopped', serverId);
       }
+    }
+
+    if (startingSet.has(serverId)) {
+      throw new Error('Server is already starting');
     }
 
     const serverDir = this.getServerDir(serverId);
@@ -608,14 +624,20 @@ class ServerService {
         if (!fs.existsSync(pharPath)) {
           throw new Error('PocketMine phar not found. Please reinstall server.');
         }
-        const phpBin = await this.ensurePocketMinePhp();
-        const phpMemArg = globalRam > 0 ? ` -d memory_limit=${ramMax}M` : '';
-        child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-          `cd '${serverDir}' && ${cpuPrefix}'${phpBin}'${phpMemArg} PocketMine-MP.phar --no-wizard`], {
-          cwd: serverDir,
-          detached: true,
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        startingSet.add(serverId);
+        try {
+          const phpBin = await this.ensurePocketMinePhp();
+          const phpMemArg = globalRam > 0 ? ` -d memory_limit=${ramMax}M` : '';
+          child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
+            `cd '${serverDir}' && ${cpuPrefix}'${phpBin}'${phpMemArg} PocketMine-MP.phar --no-wizard`], {
+            cwd: serverDir,
+            detached: true,
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+        } catch (err) {
+          startingSet.delete(serverId);
+          throw err;
+        }
       } else if (serverType === 'nukkit' || serverType === 'powernukkit') {
         const jarPath = path.join(serverDir, 'server.jar');
         if (!fs.existsSync(jarPath)) {
@@ -652,7 +674,7 @@ class ServerService {
         javaArgs = javaArgsRaw.replace(/-Xmx\S+/g, '').replace(/-Xms\S+/g, '').replace(/\s+/g, ' ').trim();
         javaArgs = `${javaArgs} -Xmx${ramMax}M -Xms${ramMin}M`.trim();
       }
-      const args = javaArgs.split(' ').filter(a => a);
+      const args = this.sanitizeJavaArgs(javaArgs);
       args.push('-jar', 'server.jar', 'nogui');
       child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
         `cd '${serverDir}' && ${cpuPrefix}${JAVA_PATH} ${args.join(' ')}`], {
@@ -663,6 +685,7 @@ class ServerService {
     }
 
     serverProcesses.set(serverId, child);
+    startingSet.delete(serverId);
     db.prepare('UPDATE servers SET status = ?, pid = ? WHERE id = ?').run('running', child.pid, serverId);
 
     const bufferConsole = (data) => {
@@ -703,6 +726,7 @@ class ServerService {
 
     child.on('error', (err) => {
       serverProcesses.delete(serverId);
+      startingSet.delete(serverId);
       db.prepare('UPDATE servers SET status = ?, pid = NULL WHERE id = ?').run('crashed', serverId);
       this.logCrash(serverId, null, null, err.message);
     });
@@ -795,11 +819,15 @@ class ServerService {
       throw new Error('Invalid command');
     }
     const proc = serverProcesses.get(serverId);
-    if (!proc) {
+    if (!proc || !proc.stdin || proc.stdin.destroyed || proc.stdin.writableEnded || proc.killed) {
       throw new Error('Server is not running');
     }
-
-    proc.stdin.write(command + '\n');
+    proc.stdin.on('error', () => {});
+    try {
+      proc.stdin.write(command + '\n');
+    } catch (e) {
+      throw new Error('Server is not running');
+    }
     UserService.logActivity(userId, 'server_command', 'server', serverId, `Command: ${command}`);
     return true;
   }
@@ -812,6 +840,10 @@ class ServerService {
       if (existingSub) {
         throw new Error('This subdomain is already in use');
       }
+    }
+
+    if (data.java_args !== undefined && !this.validateJavaArgs(data.java_args)) {
+      throw new Error('java_args contains invalid characters. Only JVM flags like -Xmx2G, -Dkey=value, -XX:+UseG1GC are allowed.');
     }
 
     const fields = [];

@@ -135,11 +135,17 @@ class ScheduleService {
     return db.prepare('SELECT * FROM schedules WHERE id = ?').get(id);
   }
 
-  static updateSchedule(id, data) {
+  static updateSchedule(id, data, serverId) {
     const db = this.getDb();
     const schedule = this.getSchedule(id);
     if (!schedule) {
       throw new Error('Schedule not found');
+    }
+    if (serverId !== undefined && schedule.server_id !== serverId) {
+      throw new Error('Schedule not found');
+    }
+    if (data.cron_expression && !cron.validate(data.cron_expression)) {
+      throw new Error('Invalid cron expression');
     }
 
     this.stopTask(id);
@@ -152,15 +158,16 @@ class ScheduleService {
       values.push(data.name);
     }
     if (data.cron_expression) {
-      if (!cron.validate(data.cron_expression)) {
-        throw new Error('Invalid cron expression');
-      }
       fields.push('cron_expression = ?');
       values.push(data.cron_expression);
     }
     if (data.action) {
       fields.push('action = ?');
       values.push(data.action);
+    }
+    if (data.command !== undefined) {
+      fields.push('command = ?');
+      values.push(data.command);
     }
     if (data.enabled !== undefined) {
       fields.push('enabled = ?');
@@ -180,10 +187,13 @@ class ScheduleService {
     return updated;
   }
 
-  static deleteSchedule(id, userId) {
+  static deleteSchedule(id, userId, serverId) {
     const db = this.getDb();
     const schedule = this.getSchedule(id);
     if (!schedule) {
+      throw new Error('Schedule not found');
+    }
+    if (serverId !== undefined && schedule.server_id !== serverId) {
       throw new Error('Schedule not found');
     }
 
@@ -195,9 +205,12 @@ class ScheduleService {
     return schedule;
   }
 
-  static async runScheduleNow(id, userId) {
+  static async runScheduleNow(id, userId, serverId) {
     const schedule = this.getSchedule(id);
     if (!schedule) {
+      throw new Error('Schedule not found');
+    }
+    if (serverId !== undefined && schedule.server_id !== serverId) {
       throw new Error('Schedule not found');
     }
 

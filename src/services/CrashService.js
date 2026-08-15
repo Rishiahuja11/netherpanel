@@ -89,10 +89,13 @@ class CrashService {
     db.prepare('DELETE FROM crashes WHERE server_id = ?').run(serverId);
   }
 
-  static analyzeCrash(crashId) {
+  static analyzeCrash(crashId, serverId) {
     const db = this.getDb();
     const crash = db.prepare('SELECT * FROM crashes WHERE id = ?').get(crashId);
     if (!crash) {
+      throw new Error('Crash report not found');
+    }
+    if (serverId !== undefined && crash.server_id !== serverId) {
       throw new Error('Crash report not found');
     }
 

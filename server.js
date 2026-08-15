@@ -108,6 +108,11 @@ async function startServer() {
         const jwt = require('jsonwebtoken');
         const { JWT_SECRET } = require('./src/middleware/auth');
         const decoded = jwt.verify(token, JWT_SECRET);
+        if (socket.userId && socket.userId !== decoded.id) {
+          socket.rooms.forEach((room) => {
+            if (room.startsWith('console:')) socket.leave(room);
+          });
+        }
         socket.userId = decoded.id;
         socket.userRole = decoded.role;
 
@@ -239,9 +244,17 @@ async function startServer() {
     });
 
     socket.on('server_status', (serverId) => {
+      if (!socket.userId) {
+        return socket.emit('error', { error: 'Not authenticated' });
+      }
+
       const server = ServerService.getServer(serverId);
       if (!server) {
         return socket.emit('error', { error: 'Server not found' });
+      }
+
+      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+        return socket.emit('error', { error: 'Access denied' });
       }
 
       socket.emit('status_update', {
@@ -264,6 +277,8 @@ async function startServer() {
   });
 
   ScheduleService.init();
+
+  db.prepare("UPDATE servers SET status = 'stopped', pid = NULL WHERE status = 'running'").run();
 
   const activeServers = db.prepare("SELECT id FROM servers WHERE status = 'running'").all();
   for (const srv of activeServers) {

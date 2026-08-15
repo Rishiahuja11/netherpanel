@@ -335,7 +335,7 @@ const NetherApp = {
         this.setCfLoginResult(`2FA required${data.email ? ' for ' + data.email : ''}. Enter your authenticator code.`, true);
       } else if (data && data.success) {
         document.getElementById('cf-password').value = '';
-        this.setCfLoginResult('Logged in. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.'), true);
+        this.setCfLoginResult('Logged in. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.') + (data.apiTokenCreated ? ' API token created.' : ' Could not create a scoped API token; using session token.'), true);
         if (data.zoneId) {
           const zoneInput = document.getElementById('cf-zone-id');
           if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
@@ -365,7 +365,7 @@ const NetherApp = {
         const row = document.getElementById('cf-2fa-row');
         if (row) row.style.display = 'none';
         this.pendingAuthId = null;
-        this.setCfLoginResult('2FA verified. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.'), true);
+        this.setCfLoginResult('2FA verified. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.') + (data.apiTokenCreated ? ' API token created.' : ' Could not create a scoped API token; using session token.'), true);
         if (data.zoneId) {
           const zoneInput = document.getElementById('cf-zone-id');
           if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;

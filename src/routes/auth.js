@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const UserService = require('../services/UserService');
-const { getDb } = require('../database');
+const SettingsService = require('../services/SettingsService');
 const { authenticateToken } = require('../middleware/auth');
 
 router.post('/register', async (req, res) => {
@@ -20,12 +20,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const db = getDb();
-    const allowRegistrations = db.prepare(
-      "SELECT value FROM settings WHERE key = 'allow_registrations'"
-    ).get()?.value;
-
-    if (allowRegistrations === 'false') {
+    if (!SettingsService.getBool('allow_registrations', true)) {
       return res.status(403).json({ error: 'Registration is disabled' });
     }
 

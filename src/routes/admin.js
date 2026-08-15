@@ -67,7 +67,7 @@ router.get('/users/:id', (req, res) => {
 
 router.put('/users/:id', (req, res) => {
   try {
-    const user = UserService.update(parseInt(req.params.id), req.body);
+    const user = UserService.update(parseInt(req.params.id), req.body, true);
     res.json(user);
   } catch (err) {
     res.status(400).json({ error: err.message });
