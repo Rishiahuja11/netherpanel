@@ -202,9 +202,9 @@ class ServerService {
 
     switch (serverType) {
       case 'paper':
-        return this.downloadFromPaperApi(serverId, version, serverDir);
+        return this.downloadFromPapermcApi(serverId, version, serverDir, PAPER_API, 'Paper');
       case 'folia':
-        return this.downloadFromFoliaApi(serverId, version, serverDir);
+        return this.downloadFromPapermcApi(serverId, version, serverDir, FOLIA_API, 'Folia');
       case 'purpur':
         return this.downloadFromPurpurApi(serverId, version, serverDir);
       case 'fabric':
@@ -216,11 +216,11 @@ class ServerService {
       case 'quilt':
         return this.downloadQuiltServer(version, serverDir);
       case 'spigot':
-        return this.downloadFromPaperApi(serverId, version, serverDir);
+        return this.downloadFromPapermcApi(serverId, version, serverDir, PAPER_API, 'Paper');
       case 'vanilla':
         return this.downloadVanillaServer(version, serverDir);
       default:
-        return this.downloadFromPaperApi(serverId, version, serverDir);
+        return this.downloadFromPapermcApi(serverId, version, serverDir, PAPER_API, 'Paper');
     }
   }
 
@@ -355,12 +355,12 @@ class ServerService {
     });
   }
 
-  static async downloadFromPaperApi(serverId, version, serverDir) {
+  static async downloadFromPapermcApi(serverId, version, serverDir, apiBase, label) {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
     return new Promise((resolve, reject) => {
-      const apiUrl = `${PAPER_API}/versions/${version}/builds/latest`;
+      const apiUrl = `${apiBase}/versions/${version}/builds/latest`;
       https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
@@ -369,30 +369,7 @@ class ServerService {
             const build = JSON.parse(data);
             const dl = build.downloads && build.downloads['server:default'];
             if (!dl || !dl.url) {
-              throw new Error(`No download found for version ${version}`);
-            }
-            this.downloadFileTo(dl.url, jarPath).then(() => resolve(jarPath)).catch(reject);
-          } catch (err) { reject(err); }
-        });
-      }).on('error', reject);
-    });
-  }
-
-  static async downloadFromFoliaApi(serverId, version, serverDir) {
-    const jarPath = path.join(serverDir, 'server.jar');
-    if (fs.existsSync(jarPath)) return jarPath;
-
-    return new Promise((resolve, reject) => {
-      const apiUrl = `${FOLIA_API}/versions/${version}/builds/latest`;
-      https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const build = JSON.parse(data);
-            const dl = build.downloads && build.downloads['server:default'];
-            if (!dl || !dl.url) {
-              throw new Error(`No Folia download found for version ${version}`);
+              throw new Error(`No download found for ${label} version ${version}`);
             }
             this.downloadFileTo(dl.url, jarPath).then(() => resolve(jarPath)).catch(reject);
           } catch (err) { reject(err); }
@@ -721,6 +698,7 @@ class ServerService {
         UserService.logActivity(userId, 'server_stop', 'server', serverId, `Server stopped (exit code: ${code})`);
         NotificationService.notify('server_stop', { server, userId });
       }
+      consoleBuffers.delete(serverId);
     });
 
     child.on('error', (err) => {
@@ -1270,11 +1248,6 @@ class ServerService {
     db.prepare(
       'INSERT INTO crashes (server_id, exit_code, signal, error_output) VALUES (?, ?, ?, ?)'
     ).run(serverId, exitCode, signal, errorOutput);
-  }
-
-  static getCrashes(serverId) {
-    const db = this.getDb();
-    return db.prepare('SELECT * FROM crashes WHERE server_id = ? ORDER BY detected_at DESC LIMIT 50').all(serverId);
   }
 
   static getServerStats() {

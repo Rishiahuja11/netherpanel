@@ -10,15 +10,6 @@ class CrashService {
     return getDb();
   }
 
-  static logCrash(serverId, exitCode, signal, errorOutput) {
-    const db = this.getDb();
-    const logSnippet = this.getLogSnippet(serverId);
-
-    db.prepare(
-      'INSERT INTO crashes (server_id, exit_code, signal, error_output, log_snippet) VALUES (?, ?, ?, ?, ?)'
-    ).run(serverId, exitCode, signal, errorOutput, logSnippet);
-  }
-
   static getLogSnippet(serverId) {
     const serverDir = ServerService.getServerDir(serverId);
     const latestLog = path.join(serverDir, 'logs', 'latest.log');

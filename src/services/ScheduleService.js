@@ -195,13 +195,6 @@ class ScheduleService {
     return schedule;
   }
 
-  static getScheduleHistory(scheduleId, limit = 50) {
-    const db = this.getDb();
-    return db.prepare(
-      'SELECT * FROM schedule_tasks WHERE schedule_id = ? ORDER BY executed_at DESC LIMIT ?'
-    ).all(scheduleId, limit);
-  }
-
   static async runScheduleNow(id, userId) {
     const schedule = this.getSchedule(id);
     if (!schedule) {

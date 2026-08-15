@@ -8,7 +8,6 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const DB_PATH = path.join(DATA_DIR, 'netherpanel.db');
 
 let db = null;
-let saveInterval = null;
 
 class Database {
   constructor(sqliteDb) {

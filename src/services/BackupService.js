@@ -6,6 +6,7 @@ const { getDb } = require('../database');
 const ServerService = require('./ServerService');
 const UserService = require('./UserService');
 const NotificationService = require('./NotificationService');
+const SettingsService = require('./SettingsService');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
@@ -50,6 +51,8 @@ class BackupService {
 
         UserService.logActivity(userId, 'backup_create', 'backup', result.lastInsertRowid, `Created backup "${backupName}"`);
         NotificationService.notify('backup_created', { server, backupName, userId });
+
+        this.cleanupOldBackups(serverId);
 
         resolve({
           id: result.lastInsertRowid,
@@ -168,9 +171,8 @@ class BackupService {
 
   static cleanupOldBackups(serverId) {
     const db = this.getDb();
-    const retentionDays = parseInt(
-      db.prepare("SELECT value FROM settings WHERE key = 'backup_retention_days'").get()?.value || '30'
-    );
+    const retentionDays = SettingsService.getInt('backup_retention_days', 30);
+    if (retentionDays <= 0) return 0;
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);

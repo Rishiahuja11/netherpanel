@@ -7,6 +7,7 @@ const ScheduleService = require('../services/ScheduleService');
 const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
 const CloudflareService = require('../services/CloudflareService');
+const SettingsService = require('../services/SettingsService');
 const { getDb } = require('../database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
@@ -182,6 +183,7 @@ router.put('/settings', (req, res) => {
     });
 
     transaction(settings);
+    SettingsService.invalidate();
 
     res.json({ message: 'Settings updated' });
   } catch (err) {

@@ -523,10 +523,6 @@ class ModService {
     return ['paper', 'spigot', 'purpur', 'folia', 'bukkit', 'pocketmine', 'nukkit', 'powernukkit'].includes(server.server_type);
   }
 
-  static isModServer(server) {
-    return ['forge', 'fabric', 'quilt', 'neoforge'].includes(server.server_type);
-  }
-
   static isModrinthCompatible(server) {
     return ['paper', 'spigot', 'purpur', 'folia', 'forge', 'fabric', 'quilt', 'neoforge'].includes(server.server_type);
   }

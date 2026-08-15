@@ -1,5 +1,7 @@
 const { getDb } = require('../database');
 
+let cache = null;
+
 const DEFAULTS = {
   panel_name: 'NetherPanel',
   cloudflare_enabled: 'true',
@@ -12,11 +14,25 @@ const DEFAULTS = {
 };
 
 class SettingsService {
-  static get(key, fallback = null) {
+  static invalidate() {
+    cache = null;
+  }
+
+  static loadCache() {
     const db = getDb();
-    if (!db) return fallback !== null ? fallback : DEFAULTS[key] || null;
-    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-    if (row) return row.value;
+    if (!db) return;
+    try {
+      const rows = db.prepare('SELECT key, value FROM settings').all();
+      cache = {};
+      for (const row of rows) cache[row.key] = row.value;
+    } catch (e) {
+      cache = null;
+    }
+  }
+
+  static get(key, fallback = null) {
+    if (cache === null) this.loadCache();
+    if (cache && key in cache) return cache[key];
     if (fallback !== null) return fallback;
     return key in DEFAULTS ? DEFAULTS[key] : null;
   }
@@ -26,6 +42,7 @@ class SettingsService {
     db.prepare(
       'INSERT INTO settings (key, value, category) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP'
     ).run(key, String(value), category, String(value));
+    if (cache !== null) cache[key] = String(value);
   }
 
   static getBool(key, fallback = false) {
@@ -36,16 +53,6 @@ class SettingsService {
   static getInt(key, fallback = 0) {
     const v = parseInt(this.get(key, String(fallback)), 10);
     return isNaN(v) ? fallback : v;
-  }
-
-  static getCloudflareConfig() {
-    return {
-      enabled: this.getBool('cloudflare_enabled', true),
-      domain: this.get('cloudflare_domain', 'smp45.qzz.io'),
-      apiToken: this.get('cloudflare_api_token', ''),
-      zoneId: this.get('cloudflare_zone_id', ''),
-      serverIp: this.get('cloudflare_server_ip', '')
-    };
   }
 
   static isCloudflareEnabled() {
