@@ -1,6 +1,7 @@
 const https = require('https');
 const crypto = require('crypto');
 const SettingsService = require('./SettingsService');
+const CloudflareTunnelService = require('./CloudflareTunnelService');
 
 const DASH_API = 'https://dash.cloudflare.com/api/v4';
 const CF_API = 'https://api.cloudflare.com/client/v4';
@@ -111,7 +112,10 @@ class CloudflareAuthService {
       SettingsService.set('cloudflare_zone_id', matched.id, 'cloudflare');
     }
 
-    return { success: true, email, zones, zoneId: matched ? matched.id : null };
+    const tunnel = await CloudflareTunnelService.setup(token);
+    if (tunnel.success) SettingsService.set('cloudflare_tunnel_url', tunnel.url, 'cloudflare');
+
+    return { success: true, email, zones, zoneId: matched ? matched.id : null, tunnel };
   }
 
   static clearPending(id) {

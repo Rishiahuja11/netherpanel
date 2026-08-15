@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "setup": "bash setup.sh",
-    "start": "concurrently \"node server.js\" \"cloudflared tunnel run --token $(cat ~/.cloudflared/token)\"",
+    "start": "node server.js",
     "start:panel": "node server.js",
     "start:tunnel": "cloudflared tunnel run --token $(cat ~/.cloudflared/token)",
     "dev": "node server.js",

@@ -157,6 +157,8 @@ const NetherApp = {
     document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
     document.getElementById('btn-cf-login')?.addEventListener('click', () => this.cloudflareLogin());
     document.getElementById('btn-cf-2fa')?.addEventListener('click', () => this.cloudflareVerify2fa());
+    document.getElementById('btn-cf-gh')?.addEventListener('click', () => this.cloudflareGitHub());
+    document.getElementById('btn-cf-tunnel')?.addEventListener('click', () => this.createTunnel());
     document.getElementById('cf-password')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.cloudflareLogin();
     });
@@ -216,6 +218,10 @@ const NetherApp = {
       if (enabledEl) enabledEl.checked = (map['cloudflare_enabled']?.value || 'true') === 'true';
       const result = document.getElementById('cf-test-result');
       if (result) result.textContent = '';
+      const tunnelUrl = map['cloudflare_tunnel_url']?.value;
+      const tunnelHost = document.getElementById('cf-tunnel-host');
+      if (tunnelHost) tunnelHost.textContent = `panel.${map['cloudflare_domain']?.value || 'your-domain'}`;
+      if (tunnelUrl) this.setCfTunnelResult(`Tunnel: ${tunnelUrl}`, true);
       this.updateCfDomainSample();
       this.loadApiTokens();
     } catch (err) {
@@ -283,6 +289,36 @@ const NetherApp = {
     el.style.color = ok ? 'var(--success)' : 'var(--error)';
   },
 
+  setCfTunnelResult(text, ok) {
+    const el = document.getElementById('cf-tunnel-result');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = ok ? 'var(--success)' : 'var(--error)';
+  },
+
+  cloudflareGitHub() {
+    window.open('https://oidc.iam.cfapi.net/api/v1/sso/init?client=github&env=production', '_blank', 'noopener');
+    this.setCfLoginResult('GitHub login opens in a new tab. It can\u2019t give the panel a token \u2014 log in with email & password here for automatic tunnel setup.', false);
+  },
+
+  async createTunnel() {
+    const btn = document.getElementById('btn-cf-tunnel');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+    this.setCfTunnelResult('Creating tunnel...', true);
+    try {
+      const data = await this.api('POST', '/api/admin/cloudflare/tunnel');
+      if (data && data.success) {
+        this.setCfTunnelResult(`Tunnel live at ${data.url}` + (data.running ? '' : ' — cloudflared not running'), true);
+      } else {
+        this.setCfTunnelResult(data?.error || 'Tunnel creation failed.', false);
+      }
+    } catch (err) {
+      this.setCfTunnelResult(err.message, false);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Create tunnel'; }
+    }
+  },
+
   async cloudflareLogin() {
     const email = document.getElementById('cf-email')?.value?.trim();
     const password = document.getElementById('cf-password')?.value;
@@ -303,6 +339,11 @@ const NetherApp = {
         if (data.zoneId) {
           const zoneInput = document.getElementById('cf-zone-id');
           if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
+        }
+        if (data.tunnel) {
+          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
+          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
+          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
         }
       }
     } catch (err) {
@@ -328,6 +369,11 @@ const NetherApp = {
         if (data.zoneId) {
           const zoneInput = document.getElementById('cf-zone-id');
           if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
+        }
+        if (data.tunnel) {
+          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
+          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
+          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
         }
       }
     } catch (err) {

@@ -8,6 +8,7 @@ const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
 const CloudflareService = require('../services/CloudflareService');
 const CloudflareAuthService = require('../services/CloudflareAuthService');
+const CloudflareTunnelService = require('../services/CloudflareTunnelService');
 const SettingsService = require('../services/SettingsService');
 const { getDb } = require('../database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
@@ -238,6 +239,15 @@ router.post('/cloudflare/login/2fa', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/cloudflare/tunnel', async (req, res) => {
+  try {
+    const result = await CloudflareTunnelService.setup();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
