@@ -1,6 +1,6 @@
 # NetherPanel
 
-A modern Minecraft server management panel for Termux. Runs directly in Termux with Java servers executed through proot-distro (Ubuntu). Works on localhost out of the box, with optional Cloudflare Tunnel and subdomain support.
+A modern Minecraft server management panel for Termux. Runs directly in Termux with Java servers executed through proot-distro (Ubuntu). Works on localhost out of the box on IP:port — no domain or public tunnel needed.
 
 ![NetherPanel](https://img.shields.io/badge/NetherPanel-v4.0-orange) ![License](https://img.shields.io/badge/License-MIT-blue) ![Platform](https://img.shields.io/badge/Platform-Termux-purple)
 
@@ -15,8 +15,7 @@ A modern Minecraft server management panel for Termux. Runs directly in Termux w
 - **Backup system** - Create, download, and restore server backups
 - **Crash detection** - Automatic crash analysis, reporting, and auto-restart
 - **Activity logging** - Track all server actions
-- **Cloudflare Tunnel** - Optional tunnel for remote access via panel.smp45.qzz.io
-- **Subdomain management** - Automatic DNS A records for each server subdomain
+- **IP:port access** - Servers and the panel are reachable directly on your device's IP, no domain required
 
 ### Server Management
 - Java and Bedrock server support
@@ -181,7 +180,6 @@ netherpanel/
 │       ├── ModService.js     # Modrinth/Hangar/Poggit integration
 │       ├── CrashService.js   # Crash detection + auto-restart
 │       ├── PlayerService.js  # Whitelist/ops/bans management
-│       ├── CloudflareService.js # DNS subdomain management
 │       └── SystemInfoService.js # CPU/memory/disk monitoring
 ├── public/
 │   ├── login.html            # Login page
@@ -215,9 +213,9 @@ Java servers are spawned with `proot-distro login ubuntu` and Java 25 installed 
 - **Nukkit / PowerNukkit** run the NukkitX-family jar via the proot Ubuntu Java. Official Nukkit (CloudburstMC) has no downloadable releases, so Nukkit uses the maintained PowerNukkitX jar.
 - **Official Bedrock Dedicated Server** only supports x86_64 CPUs, so on ARM devices the panel shows a clear error and recommends PocketMine or Nukkit.
 
-### Optional Cloudflare Tunnel
+### IP:port Access
 
-If a Cloudflare tunnel token is present at `~/.cloudflared/token`, `start.sh` will launch `cloudflared` alongside the panel and expose it at `https://panel.smp45.qzz.io`. Without the token, the panel simply runs on `http://localhost:3000`.
+The panel runs on `http://localhost:3000` by default. Each server is accessible at your device's local IP (e.g. `192.168.1.x:25565`). No domain, Cloudflare, or tunnel setup is required.
 
 ### No Docker
 

@@ -6,9 +6,6 @@ const BackupService = require('../services/BackupService');
 const ScheduleService = require('../services/ScheduleService');
 const ModService = require('../services/ModService');
 const CrashService = require('../services/CrashService');
-const CloudflareService = require('../services/CloudflareService');
-const CloudflareAuthService = require('../services/CloudflareAuthService');
-const CloudflareTunnelService = require('../services/CloudflareTunnelService');
 const SettingsService = require('../services/SettingsService');
 const { getDb } = require('../database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
@@ -199,68 +196,6 @@ router.delete('/crashes/:id', (req, res) => {
     res.json({ message: 'Crash report deleted', crash });
   } catch (err) {
     res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/cloudflare/test', async (req, res) => {
-  try {
-    const db = getDb();
-    const cf = CloudflareService.fromSettings(db);
-    if (!cf) {
-      return res.status(400).json({ error: 'Cloudflare not configured. Log in or save Zone ID / Server IP first.' });
-    }
-    const result = await cf.testConnection();
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/cloudflare/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-    const result = await CloudflareAuthService.login(email, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/cloudflare/login/2fa', async (req, res) => {
-  try {
-    const { pendingAuthId, code } = req.body;
-    if (!pendingAuthId || !code) {
-      return res.status(400).json({ error: 'Login session and 2FA code are required' });
-    }
-    const result = await CloudflareAuthService.verify2fa(pendingAuthId, code);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/cloudflare/token', async (req, res) => {
-  try {
-    const { token } = req.body || {};
-    if (!token || !String(token).trim()) {
-      return res.status(400).json({ error: 'API token is required' });
-    }
-    const result = await CloudflareAuthService.useApiToken(String(token).trim());
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/cloudflare/tunnel', async (req, res) => {
-  try {
-    const result = await CloudflareTunnelService.setup();
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 });
 

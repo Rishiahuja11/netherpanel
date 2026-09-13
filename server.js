@@ -4,7 +4,6 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 const { initDatabase, getDb } = require('./src/database');
-const SettingsService = require('./src/services/SettingsService');
 
 const ENV_PATH = path.join(__dirname, '.env');
 if (fs.existsSync(ENV_PATH)) {
@@ -261,9 +260,8 @@ async function startServer() {
         serverId,
         status: server.status,
         is_running: ServerService.isRunning(serverId)
-      });
-    });
-
+});
+  });
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
 
@@ -319,12 +317,6 @@ async function startServer() {
         console.log('Default admin user created (admin/admin123)');
       });
     }
-
-    const CloudflareTunnelService = require('./src/services/CloudflareTunnelService');
-    CloudflareTunnelService.start().then(r => {
-      if (r && r.success) console.log(`[tunnel] Cloudflare tunnel running: https://panel.${SettingsService.getDomain()}`);
-      else if (r && !r.skipped) console.log(`[tunnel] Tunnel not started: ${r.error}`);
-    });
   });
 
   module.exports = { app, server: httpServer, io };

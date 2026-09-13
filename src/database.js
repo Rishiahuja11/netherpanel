@@ -169,7 +169,6 @@ async function initDatabase() {
       pid INTEGER,
       path TEXT NOT NULL,
       java_args TEXT,
-      subdomain TEXT,
       startup_cmd TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -317,14 +316,8 @@ async function initDatabase() {
     { key: 'auto_start_servers', value: 'false', category: 'server' },
     { key: 'max_servers_per_user', value: '5', category: 'limits' },
     { key: 'backup_retention_days', value: '30', category: 'backup' },
-    { key: 'cloudflare_enabled', value: 'true', category: 'cloudflare' },
-    { key: 'cloudflare_domain', value: 'smp45.qzz.io', category: 'cloudflare' },
-    { key: 'cloudflare_api_token', value: '', category: 'cloudflare' },
-    { key: 'cloudflare_zone_id', value: '', category: 'cloudflare' },
-    { key: 'cloudflare_server_ip', value: '', category: 'cloudflare' },
     { key: 'resource_ram_limit', value: '0', category: 'resource' },
     { key: 'resource_cpu_limit', value: '', category: 'resource' },
-    { key: 'cloudflare_email', value: '', category: 'cloudflare' },
   ];
 
   for (const setting of defaultSettings) {
@@ -334,8 +327,9 @@ async function initDatabase() {
     }
   }
 
-  // Remove legacy webhook settings
+  // Remove legacy webhook and Cloudflare/domain settings
   db.prepare("DELETE FROM settings WHERE key IN ('webhook_url', 'webhook_events')").run();
+  db.prepare("DELETE FROM settings WHERE key LIKE 'cloudflare_%'").run();
 
   db.save();
 

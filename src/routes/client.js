@@ -23,8 +23,6 @@ router.get('/config', (req, res) => {
     const db = getDb();
     res.json({
       panel_name: db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel',
-      cloudflare_enabled: SettingsService.isCloudflareEnabled(),
-      domain: SettingsService.getDomain(),
       resource_ram_limit: SettingsService.getRamLimit(),
       resource_cpu_limit: SettingsService.getCpuLimit()
     });
@@ -42,7 +40,7 @@ router.get('/servers', (req, res) => {
       servers = ServerService.getUserServers(req.user.id);
     } else {
       servers = db.prepare(`
-        SELECT id, name, slug, version, server_type, port, subdomain, status, created_at 
+        SELECT id, name, slug, version, server_type, port, status, created_at 
         FROM servers 
         ORDER BY created_at DESC 
         LIMIT 50
@@ -63,7 +61,7 @@ router.get('/servers/:id', (req, res) => {
   try {
     const db = getDb();
     const server = ServerService.enrichServer(db.prepare(`
-      SELECT id, name, slug, version, server_type, port, subdomain, status, created_at 
+      SELECT id, name, slug, version, server_type, port, status, created_at 
       FROM servers WHERE id = ?
     `).get(parseInt(req.params.id)));
 

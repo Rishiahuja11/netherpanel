@@ -4,7 +4,7 @@ const NetherApp = {
   wizardBackupFile: null,
   selectedGameType: 'java',
   servers: [],
-  panelConfig: { cloudflare_enabled: true, domain: 'smp45.qzz.io', resource_ram_limit: 0, resource_cpu_limit: '' },
+  panelConfig: { resource_ram_limit: 0, resource_cpu_limit: '' },
 
   JAVA_SOFTWARE: {
     paper: { name: 'Paper', desc: 'High performance, plugin support' },
@@ -103,22 +103,11 @@ const NetherApp = {
       const res = await fetch('/api/client/config');
       if (res.ok) {
         this.panelConfig = await res.json();
-        this.updateSubdomainHint();
         this.updateResourceHint();
       }
     } catch (err) {
       console.error('Failed to load panel config:', err);
     }
-  },
-
-  updateSubdomainHint() {
-    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
-    const hint = document.getElementById('subdomain-cf-hint');
-    const input = document.getElementById('server-subdomain');
-    if (hint) hint.style.display = cfEnabled ? 'none' : '';
-    if (input) input.disabled = !cfEnabled;
-    const preview = document.getElementById('subdomain-preview');
-    if (preview && !cfEnabled) preview.textContent = 'localhost:<port>';
   },
 
   updateResourceHint() {
@@ -154,21 +143,6 @@ const NetherApp = {
       if (e.target === modal) { modal.classList.remove('active'); document.body.style.overflow = ''; }
     });
     document.getElementById('btn-save-settings')?.addEventListener('click', () => this.saveSettings());
-    document.getElementById('btn-cf-test')?.addEventListener('click', () => this.testCloudflare());
-    document.getElementById('btn-cf-login')?.addEventListener('click', () => this.cloudflareLogin());
-    document.getElementById('btn-cf-2fa')?.addEventListener('click', () => this.cloudflareVerify2fa());
-    document.getElementById('btn-cf-token-save')?.addEventListener('click', () => this.saveCfToken());
-    document.getElementById('btn-cf-token-create')?.addEventListener('click', () => this.createCfToken());
-    document.getElementById('cf-api-token')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.saveCfToken();
-    });
-    document.getElementById('btn-cf-tunnel')?.addEventListener('click', () => this.createTunnel());
-    document.getElementById('cf-password')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.cloudflareLogin();
-    });
-    document.getElementById('cf-2fa-code')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.cloudflareVerify2fa();
-    });
     document.getElementById('btn-create-token')?.addEventListener('click', () => this.createApiToken());
     document.getElementById('btn-copy-token')?.addEventListener('click', () => {
       const val = document.getElementById('new-token-value');
@@ -179,8 +153,6 @@ const NetherApp = {
       const btn = e.target.closest('[data-delete-token]');
       if (btn) this.deleteApiToken(btn.dataset.deleteToken);
     });
-    document.getElementById('cf-enabled')?.addEventListener('change', () => this.updateCfDomainSample());
-    document.getElementById('cf-domain')?.addEventListener('input', () => this.updateCfDomainSample());
     document.querySelectorAll('input[name="panel-theme"]').forEach(r => {
       r.addEventListener('change', () => {
         if (!r.checked) return;
@@ -212,34 +184,18 @@ const NetherApp = {
         if (el && map[key]) el.value = map[key].value || '';
         else if (el && def) el.value = def;
       };
-      setVal('cf-zone-id', 'cloudflare_zone_id');
-      setVal('cf-server-ip', 'cloudflare_server_ip');
-      setVal('cf-domain', 'cloudflare_domain', 'smp45.qzz.io');
       setVal('resource-ram-limit', 'resource_ram_limit', '0');
       setVal('resource-cpu-limit', 'resource_cpu_limit', '');
-      setVal('cf-email', 'cloudflare_email', '');
-      const enabledEl = document.getElementById('cf-enabled');
-      if (enabledEl) enabledEl.checked = (map['cloudflare_enabled']?.value || 'true') === 'true';
       const result = document.getElementById('cf-test-result');
       if (result) result.textContent = '';
-      const tunnelUrl = map['cloudflare_tunnel_url']?.value;
-      const tunnelHost = document.getElementById('cf-tunnel-host');
-      if (tunnelHost) tunnelHost.textContent = `panel.${map['cloudflare_domain']?.value || 'your-domain'}`;
-      if (tunnelUrl) this.setCfTunnelResult(`Tunnel: ${tunnelUrl}`, true);
-      this.updateCfDomainSample();
       this.loadApiTokens();
     } catch (err) {
       this.showToast('Error', err.message, 'error');
     }
   },
 
-  collectCloudflareSettings() {
+  collectResourceSettings() {
     return [
-      { key: 'cloudflare_enabled', value: document.getElementById('cf-enabled')?.checked ? 'true' : 'false', category: 'cloudflare' },
-      { key: 'cloudflare_domain', value: document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io', category: 'cloudflare' },
-      { key: 'cloudflare_email', value: document.getElementById('cf-email')?.value?.trim() || '', category: 'cloudflare' },
-      { key: 'cloudflare_zone_id', value: document.getElementById('cf-zone-id')?.value?.trim() || '', category: 'cloudflare' },
-      { key: 'cloudflare_server_ip', value: document.getElementById('cf-server-ip')?.value?.trim() || '', category: 'cloudflare' },
       { key: 'resource_ram_limit', value: document.getElementById('resource-ram-limit')?.value?.trim() || '0', category: 'resource' },
       { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' }
     ];
@@ -247,179 +203,16 @@ const NetherApp = {
 
   async saveSettings(silent) {
     try {
-      const settings = this.collectCloudflareSettings();
+      const settings = this.collectResourceSettings();
       await this.api('PUT', '/api/admin/settings', { settings });
-      this.panelConfig.cloudflare_enabled = settings.find(s => s.key === 'cloudflare_enabled').value === 'true';
-      this.panelConfig.domain = settings.find(s => s.key === 'cloudflare_domain').value;
       this.panelConfig.resource_ram_limit = settings.find(s => s.key === 'resource_ram_limit').value;
       this.panelConfig.resource_cpu_limit = settings.find(s => s.key === 'resource_cpu_limit').value;
-      this.updateSubdomainHint();
       this.updateResourceHint();
       if (!silent) this.showToast('Saved', 'Settings updated', 'success');
       return true;
     } catch (err) {
       this.showToast('Error', err.message, 'error');
       return false;
-    }
-  },
-
-  async testCloudflare() {
-    const result = document.getElementById('cf-test-result');
-    if (result) result.textContent = 'Testing...';
-    const saved = await this.saveSettings(true);
-    if (!saved) return;
-    try {
-      const data = await this.api('POST', '/api/admin/cloudflare/test');
-      if (data && data.success) {
-        if (result) { result.textContent = `Connected to zone "${data.zoneName}"`; result.style.color = 'var(--success)'; }
-      } else {
-        if (result) { result.textContent = data?.error || 'Connection failed'; result.style.color = 'var(--error)'; }
-      }
-    } catch (err) {
-      if (result) { result.textContent = err.message; result.style.color = 'var(--error)'; }
-    }
-  },
-
-  updateCfDomainSample() {
-    const domain = document.getElementById('cf-domain')?.value?.trim() || 'smp45.qzz.io';
-    const sample = document.getElementById('cf-domain-sample');
-    if (sample) sample.textContent = `myserver.${domain}`;
-  },
-
-  setCfLoginResult(text, ok) {
-    const el = document.getElementById('cf-login-result');
-    if (!el) return;
-    el.textContent = text || '';
-    el.style.color = ok ? 'var(--success)' : 'var(--error)';
-  },
-
-  setCfTunnelResult(text, ok) {
-    const el = document.getElementById('cf-tunnel-result');
-    if (!el) return;
-    el.textContent = text || '';
-    el.style.color = ok ? 'var(--success)' : 'var(--error)';
-  },
-
-  setCfTokenResult(text, ok) {
-    const el = document.getElementById('cf-token-result');
-    if (!el) return;
-    el.textContent = text || '';
-    el.style.color = ok ? 'var(--success)' : 'var(--error)';
-  },
-
-  createCfToken() {
-    window.open('https://dash.cloudflare.com/profile/api-tokens/create', '_blank', 'noopener');
-    this.setCfTokenResult('Cloudflare token wizard opened in a new tab. Select the permissions listed below, then paste the token and click "Save & Connect".', true);
-  },
-
-  async saveCfToken() {
-    const token = document.getElementById('cf-api-token')?.value?.trim();
-    if (!token) return this.setCfTokenResult('Paste a Cloudflare API token first.', false);
-    const btn = document.getElementById('btn-cf-token-save');
-    if (btn) { btn.disabled = true; btn.textContent = 'Connecting...'; }
-    try {
-      const data = await this.api('POST', '/api/admin/cloudflare/token', { token });
-      if (data && data.success) {
-        document.getElementById('cf-api-token').value = '';
-        this.setCfTokenResult('Token connected. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.'), true);
-        if (data.zoneId) {
-          const zoneInput = document.getElementById('cf-zone-id');
-          if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
-        }
-        if (data.tunnel) {
-          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
-          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
-          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
-        }
-      } else {
-        this.setCfTokenResult(data?.error || 'Connection failed.', false);
-      }
-    } catch (err) {
-      this.setCfTokenResult(err.message, false);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Save & Connect'; }
-    }
-  },
-
-  async createTunnel() {
-    const btn = document.getElementById('btn-cf-tunnel');
-    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
-    this.setCfTunnelResult('Creating tunnel...', true);
-    try {
-      const data = await this.api('POST', '/api/admin/cloudflare/tunnel');
-      if (data && data.success) {
-        this.setCfTunnelResult(`Tunnel live at ${data.url}` + (data.running ? '' : ' — cloudflared not running'), true);
-      } else {
-        this.setCfTunnelResult(data?.error || 'Tunnel creation failed.', false);
-      }
-    } catch (err) {
-      this.setCfTunnelResult(err.message, false);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Create tunnel'; }
-    }
-  },
-
-  async cloudflareLogin() {
-    const email = document.getElementById('cf-email')?.value?.trim();
-    const password = document.getElementById('cf-password')?.value;
-    if (!email || !password) return this.setCfLoginResult('Email and password are required.', false);
-    const btn = document.getElementById('btn-cf-login');
-    if (btn) { btn.disabled = true; btn.textContent = 'Logging in...'; }
-    try {
-      const data = await this.api('POST', '/api/admin/cloudflare/login', { email, password });
-      if (data && data.requires2fa) {
-        this.pendingAuthId = data.pendingAuthId;
-        const row = document.getElementById('cf-2fa-row');
-        if (row) row.style.display = 'flex';
-        document.getElementById('cf-2fa-code')?.focus();
-        this.setCfLoginResult(`2FA required${data.email ? ' for ' + data.email : ''}. Enter your authenticator code.`, true);
-      } else if (data && data.success) {
-        document.getElementById('cf-password').value = '';
-        this.setCfLoginResult('Logged in. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.') + (data.apiTokenCreated ? ' API token created.' : ' Could not create a scoped API token; using session token.'), true);
-        if (data.zoneId) {
-          const zoneInput = document.getElementById('cf-zone-id');
-          if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
-        }
-        if (data.tunnel) {
-          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
-          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
-          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
-        }
-      }
-    } catch (err) {
-      this.setCfLoginResult(err.message, false);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Log in'; }
-    }
-  },
-
-  async cloudflareVerify2fa() {
-    const code = document.getElementById('cf-2fa-code')?.value?.trim();
-    if (!code || !this.pendingAuthId) return this.setCfLoginResult('Enter your 2FA code first.', false);
-    const btn = document.getElementById('btn-cf-2fa');
-    if (btn) { btn.disabled = true; btn.textContent = 'Verifying...'; }
-    try {
-      const data = await this.api('POST', '/api/admin/cloudflare/login/2fa', { pendingAuthId: this.pendingAuthId, code });
-      if (data && data.success) {
-        document.getElementById('cf-password').value = '';
-        const row = document.getElementById('cf-2fa-row');
-        if (row) row.style.display = 'none';
-        this.pendingAuthId = null;
-        this.setCfLoginResult('2FA verified. Zone auto-detected' + (data.zoneId ? '' : ' — set Zone ID manually if not matched.') + (data.apiTokenCreated ? ' API token created.' : ' Could not create a scoped API token; using session token.'), true);
-        if (data.zoneId) {
-          const zoneInput = document.getElementById('cf-zone-id');
-          if (zoneInput && !zoneInput.value) zoneInput.value = data.zoneId;
-        }
-        if (data.tunnel) {
-          if (data.tunnel.success) this.setCfTunnelResult(`Tunnel live at ${data.tunnel.url}`, true);
-          else if (data.tunnel.skipped) this.setCfTunnelResult(data.tunnel.error || 'Tunnel skipped', false);
-          else this.setCfTunnelResult(`Tunnel not created: ${data.tunnel.error || 'unknown error'}`, false);
-        }
-      }
-    } catch (err) {
-      this.setCfLoginResult(err.message, false);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Verify'; }
     }
   },
 
@@ -630,18 +423,14 @@ const NetherApp = {
     const name = document.getElementById('server-name')?.value || 'My Server';
     const sw = document.querySelector('input[name="software"]:checked')?.value || 'paper';
     const ver = document.getElementById('server-version')?.value || '1.21.4';
-    const domain = this.panelConfig?.domain || 'smp45.qzz.io';
-    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
-    const sub = cfEnabled ? document.getElementById('server-subdomain')?.value?.trim() : '';
     const allSw = { ...this.JAVA_SOFTWARE, ...this.BEDROCK_SOFTWARE };
-    const addr = sub ? `${sub}.${domain}` : 'Auto-assigned on create';
 
     document.getElementById('review-name').textContent = name;
     document.getElementById('review-game').textContent = this.selectedGameType === 'bedrock' ? 'Bedrock' : 'Java';
     document.getElementById('review-software').textContent = allSw[sw]?.name || sw;
     document.getElementById('review-version').textContent = ver;
     document.getElementById('review-port').textContent = 'Auto (random)';
-    document.getElementById('review-address').textContent = addr;
+    document.getElementById('review-address').textContent = 'Auto-assigned on create';
 
     const backupRow = document.getElementById('review-backup-row');
     const backupName = document.getElementById('review-backup');
@@ -651,27 +440,21 @@ const NetherApp = {
     } else {
       if (backupRow) backupRow.style.display = 'none';
     }
-
-    const preview = document.getElementById('subdomain-preview');
-    if (preview) preview.textContent = sub ? `${sub}.${domain}` : `myserver.${domain}`;
   },
 
   async createServer() {
     const name = document.getElementById('server-name')?.value?.trim();
     const software = document.querySelector('input[name="software"]:checked')?.value;
     const version = document.getElementById('server-version')?.value;
-    const cfEnabled = this.panelConfig?.cloudflare_enabled !== false;
-    const subdomain = cfEnabled ? document.getElementById('server-subdomain')?.value?.trim() : '';
 
     if (!name) return this.showToast('Error', 'Server name is required', 'error');
-    if (subdomain && !/^[a-z0-9-]+$/.test(subdomain)) return this.showToast('Error', 'Subdomain can only contain lowercase letters, numbers, and hyphens', 'error');
 
     try {
       this.showToast('Creating', `Setting up "${name}"...`, 'info');
       const server = await this.api('POST', '/api/servers', {
         name, version, server_type: software,
         game_type: this.selectedGameType,
-        ram_min: 0, ram_max: 2048, subdomain
+        ram_min: 0, ram_max: 2048
       });
 
       if (this.wizardBackupFile) {

@@ -164,14 +164,10 @@ router.get('/:id', (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, version, server_type, game_type, ram_min, ram_max, subdomain } = req.body;
+    const { name, version, server_type, game_type, ram_min, ram_max } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Server name is required' });
-    }
-
-    if (subdomain !== undefined && subdomain !== null && subdomain !== '' && !/^[a-z0-9-]+$/.test(subdomain)) {
-      return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
     }
 
     const server = await ServerService.createServer(req.user.id, {
@@ -180,8 +176,7 @@ router.post('/', async (req, res) => {
       serverType: server_type,
       gameType: game_type || 'java',
       ramMin: ram_min,
-      ramMax: ram_max,
-      subdomain
+      ramMax: ram_max
     });
 
     NotificationService.notify('server_created', { server, userId: req.user.id });
@@ -201,10 +196,6 @@ router.put('/:id', (req, res) => {
 
     if (server.user_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
-    }
-
-    if (req.body.subdomain !== undefined && req.body.subdomain !== null && req.body.subdomain !== '' && !/^[a-z0-9-]+$/.test(req.body.subdomain)) {
-      return res.status(400).json({ error: 'Subdomain can only contain lowercase letters, numbers, and hyphens' });
     }
 
     const updated = ServerService.updateServer(server.id, req.body);

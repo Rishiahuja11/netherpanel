@@ -4,11 +4,6 @@ let cache = null;
 
 const DEFAULTS = {
   panel_name: 'NetherPanel',
-  cloudflare_enabled: 'true',
-  cloudflare_domain: 'smp45.qzz.io',
-  cloudflare_api_token: '',
-  cloudflare_zone_id: '',
-  cloudflare_server_ip: '',
   resource_ram_limit: '0',
   resource_cpu_limit: ''
 };
@@ -53,14 +48,6 @@ class SettingsService {
   static getInt(key, fallback = 0) {
     const v = parseInt(this.get(key, String(fallback)), 10);
     return isNaN(v) ? fallback : v;
-  }
-
-  static isCloudflareEnabled() {
-    return this.getBool('cloudflare_enabled', true);
-  }
-
-  static getDomain() {
-    return this.get('cloudflare_domain', 'smp45.qzz.io');
   }
 
   static getRamLimit() {

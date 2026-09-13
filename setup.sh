@@ -52,19 +52,9 @@ echo "━━━ Step 4: Installing utilities ━━━"
 pkg install -y git python3 curl wget unzip tar
 echo "  [✓] Utilities installed"
 
-# Step 5: Install cloudflared (Cloudflare Tunnel client)
+# Step 5: Install proot-distro + Ubuntu (Java/Forge runtime)
 echo ""
-echo "━━━ Step 5: Installing cloudflared (Cloudflare Tunnel) ━━━"
-if command -v cloudflared &> /dev/null; then
-    echo "  [✓] cloudflared already installed: $(cloudflared --version 2>/dev/null | head -1)"
-else
-    pkg install -y cloudflared
-    echo "  [✓] cloudflared installed"
-fi
-
-# Step 6: Install proot-distro + Ubuntu (Java/Forge runtime)
-echo ""
-echo "━━━ Step 6: Installing proot-distro (Ubuntu runtime) ━━━"
+echo "━━━ Step 5: Installing proot-distro (Ubuntu runtime) ━━━"
 if command -v proot-distro &> /dev/null; then
     echo "  [✓] proot-distro already installed"
 else
@@ -94,19 +84,19 @@ else
     fi
 fi
 
-# Step 7: Install npm dependencies
+# Step 6: Install npm dependencies
 echo ""
-echo "━━━ Step 7: Installing npm dependencies ━━━"
+echo "━━━ Step 6: Installing npm dependencies ━━━"
 npm install --production 2>/dev/null || npm install
 echo "  [✓] npm dependencies installed"
 
-# Step 8: Create data directories
+# Step 7: Create data directories
 echo ""
-echo "━━━ Step 8: Creating directories ━━━"
+echo "━━━ Step 7: Creating directories ━━━"
 mkdir -p data/servers data/backups data/uploads data/eggs data/crashes
 echo "  [✓] Directories created"
 
-# Step 9: Make scripts executable
+# Step 8: Make scripts executable
 chmod +x start.sh
 
 # Done
@@ -122,12 +112,6 @@ echo ""
 echo "    2. Start the panel:"
 echo "       bash start.sh"
 echo "       or: npm start"
-echo ""
-echo "    3. Connect Cloudflare for a public tunnel URL:"
-echo "       ./netherpanel.sh --api http://localhost:3000"
-echo "       ./netherpanel.sh login"
-echo "       ./netherpanel.sh cf login"
-echo "       (or use the Cloudflare section in the panel UI)"
 echo ""
 echo "  Panel URL: http://localhost:3000"
 echo ""
