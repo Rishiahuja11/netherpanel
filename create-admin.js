@@ -46,8 +46,8 @@ async function createAdmin() {
     }
 
     try {
-        // Initialize database
-        initDatabase();
+        // Initialize database (async — must await before getDb())
+        await initDatabase();
         const db = getDb();
 
         // Check if user exists
