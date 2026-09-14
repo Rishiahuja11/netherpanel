@@ -1,9 +1,5 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-const { initDatabase, getDb } = require('./src/database');
 
 const ENV_PATH = path.join(__dirname, '.env');
 if (fs.existsSync(ENV_PATH)) {
@@ -26,76 +22,10 @@ fs.mkdirSync(path.join(DATA_DIR, 'logs'), { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, 'tmp', 'uploads'), { recursive: true });
 
 async function startServer() {
-  await initDatabase();
-  const db = getDb();
-
-  const app = express();
-  const httpServer = http.createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    }
-  });
-
-  const { securityHeaders } = require('./src/middleware/security');
-  app.use(securityHeaders());
-
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
-    next();
-  });
-
-  app.use(express.static(path.join(__dirname, 'public')));
-
-  const authRoutes = require('./src/routes/auth');
-  const serverRoutes = require('./src/routes/servers');
-  const adminRoutes = require('./src/routes/admin');
-  const clientRoutes = require('./src/routes/client');
-  const meRoutes = require('./src/routes/me');
-  const { apiRouter: publicApiRoutes, pageRouter: publicPageRoutes } = require('./src/routes/public');
-
-  app.use('/api/auth', authRoutes);
-  app.use('/api/servers', serverRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api/client', clientRoutes);
-  app.use('/api/me', meRoutes);
-  app.use('/api/public', publicApiRoutes);
-  app.use('/', publicPageRoutes);
-
-  app.get('/api', (req, res) => {
-    res.json({
-      name: 'NetherPanel API',
-      version: '1.0.0',
-      endpoints: {
-        auth: '/api/auth',
-        servers: '/api/servers',
-        admin: '/api/admin',
-        client: '/api/client'
-      }
-    });
-  });
-
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'Endpoint not found' });
-    }
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-  });
+  const { app, httpServer, io, db } = await require('./src/app').createApp();
 
   const ServerService = require('./src/services/ServerService');
-  ServerService.setIo(io);
   const NotificationService = require('./src/services/NotificationService');
-  NotificationService.setIo(io);
   const ScheduleService = require('./src/services/ScheduleService');
   const CrashService = require('./src/services/CrashService');
   const UserService = require('./src/services/UserService');
@@ -305,7 +235,7 @@ async function startServer() {
   ║                                          ║
   ║  Default login:                          ║
   ║  Username: admin                         ║
-  ║  Password: admin123                      ║
+  ║  Password: admin123 (change on sign-in)  ║
   ╚══════════════════════════════════════════╝
     `);
 
@@ -315,14 +245,12 @@ async function startServer() {
     if (!existingAdmin) {
       bcrypt.hash('admin123', 12).then(hashedPassword => {
         db.prepare(
-          "INSERT INTO users (username, email, password, role) VALUES ('admin', 'admin@netherpanel.local', ?, 'admin')"
+          "INSERT INTO users (username, email, password, role, must_change_password) VALUES ('admin', 'admin@netherpanel.local', ?, 'admin', 1)"
         ).run(hashedPassword);
-        console.log('Default admin user created (admin/admin123)');
+        console.log('Default admin user created (admin/admin123). A password change will be required on first sign-in.');
       });
     }
   });
-
-  module.exports = { app, server: httpServer, io };
 }
 
 startServer().catch(err => {

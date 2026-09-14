@@ -8,11 +8,10 @@ const { getDb } = require('../database');
 const UserService = require('./UserService');
 const SettingsService = require('./SettingsService');
 const NotificationService = require('./NotificationService');
+const PlatformService = require('./PlatformService');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const SERVERS_DIR = path.join(DATA_DIR, 'servers');
-const PROOT_DISTRO = 'ubuntu';
-const JAVA_PATH = '/usr/lib/jvm/java-25-openjdk-arm64/bin/java';
 
 const PAPER_API = 'https://fill.papermc.io/v3/projects/paper';
 const FOLIA_API = 'https://fill.papermc.io/v3/projects/folia';
@@ -108,6 +107,8 @@ class ServerService {
   }
 
   static getLocalIp() {
+    const envHost = process.env.NETHERPANEL_HOST || process.env.NETHERPANEL_PUBLIC_ADDR;
+    if (envHost) return envHost;
     try {
       const ifaces = os.networkInterfaces();
       for (const name of Object.keys(ifaces)) {
@@ -121,6 +122,7 @@ class ServerService {
 
   static getAddress(server) {
     if (!server) return '';
+    if (server.subdomain) return `${server.subdomain}:${server.port}`;
     return `${this.getLocalIp()}:${server.port}`;
   }
 
@@ -130,10 +132,45 @@ class ServerService {
     return server;
   }
 
+  static sanitizeServer(server, role) {
+    if (!server) return server;
+    const isAdmin = role === 'admin' || (role && role.role === 'admin');
+    if (isAdmin) return server;
+    const clean = { ...server };
+    delete clean.path;
+    delete clean.pid;
+    return clean;
+  }
+
+  static getTemplate(id) {
+    const db = this.getDb();
+    return db.prepare('SELECT * FROM server_templates WHERE id = ?').get(id);
+  }
+
+  static getAllTemplates() {
+    const db = this.getDb();
+    return db.prepare('SELECT * FROM server_templates ORDER BY game_type, server_type, name').all();
+  }
+
   static async createServer(userId, data) {
     const db = this.getDb();
-    const { name, version = '1.21.4', serverType = 'paper', gameType = 'java', ramMin = 1024, ramMax = 2048 } = data;
+    let { name, version = '1.21.4', serverType = 'paper', gameType = 'java', ramMin = 1024, ramMax = 2048, subdomain, javaArgs, templateId } = data;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    if (templateId != null && templateId !== '') {
+      const tpl = this.getTemplate(parseInt(templateId, 10));
+      if (!tpl) throw new Error('Template not found');
+      if (!version || version === '1.21.4') version = tpl.version || version;
+      if (!serverType || serverType === 'paper') serverType = tpl.server_type || serverType;
+      if (!gameType || gameType === 'java') gameType = tpl.game_type || gameType;
+      if (tpl.java_args) javaArgs = tpl.java_args;
+    }
+
+    if (subdomain !== undefined && subdomain !== null && subdomain !== '') {
+      if (typeof subdomain !== 'string' || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(subdomain)) {
+        throw new Error('Invalid subdomain: use letters, numbers and hyphens only');
+      }
+    }
 
     const existing = db.prepare('SELECT id FROM servers WHERE slug = ?').get(slug);
     if (existing) {
@@ -141,7 +178,7 @@ class ServerService {
     }
 
     const userServers = db.prepare('SELECT COUNT(*) as count FROM servers WHERE user_id = ?').get(userId).count;
-    const maxServers = parseInt(db.prepare("SELECT value FROM settings WHERE key = 'max_servers_per_user'").get()?.value || '5');
+    const maxServers = SettingsService.getMaxServersPerUser();
     if (userServers >= maxServers) {
       throw new Error(`Maximum server limit (${maxServers}) reached`);
     }
@@ -153,8 +190,8 @@ class ServerService {
     const actualPort = this.allocateRandomPort(gameType);
 
     const result = db.prepare(
-      'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(userId, name, slug, version, serverType, gameType, actualPort, minRam, maxRam, '');
+      'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path, subdomain, java_args) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, name, slug, version, serverType, gameType, actualPort, minRam, maxRam, '', subdomain || null, javaArgs || null);
 
     const serverId = result.lastInsertRowid;
     const serverDir = this.getServerDir(serverId);
@@ -254,21 +291,16 @@ class ServerService {
 
     await this.downloadFileTo(installerUrl, installerPath);
 
-    return new Promise((resolve, reject) => {
-      const { exec } = require('child_process');
-      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd '${serverDir}' && java -jar forge-installer.jar --installServer"`;
-      exec(cmd, { cwd: serverDir, timeout: 300000 }, (err) => {
-        if (err) {
-          reject(new Error(`Forge installer failed: ${err.message}`));
-          return;
-        }
-        const forgeJar = fs.readdirSync(serverDir).find(f => f.startsWith('forge-') && f.endsWith('.jar') && !f.includes('installer'));
-        if (forgeJar) {
-          fs.renameSync(path.join(serverDir, forgeJar), jarPath);
-        }
-        resolve(jarPath);
-      });
-    });
+    try {
+      await PlatformService.runJavaInstaller(serverDir, ['-jar', 'forge-installer.jar', '--installServer']);
+    } catch (err) {
+      throw new Error(`Forge installer failed: ${err.message}`);
+    }
+    const forgeJar = fs.readdirSync(serverDir).find(f => f.startsWith('forge-') && f.endsWith('.jar') && !f.includes('installer'));
+    if (forgeJar) {
+      fs.renameSync(path.join(serverDir, forgeJar), jarPath);
+    }
+    return jarPath;
   }
 
   static async downloadNeoForgeServer(version, serverDir) {
@@ -280,23 +312,19 @@ class ServerService {
 
     await this.downloadFileTo(installerUrl, installerPath);
 
-    return new Promise((resolve, reject) => {
-      const cmd = `proot-distro login ${PROOT_DISTRO} -- bash -c "cd '${serverDir}' && java -jar neoforge-installer.jar --installServer"`;
-      exec(cmd, { cwd: serverDir, timeout: 300000 }, (err) => {
-        if (err) {
-          reject(new Error(`NeoForge installer failed: ${err.message}`));
-          return;
-        }
-        const neoJar = fs.readdirSync(serverDir).find(f => f.startsWith('neoforge-') && f.endsWith('.jar') && !f.includes('installer'));
-        if (neoJar) {
-          fs.renameSync(path.join(serverDir, neoJar), jarPath);
-        } else {
-          const allJar = fs.readdirSync(serverDir).find(f => f.endsWith('.jar') && !f.includes('installer'));
-          if (allJar) fs.renameSync(path.join(serverDir, allJar), jarPath);
-        }
-        resolve(jarPath);
-      });
-    });
+    try {
+      await PlatformService.runJavaInstaller(serverDir, ['-jar', 'neoforge-installer.jar', '--installServer']);
+    } catch (err) {
+      throw new Error(`NeoForge installer failed: ${err.message}`);
+    }
+    const neoJar = fs.readdirSync(serverDir).find(f => f.startsWith('neoforge-') && f.endsWith('.jar') && !f.includes('installer'));
+    if (neoJar) {
+      fs.renameSync(path.join(serverDir, neoJar), jarPath);
+    } else {
+      const allJar = fs.readdirSync(serverDir).find(f => f.endsWith('.jar') && !f.includes('installer'));
+      if (allJar) fs.renameSync(path.join(serverDir, allJar), jarPath);
+    }
+    return jarPath;
   }
 
   static async downloadQuiltServer(version, serverDir) {
@@ -688,7 +716,7 @@ class ServerService {
       throw new Error(`RAM maximum (${maxRam} MB) exceeds the device's usable memory (${hardCap} MB)`);
     }
 
-    const perUserRam = this.getSettingInt(db, 'ram_per_user', 0);
+    const perUserRam = SettingsService.getRamPerUser();
     if (perUserRam > 0) {
       if (maxRam > perUserRam) {
         throw new Error(`RAM maximum (${maxRam} MB) exceeds your per-user quota (${perUserRam} MB)`);
@@ -712,18 +740,7 @@ class ServerService {
   }
 
   static buildCpuPrefix(cpuLimit) {
-    const raw = String(cpuLimit || '').trim();
-    if (!raw) return '';
-    let range;
-    if (/^\d+$/.test(raw)) {
-      const cores = Math.max(1, Math.min(parseInt(raw, 10), os.cpus().length));
-      range = `0-${cores - 1}`;
-    } else if (/^\d+-\d+$/.test(raw)) {
-      range = raw;
-    } else {
-      return '';
-    }
-    return `taskset -c ${range} `;
+    return PlatformService.buildCpuPrefix(cpuLimit);
   }
 
   static validateJavaArgs(raw) {
@@ -762,31 +779,33 @@ class ServerService {
     const isBedrock = server.game_type === 'bedrock';
 
     const globalRam = SettingsService.getRamLimit();
-    const cpuPrefix = this.buildCpuPrefix(SettingsService.getCpuLimit());
+    const cpuLimit = SettingsService.getCpuLimit();
     const { max: ramMax, min: ramMin } = this.computeRamLimits(server, globalRam);
 
     this.assertRamBudget(ramMax);
 
     consoleBuffers.set(serverId, []);
 
+    const proot = PlatformService.isProotAvailable();
+    const spawnSpec = (opts) => {
+      const spec = PlatformService.serverSpawnSpec(opts);
+      return spawn(spec.cmd, spec.args, { cwd: spec.cwd, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    };
+    const javaPresent = () => proot || PlatformService.cmdExists('java');
+
     let child;
     if (isBedrock) {
       const serverType = server.server_type;
       if (serverType === 'pocketmine') {
-        const pharPath = path.join(serverDir, 'PocketMine-MP.phar');
+        const pharName = 'PocketMine-MP.phar';
+        const pharPath = path.join(serverDir, pharName);
         if (!fs.existsSync(pharPath)) {
           throw new Error('PocketMine phar not found. Please reinstall server.');
         }
         startingSet.add(serverId);
         try {
-          const phpBin = await this.ensurePocketMinePhp();
-          const phpMemArg = globalRam > 0 ? ` -d memory_limit=${ramMax}M` : '';
-          child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-            `cd '${serverDir}' && ${cpuPrefix}'${phpBin}'${phpMemArg} PocketMine-MP.phar --no-wizard`], {
-            cwd: serverDir,
-            detached: true,
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
+          const phpBin = proot ? await this.ensurePocketMinePhp() : null;
+          child = spawnSpec({ serverDir, phpBin, pharName, ramMax, ramMin, cpuLimit, kind: 'pocketmine' });
         } catch (err) {
           startingSet.delete(serverId);
           throw err;
@@ -796,30 +815,28 @@ class ServerService {
         if (!fs.existsSync(jarPath)) {
           throw new Error('Server jar not found. Please reinstall server.');
         }
-        child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-          `cd '${serverDir}' && ${cpuPrefix}${JAVA_PATH} -Xmx${ramMax}M -Xms${ramMin}M -jar server.jar nogui`], {
-          cwd: serverDir,
-          detached: true,
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        if (!javaPresent()) {
+          throw new Error('Java is required but was not found. Install a JDK and add it to PATH.');
+        }
+        child = spawnSpec({ serverDir, cpuLimit, kind: 'java', javaArgs: [`-Xmx${ramMax}M`, `-Xms${ramMin}M`] });
       } else {
-        const exePath = path.join(serverDir, 'bedrock_server');
+        const exeName = PlatformService.isWindows() ? 'bedrock_server.exe' : 'bedrock_server';
+        const exePath = path.join(serverDir, exeName);
         if (!fs.existsSync(exePath)) {
           throw new Error('Bedrock server not found. Please reinstall server.');
         }
         if (process.arch !== 'x64') {
           throw new Error(`Official Bedrock Dedicated Server only runs on x86_64 CPUs (this device is ${process.arch}). Please use PocketMine or Nukkit instead.`);
         }
-        child = spawn(exePath, [], {
-          cwd: serverDir,
-          detached: true,
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        child = spawnSpec({ serverDir, exePath, cpuLimit: '', kind: 'bedrock-agent' });
       }
     } else {
       const jarPath = path.join(serverDir, 'server.jar');
       if (!fs.existsSync(jarPath)) {
         throw new Error('Server jar not found. Please reinstall server.');
+      }
+      if (!javaPresent()) {
+        throw new Error('Java is required but was not found. Install a JDK and add it to PATH.');
       }
       const javaArgsRaw = server.java_args || `-Xmx${ramMax}M -Xms${ramMin}M`;
       let javaArgs = javaArgsRaw;
@@ -828,13 +845,7 @@ class ServerService {
         javaArgs = `${javaArgs} -Xmx${ramMax}M -Xms${ramMin}M`.trim();
       }
       const args = this.sanitizeJavaArgs(javaArgs);
-      args.push('-jar', 'server.jar', 'nogui');
-      child = spawn('proot-distro', ['login', PROOT_DISTRO, '--', 'bash', '-c',
-        `cd '${serverDir}' && ${cpuPrefix}${JAVA_PATH} ${args.join(' ')}`], {
-        cwd: serverDir,
-        detached: true,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+      child = spawnSpec({ serverDir, cpuLimit, kind: 'java', javaArgs: args });
     }
 
     serverProcesses.set(serverId, child);
@@ -892,17 +903,7 @@ class ServerService {
   }
 
   static killProcessGroup(pid, signal) {
-    try {
-      process.kill(-pid, signal);
-      return true;
-    } catch (e) {
-      try {
-        process.kill(pid, signal);
-        return true;
-      } catch (e2) {
-        return false;
-      }
-    }
+    return PlatformService.killProcessTree(pid, signal);
   }
 
   static async stopServer(serverId, userId) {
@@ -996,7 +997,7 @@ class ServerService {
     const values = [];
 
     Object.entries(data).forEach(([key, value]) => {
-      if (['name', 'version', 'ram_min', 'ram_max', 'java_args', 'startup_cmd'].includes(key)) {
+      if (['name', 'version', 'ram_min', 'ram_max', 'java_args', 'startup_cmd', 'subdomain'].includes(key)) {
         fields.push(`${key} = ?`);
         values.push(value);
       }

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NetherPanel - Admin</title>
+  <meta name="theme-color" content="#030305">
+  <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/style.css?v=11">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="admin-page">
+  <div class="panel-grid-bg"></div>
+  <div class="panel-grain"></div>
+
+  <nav class="top-nav admin-nav">
+    <div class="nav-left">
+      <a href="index.html" class="nav-logo">
+        <svg viewBox="0 0 32 32" fill="none" class="logo-svg">
+          <path d="M16 2L2 9V23L16 30L30 23V9L16 2Z" stroke="url(#ng)" stroke-width="1.5" fill="none"/>
+          <path d="M16 8L8 12V20L16 24L24 20V12L16 8Z" fill="url(#ng)"/>
+          <defs><linearGradient id="ng" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+        </svg>
+        <span>Admin</span>
+      </a>
+      <span class="admin-breadcrumb">System Overview</span>
+    </div>
+    <div class="nav-right">
+      <a href="index.html" class="btn-sm nav-admin-back"><i data-lucide="arrow-left"></i> Panel</a>
+      <div class="user-menu">
+        <button class="user-avatar" id="user-menu-toggle">
+          <div class="avatar-circle" id="user-avatar">?</div>
+          <i data-lucide="chevron-down" class="chevron"></i>
+        </button>
+        <div class="dropdown-menu">
+          <div class="dropdown-header">
+            <div class="avatar-circle large" id="user-avatar-lg">?</div>
+            <div>
+              <div class="dropdown-user-name" id="dropdown-user-name">Loading...</div>
+              <div class="dropdown-user-email" id="dropdown-user-email">-</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="#" class="dropdown-item" id="btn-logout"><i data-lucide="log-out"></i> Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-tabs">
+        <button class="admin-tab active" data-tab="overview"><i data-lucide="layout-dashboard"></i> Overview</button>
+        <button class="admin-tab" data-tab="users"><i data-lucide="users"></i> Users</button>
+        <button class="admin-tab" data-tab="servers"><i data-lucide="server"></i> Servers</button>
+        <button class="admin-tab" data-tab="settings"><i data-lucide="sliders-horizontal"></i> Settings</button>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <section class="admin-section active" id="section-overview">
+        <div class="admin-section-header">
+          <h2>Overview</h2>
+          <p>Panel health and platform statistics</p>
+        </div>
+
+        <div class="stats-row admin-stats" id="admin-stats">
+          <div class="stat-card stagger-1">
+            <div class="stat-icon blue"><i data-lucide="users"></i></div>
+            <div>
+              <div class="stat-value" id="stat-users">0</div>
+              <div class="stat-label">Users</div>
+            </div>
+          </div>
+          <div class="stat-card stagger-2">
+            <div class="stat-icon purple"><i data-lucide="server"></i></div>
+            <div>
+              <div class="stat-value" id="stat-servers">0</div>
+              <div class="stat-label">Servers</div>
+            </div>
+          </div>
+          <div class="stat-card stagger-3">
+            <div class="stat-icon green"><i data-lucide="play-circle"></i></div>
+            <div>
+              <div class="stat-value" id="stat-running">0</div>
+              <div class="stat-label">Running</div>
+            </div>
+          </div>
+          <div class="stat-card stagger-4">
+            <div class="stat-icon red"><i data-lucide="activity"></i></div>
+            <div>
+              <div class="stat-value" id="stat-ram">0 <span class="stat-unit">MB</span></div>
+              <div class="stat-label">RAM Allocated</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-grid-two">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><i data-lucide="server"></i> Servers by Status</h3>
+            </div>
+            <div id="server-status-bars" class="admin-bars"></div>
+          </div>
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3><i data-lucide="file-clock"></i> Recent Activity</h3>
+            </div>
+            <div id="recent-logs" class="admin-log-list"><div class="empty-state"><p>Loading...</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="section-users">
+        <div class="admin-section-header">
+          <h2>Users</h2>
+          <p>Manage accounts, roles and passwords</p>
+          <button class="btn-sm" id="btn-add-user"><i data-lucide="user-plus"></i> Add User</button>
+        </div>
+        <div class="admin-card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Servers</th>
+                <th>Created</th>
+                <th class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-body"><tr><td colspan="6"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-section" id="section-servers">
+        <div class="admin-section-header">
+          <h2>Servers</h2>
+          <p>All servers across all users</p>
+        </div>
+        <div class="admin-card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Owner</th>
+                <th>Type</th>
+                <th>Game</th>
+                <th>RAM</th>
+                <th>Status</th>
+                <th class="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="servers-body"><tr><td colspan="7"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-section" id="section-settings">
+        <div class="admin-section-header">
+          <h2>Settings</h2>
+          <p>Panel-wide configuration</p>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-header"><h3><i data-lucide="server"></i> General</h3></div>
+          <div class="settings-admin">
+            <div class="setting-item">
+              <div>
+                <span>Panel Name</span>
+                <small>The panel name shown in the browser and status page</small>
+              </div>
+              <input type="text" id="set-panel-name" class="form-input" placeholder="NetherPanel">
+            </div>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-header"><h3><i data-lucide="sliders-horizontal"></i> Limits &amp; Quotas</h3></div>
+          <div class="settings-admin">
+            <div class="setting-item">
+              <div>
+                <span>Max Servers Per User</span>
+                <small>Maximum servers a single user may create</small>
+              </div>
+              <input type="number" id="set-max-servers" class="form-input" min="1" placeholder="5">
+            </div>
+            <div class="setting-item">
+              <div>
+                <span>Per-User RAM Quota (MB)</span>
+                <small>Total RAM a user may allocate across servers. 0 = unlimited</small>
+              </div>
+              <input type="number" id="set-ram-user" class="form-input" min="0" step="256" placeholder="0">
+            </div>
+            <div class="setting-item">
+              <div>
+                <span>Max RAM Per Server (MB)</span>
+                <small>Hard limit for any single server. 0 = default</small>
+              </div>
+              <input type="number" id="set-ram-limit" class="form-input" min="0" step="256" placeholder="0">
+            </div>
+            <div class="setting-item">
+              <div>
+                <span>Allow Registrations</span>
+                <small>Whether new users can self-register</small>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="set-allow-reg">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="admin-form-actions">
+            <button class="btn-primary" id="btn-save-settings"><i data-lucide="save"></i> Save Settings</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="user-modal-title">Add User</h2>
+        <button class="modal-close" id="close-user-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="user-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="user-username" class="form-input" placeholder="Username" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="user-email" class="form-input" placeholder="user@example.com">
+          </div>
+          <div class="form-group" id="user-password-group">
+            <label>Password</label>
+            <input type="password" id="user-password" class="form-input" placeholder="Min 8 characters" minlength="8">
+          </div>
+          <label class="checkbox-hold"><input type="checkbox" id="user-admin-role"> Administrator</label>
+          <label class="checkbox-hold"><input type="checkbox" id="user-force-change"> Require password change on next login</label>
+          <div class="admin-form-actions">
+            <button type="submit" class="btn-primary" id="btn-save-user"><i data-lucide="save"></i> Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="password-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Reset Password</h2>
+        <button class="modal-close" id="close-password-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" id="reset-password-input" class="form-input" placeholder="Min 8 characters" minlength="8">
+        </div>
+        <div class="admin-form-actions">
+          <button class="btn-primary" id="btn-reset-password"><i data-lucide="key-round"></i> Reset Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/admin.js?v=1"></script>
+</body>
+</html>

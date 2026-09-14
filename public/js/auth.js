@@ -9,6 +9,7 @@ const NetherAuth = {
     this.initPasswordToggle();
     this.initPasswordStrength();
     this.initFormSubmissions();
+    this.initForceChange();
     this.initLucideIcons();
     this.checkExistingSession();
   },
@@ -125,6 +126,11 @@ const NetherAuth = {
           const data = await NetherAuth.apiCall('/api/auth/login', 'POST', { username, password });
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
+          if (data.user && data.user.must_change_password) {
+            NetherAuth.showForceChange();
+            NetherAuth.showToast('Warning', 'You must change your password before continuing', 'warning');
+            return;
+          }
           NetherAuth.showToast('Success', 'Logged in successfully!', 'success');
           setTimeout(() => { window.location.href = 'index.html'; }, 500);
         } catch (err) {
@@ -177,6 +183,59 @@ const NetherAuth = {
         }
       });
     }
+  },
+
+  showForceChange() {
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const forceChange = document.getElementById('force-change');
+    document.querySelectorAll('.auth-tab').forEach(t => t.style.display = 'none');
+    if (loginForm) loginForm.classList.remove('active');
+    if (registerForm) registerForm.classList.remove('active');
+    if (forceChange) forceChange.style.display = 'flex';
+    lucide.createIcons();
+  },
+
+  initForceChange() {
+    const btn = document.getElementById('fc-submit');
+    if (!btn) return;
+
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const currentPassword = document.getElementById('fc-current').value;
+      const newPassword = document.getElementById('fc-new').value;
+      const confirmPassword = document.getElementById('fc-confirm').value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        NetherAuth.showToast('Error', 'Please fill in all fields', 'error');
+        return;
+      }
+      if (newPassword.length < 8) {
+        NetherAuth.showToast('Error', 'New password must be at least 8 characters', 'error');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        NetherAuth.showToast('Error', 'Passwords do not match', 'error');
+        return;
+      }
+
+      btn.innerHTML = '<span class="spinner spinner-sm"></span> Updating...';
+      btn.disabled = true;
+
+      try {
+        await NetherAuth.apiCall('/api/auth/me/password', 'PUT', { currentPassword, newPassword });
+        let user = {};
+        try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (err) {}
+        user.must_change_password = 0;
+        localStorage.setItem('user', JSON.stringify(user));
+        NetherAuth.showToast('Success', 'Password updated. Redirecting...', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 700);
+      } catch (err) {
+        NetherAuth.showToast('Error', err.message, 'error');
+        btn.innerHTML = 'Change Password';
+        btn.disabled = false;
+      }
+    });
   },
 
   escapeHtml(str) {

@@ -78,6 +78,21 @@ function requireServerAccess(required = []) {
   };
 }
 
+function requireServerOwnerOrAdmin(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  const server = res.locals.server;
+  if (server.user_id === req.user.id) return next();
+  const access = ServerService.getServerAccess(server.id, req.user.id);
+  if (access && (access.role === 'owner' || access.role === 'admin')) {
+    return next();
+  }
+  return res.status(403).json({ error: 'Only the server owner or an administrator can delete this server' });
+}
+
+function projectForViewer(server, viewer) {
+  return ServerService.sanitizeServer(server, viewer.role);
+}
+
 function requireAccessManager(req, res, next) {
   if (req.user.role === 'admin') return next();
   const server = res.locals.server;
@@ -93,7 +108,7 @@ function requireAccessManager(req, res, next) {
 router.get('/', (req, res) => {
   try {
     const servers = ServerService.getUserServers(req.user.id);
-    res.json(servers);
+    res.json(servers.map(s => projectForViewer(s, req.user)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -119,6 +134,15 @@ router.get('/types', (req, res) => {
       powernukkit: { name: 'PowerNukkit', desc: 'Enhanced Nukkit fork with extra features' }
     }
   });
+});
+
+router.get('/templates', (req, res) => {
+  try {
+    const templates = ServerService.getAllTemplates();
+    res.json(templates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/versions', async (req, res) => {
@@ -185,7 +209,7 @@ router.get('/system/info', async (req, res) => {
 
 router.get('/:id', loadServer, requireServerAccess(['view']), (req, res) => {
   try {
-    const server = res.locals.server;
+    const server = projectForViewer(res.locals.server, req.user);
 
     server.is_running = ServerService.isRunning(server.id);
     if (req.user.role === 'admin') {
@@ -209,7 +233,7 @@ router.get('/:id', loadServer, requireServerAccess(['view']), (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, version, server_type, game_type, ram_min, ram_max } = req.body;
+    const { name, version, server_type, game_type, ram_min, ram_max, subdomain, java_args, template_id } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Server name is required' });
@@ -225,12 +249,15 @@ router.post('/', async (req, res) => {
       serverType: server_type,
       gameType: game_type || 'java',
       ramMin: ram_min,
-      ramMax: ram_max
+      ramMax: ram_max,
+      subdomain,
+      javaArgs: java_args,
+      templateId: template_id
     });
 
     NotificationService.notify('server_created', { server, userId: req.user.id });
 
-    res.status(201).json(server);
+    res.status(201).json(projectForViewer(server, req.user));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -241,13 +268,13 @@ router.put('/:id', loadServer, requireServerAccess(['config']), (req, res) => {
     const server = res.locals.server;
 
     const updated = ServerService.updateServer(server.id, req.body);
-    res.json(updated);
+    res.json(projectForViewer(updated, req.user));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-router.delete('/:id', loadServer, requireServerAccess(['config']), (req, res) => {
+router.delete('/:id', loadServer, requireServerOwnerOrAdmin, (req, res) => {
   try {
     const server = res.locals.server;
 

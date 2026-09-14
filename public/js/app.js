@@ -4,7 +4,7 @@ const NetherApp = {
   wizardBackupFile: null,
   selectedGameType: 'java',
   servers: [],
-  panelConfig: { resource_ram_limit: 0, resource_cpu_limit: '' },
+  panelConfig: { resource_ram_limit: 0, resource_cpu_limit: '', ram_per_user: 0, max_servers_per_user: 5 },
 
   JAVA_SOFTWARE: {
     paper: { name: 'Paper', desc: 'High performance, plugin support' },
@@ -24,7 +24,7 @@ const NetherApp = {
     powernukkit: { name: 'PowerNukkit', desc: 'Enhanced Nukkit with extra features' }
   },
 
-  init() {
+  async init() {
     this.token = localStorage.getItem('token');
     this.authToken = this.token;
     this.user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -45,8 +45,55 @@ const NetherApp = {
     this.initSettingsModal();
     this.loadPanelConfig();
     this.updateSoftwareOptions();
+    this.loadTemplates();
     this.loadServers();
     setInterval(() => this.loadServerStats(), 15000);
+  },
+
+  async loadTemplates() {
+    const sel = document.getElementById('quick-start-template');
+    if (!sel) return;
+    try {
+      const res = await fetch('/api/servers/templates', {
+        headers: { 'Authorization': `Bearer ${this.token}` }
+      });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+        return;
+      }
+      const templates = await res.json();
+      if (!Array.isArray(templates) || !templates.length) return;
+      sel.innerHTML = '<option value="">Choose a template (optional)</option>' + templates.map(t =>
+        `<option value="${this.escapeAttr(t.id)}">${this.escapeHtml(t.name)} — ${this.escapeHtml(t.version || 'latest')}</option>`
+      ).join('');
+      sel.addEventListener('change', () => {
+        const tpl = templates.find(t => t.id === parseInt(sel.value, 10));
+        if (tpl) this.applyTemplate(tpl);
+      });
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+    }
+  },
+
+  async applyTemplate(tpl) {
+    const gameType = tpl.game_type === 'bedrock' ? 'bedrock' : 'java';
+    const sw = gameType === 'bedrock' ? this.BEDROCK_SOFTWARE : this.JAVA_SOFTWARE;
+    document.querySelectorAll('input[name="game-type"]').forEach(r => {
+      r.checked = r.value === gameType;
+    });
+    this.selectedGameType = gameType;
+    this.selectedSoftware = sw[tpl.server_type] ? tpl.server_type : Object.keys(sw)[0];
+
+    this.updateSoftwareOptions();
+    await this.updateVersionOptions();
+
+    const sel = document.getElementById('server-version');
+    const ver = tpl.version || 'latest';
+    if (ver !== 'latest' && [...sel.options].some(o => o.value === ver)) {
+      sel.value = ver;
+    }
   },
 
   api(method, url, body) {
@@ -77,6 +124,8 @@ const NetherApp = {
     document.getElementById('dropdown-user-email').textContent = this.user?.email || '-';
     const settingsBtn = document.getElementById('btn-settings');
     if (settingsBtn) settingsBtn.style.display = this.user?.role === 'admin' ? 'flex' : 'none';
+    const adminBtn = document.getElementById('btn-admin');
+    if (adminBtn) adminBtn.style.display = this.user?.role === 'admin' ? 'flex' : 'none';
   },
 
   initLucideIcons() { if (typeof lucide !== 'undefined') lucide.createIcons(); },
@@ -113,14 +162,18 @@ const NetherApp = {
   updateResourceHint() {
     const ram = parseInt(this.panelConfig?.resource_ram_limit, 10) || 0;
     const cpu = String(this.panelConfig?.resource_cpu_limit || '').trim();
+    const perUser = parseInt(this.panelConfig?.ram_per_user, 10) || 0;
+    const maxServers = parseInt(this.panelConfig?.max_servers_per_user, 10) || 5;
     const hint = document.getElementById('resource-limit-hint');
     if (!hint) return;
     const parts = [];
     if (ram > 0) parts.push(`${ram} MB RAM`);
     if (cpu) parts.push(`${cpu} CPU core${cpu === '1' ? '' : 's'}`);
+    if (perUser > 0) parts.push(`${perUser} MB/user`);
+    if (maxServers < 999) parts.push(`${maxServers} servers/user`);
     if (parts.length) {
       hint.style.display = '';
-      hint.textContent = `Global limit: ${parts.join(' · ')} (set in Settings)`;
+      hint.textContent = `Limits: ${parts.join(' · ')} (set in Settings)`;
     } else {
       hint.style.display = 'none';
     }
@@ -186,8 +239,8 @@ const NetherApp = {
       };
       setVal('resource-ram-limit', 'resource_ram_limit', '0');
       setVal('resource-cpu-limit', 'resource_cpu_limit', '');
-      const result = document.getElementById('cf-test-result');
-      if (result) result.textContent = '';
+      setVal('ram-per-user', 'ram_per_user', '0');
+      setVal('max-servers-per-user', 'max_servers_per_user', '5');
       this.loadApiTokens();
     } catch (err) {
       this.showToast('Error', err.message, 'error');
@@ -197,7 +250,9 @@ const NetherApp = {
   collectResourceSettings() {
     return [
       { key: 'resource_ram_limit', value: document.getElementById('resource-ram-limit')?.value?.trim() || '0', category: 'resource' },
-      { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' }
+      { key: 'resource_cpu_limit', value: document.getElementById('resource-cpu-limit')?.value?.trim() || '', category: 'resource' },
+      { key: 'ram_per_user', value: document.getElementById('ram-per-user')?.value?.trim() || '0', category: 'quota' },
+      { key: 'max_servers_per_user', value: document.getElementById('max-servers-per-user')?.value?.trim() || '5', category: 'quota' }
     ];
   },
 
@@ -207,6 +262,8 @@ const NetherApp = {
       await this.api('PUT', '/api/admin/settings', { settings });
       this.panelConfig.resource_ram_limit = settings.find(s => s.key === 'resource_ram_limit').value;
       this.panelConfig.resource_cpu_limit = settings.find(s => s.key === 'resource_cpu_limit').value;
+      this.panelConfig.ram_per_user = settings.find(s => s.key === 'ram_per_user').value;
+      this.panelConfig.max_servers_per_user = settings.find(s => s.key === 'max_servers_per_user').value;
       this.updateResourceHint();
       if (!silent) this.showToast('Saved', 'Settings updated', 'success');
       return true;
@@ -297,9 +354,10 @@ const NetherApp = {
     const grid = document.getElementById('software-grid');
     if (!grid) return;
     const sw = this.selectedGameType === 'bedrock' ? this.BEDROCK_SOFTWARE : this.JAVA_SOFTWARE;
-    grid.innerHTML = Object.entries(sw).map(([key, val], i) => `
+    const current = this.selectedSoftware && sw[this.selectedSoftware] ? this.selectedSoftware : Object.keys(sw)[0];
+    grid.innerHTML = Object.entries(sw).map(([key, val]) => `
       <label class="software-option">
-        <input type="radio" name="software" value="${key}" ${i === 0 ? 'checked' : ''}>
+        <input type="radio" name="software" value="${key}" ${key === current ? 'checked' : ''}>
         <div class="software-card">
           <strong>${val.name}</strong>
           <span>${val.desc}</span>
@@ -312,7 +370,7 @@ const NetherApp = {
         this.updateVersionOptions();
       });
     });
-    this.selectedSoftware = Object.keys(sw)[0];
+    this.selectedSoftware = grid.querySelector('input[name="software"]:checked')?.value || Object.keys(sw)[0];
     this.updateVersionOptions();
   },
 
@@ -530,9 +588,13 @@ const NetherApp = {
   renderServers() {
     const grid = document.getElementById('servers-grid');
     const empty = document.getElementById('empty-state');
+    const running = this.servers.filter(s => s.status === 'running').length;
+    const ramAlloc = this.servers.filter(s => s.status === 'running')
+      .reduce((acc, s) => acc + (parseInt(s.ram_max, 10) || 0), 0);
     document.getElementById('stat-total').textContent = this.servers.length;
-    document.getElementById('stat-running').textContent = this.servers.filter(s => s.status === 'running').length;
+    document.getElementById('stat-running').textContent = running;
     document.getElementById('stat-stopped').textContent = this.servers.filter(s => s.status !== 'running').length;
+    document.getElementById('stat-ram').textContent = ramAlloc ? `${ramAlloc} MB` : '0 MB';
 
     if (!this.servers.length) {
       grid.innerHTML = '';
@@ -544,12 +606,25 @@ const NetherApp = {
     grid.innerHTML = this.servers.map(s => {
       const isRunning = s.status === 'running';
       const addr = s.address || `localhost:${s.port}`;
+      const isShared = s.access_role && s.access_role !== 'owner';
+      const hasPower = this.hasPerm(s, 'power');
+      const hasConfig = this.hasPerm(s, 'config');
+      const ramLabel = (parseInt(s.ram_min, 10) || 0) === (parseInt(s.ram_max, 10) || 0)
+        ? `${s.ram_min || '?'} MB`
+        : `${s.ram_min || '?'}–${s.ram_max || '?'} MB`;
+      const powerBtn = isRunning
+        ? `<button class="action-btn-sm" title="Stop" onclick="NetherApp.serverAction(${s.id}, 'stop')"><i data-lucide="square"></i></button>
+           <button class="action-btn-sm" title="Restart" onclick="NetherApp.serverAction(${s.id}, 'restart')"><i data-lucide="refresh-cw"></i></button>`
+        : `<button class="action-btn-sm" title="Start" onclick="NetherApp.serverAction(${s.id}, 'start')"><i data-lucide="play"></i></button>`;
       return `
       <div class="server-card" data-status="${s.status}" data-server-id="${s.id}">
         <div class="server-card-header">
           <div class="server-info">
-            <h3 class="server-name">${s.name}</h3>
-            <span class="server-version">${s.server_type} ${s.version}</span>
+            <div class="server-title-row">
+              <h3 class="server-name">${this.escapeHtml(s.name)}</h3>
+              ${isShared ? '<span class="server-badge shared" title="Shared with you">Shared</span>' : ''}
+            </div>
+            <span class="server-version">${this.escapeHtml(s.server_type)} ${this.escapeHtml(s.version)} · ${ramLabel}</span>
           </div>
           <div class="server-status ${s.status}">
             <span class="status-dot"></span>
@@ -559,23 +634,27 @@ const NetherApp = {
         <div class="server-card-body">
           <div class="server-players">
             <i data-lucide="globe"></i>
-            <span>${addr}</span>
+            <span>${this.escapeHtml(addr)}</span>
           </div>
           ${isRunning ? '<div class="server-stats" style="display:flex;gap:0.75rem;font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem"></div>' : ''}
         </div>
         <div class="server-card-footer">
           <div class="server-actions">
-            ${isRunning
-              ? `<button class="action-btn-sm" title="Stop" onclick="NetherApp.serverAction(${s.id}, 'stop')"><i data-lucide="square"></i></button>
-                 <button class="action-btn-sm" title="Restart" onclick="NetherApp.serverAction(${s.id}, 'restart')"><i data-lucide="refresh-cw"></i></button>`
-              : `<button class="action-btn-sm" title="Start" onclick="NetherApp.serverAction(${s.id}, 'start')"><i data-lucide="play"></i></button>`}
-            <button class="action-btn-sm danger" title="Delete" data-name="${this.escapeAttr(s.name)}" onclick="NetherApp.deleteServer(${s.id}, this.dataset.name)"><i data-lucide="trash-2"></i></button>
+            ${hasPower ? powerBtn : ''}
+            ${hasConfig ? `<button class="action-btn-sm danger" title="Delete" data-name="${this.escapeAttr(s.name)}" onclick="NetherApp.deleteServer(${s.id}, this.dataset.name)"><i data-lucide="trash-2"></i></button>` : ''}
             <a href="server.html?id=${s.id}" class="action-btn-sm" title="Manage"><i data-lucide="settings"></i></a>
           </div>
         </div>
       </div>`;
     }).join('');
     this.initLucideIcons();
+  },
+
+  hasPerm(server, perm) {
+    if (!server) return false;
+    if (server.access_role === 'owner' || server.access_role === 'admin') return true;
+    const perms = server.access_permissions == null ? [] : String(server.access_permissions).split(',');
+    return perms.includes('all') || perms.includes(perm);
   },
 
   createEmptyState() {

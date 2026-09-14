@@ -318,7 +318,10 @@ async function initDatabase() {
 
   // Migrations - add columns that may not exist
   try { db.db.run('ALTER TABLE servers ADD COLUMN startup_cmd TEXT'); } catch (e) {}
+  try { db.db.run('ALTER TABLE servers ADD COLUMN subdomain TEXT'); } catch (e) {}
   try { db.db.run('ALTER TABLE schedules ADD COLUMN user_id INTEGER'); } catch (e) {}
+  try { db.db.run('ALTER TABLE server_templates ADD COLUMN game_type TEXT DEFAULT \'java\''); } catch (e) {}
+  try { db.db.run('ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0'); } catch (e) {}
 
   // Seed owner access rows for existing servers (first-run migration for server_users)
   db.exec(`
@@ -349,6 +352,27 @@ async function initDatabase() {
   // Remove legacy webhook and Cloudflare/domain settings
   db.prepare("DELETE FROM settings WHERE key IN ('webhook_url', 'webhook_events')").run();
   db.prepare("DELETE FROM settings WHERE key LIKE 'cloudflare_%'").run();
+
+  // Seed default server templates (eggs) on first run
+  const templateCount = db.prepare('SELECT COUNT(*) as count FROM server_templates').get().count;
+  if (templateCount === 0) {
+    const defaultTemplates = [
+      { name: 'Vanilla Minecraft', description: 'Official Mojang server jar', server_type: 'vanilla', version: '1.21.4', game_type: 'java', java_args: '', is_public: 1 },
+      { name: 'Paper', description: 'High-performance fork with plugin support', server_type: 'paper', version: '1.21.4', game_type: 'java', java_args: '-XX:+UseG1GC -XX:MaxGCPauseMillis=200', is_public: 1 },
+      { name: 'Fabric', description: 'Lightweight mod loader', server_type: 'fabric', version: '1.21.4', game_type: 'java', java_args: '', is_public: 1 },
+      { name: 'Forge', description: 'Classic modding platform', server_type: 'forge', version: '1.20.1-47.2.0', game_type: 'java', java_args: '-XX:+UseG1GC', is_public: 1 },
+      { name: 'NeoForge', description: 'Modern Forge fork with active development', server_type: 'neoforge', version: '1.21.0-21.0.167', game_type: 'java', java_args: '-XX:+UseG1GC', is_public: 1 },
+      { name: 'PocketMine-MP', description: 'PHP-based Bedrock server software', server_type: 'pocketmine', version: 'latest', game_type: 'bedrock', java_args: '', is_public: 1 },
+      { name: 'Nukkit', description: 'Java-based Bedrock server software', server_type: 'nukkit', version: 'latest', game_type: 'bedrock', java_args: '', is_public: 1 },
+      { name: 'Bedrock Edition', description: 'Official Bedrock Dedicated Server', server_type: 'bedrock', version: 'latest', game_type: 'bedrock', java_args: '', is_public: 1 }
+    ];
+    const tplInsert = db.prepare(
+      "INSERT INTO server_templates (name, description, server_type, version, game_type, java_args, is_public) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    );
+    for (const tpl of defaultTemplates) {
+      tplInsert.run(tpl.name, tpl.description, tpl.server_type, tpl.version, tpl.game_type, tpl.java_args, tpl.is_public);
+    }
+  }
 
   db.save();
 

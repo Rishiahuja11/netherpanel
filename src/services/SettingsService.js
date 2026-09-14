@@ -5,7 +5,9 @@ let cache = null;
 const DEFAULTS = {
   panel_name: 'NetherPanel',
   resource_ram_limit: '0',
-  resource_cpu_limit: ''
+  resource_cpu_limit: '',
+  ram_per_user: '0',
+  max_servers_per_user: '5'
 };
 
 class SettingsService {
@@ -56,6 +58,14 @@ class SettingsService {
 
   static getCpuLimit() {
     return this.get('resource_cpu_limit', '');
+  }
+
+  static getRamPerUser() {
+    return this.getInt('ram_per_user', 0);
+  }
+
+  static getMaxServersPerUser() {
+    return Math.max(1, this.getInt('max_servers_per_user', 5));
   }
 }
 

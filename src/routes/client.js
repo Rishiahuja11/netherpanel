@@ -24,7 +24,9 @@ router.get('/config', (req, res) => {
     res.json({
       panel_name: db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel',
       resource_ram_limit: SettingsService.getRamLimit(),
-      resource_cpu_limit: SettingsService.getCpuLimit()
+      resource_cpu_limit: SettingsService.getCpuLimit(),
+      ram_per_user: SettingsService.getRamPerUser(),
+      max_servers_per_user: SettingsService.getMaxServersPerUser()
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -51,7 +53,7 @@ router.get('/servers', (req, res) => {
       server.is_running = ServerService.isRunning(server.id);
     });
 
-    res.json(servers);
+    res.json(req.user ? servers.map(s => ServerService.sanitizeServer(s, req.user.role)) : servers);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -70,7 +72,7 @@ router.get('/servers/:id', (req, res) => {
     }
 
     server.is_running = ServerService.isRunning(server.id);
-    res.json(server);
+    res.json(req.user ? ServerService.sanitizeServer(server, req.user.role) : server);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

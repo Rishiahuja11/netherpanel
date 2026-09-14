@@ -8,7 +8,7 @@
   <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=11">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -69,6 +69,26 @@
       </div>
       <button type="submit" class="btn-primary" style="margin-top:0.5rem">Create Account</button>
     </form>
+
+    <div id="force-change" class="auth-form" style="display:none">
+      <div class="force-notice">
+        <i data-lucide="shield-alert"></i>
+        <p>A password change is required before you can continue. Please set a new password below.</p>
+      </div>
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="fc-current" class="form-input" placeholder="Enter current password" required>
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="fc-new" class="form-input" placeholder="Min 8 characters" required minlength="8">
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="fc-confirm" class="form-input" placeholder="Repeat new password" required>
+      </div>
+      <button type="submit" id="fc-submit" class="btn-primary" style="margin-top:0.5rem">Change Password</button>
+    </div>
   </div>
 
   <div class="toast-container" id="toast-container"></div>

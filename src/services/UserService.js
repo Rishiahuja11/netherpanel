@@ -19,7 +19,7 @@ class UserService {
       'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)'
     ).run(username, email, hashedPassword, role);
 
-    const user = db.prepare('SELECT id, username, email, role, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const user = db.prepare('SELECT id, username, email, role, must_change_password, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
     const token = generateToken(user);
 
     this.logActivity(user.id, 'register', 'user', user.id, `User ${username} registered`);
@@ -48,12 +48,12 @@ class UserService {
 
   static getById(id) {
     const db = this.getDb();
-    return db.prepare('SELECT id, username, email, role, avatar, created_at FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, username, email, role, must_change_password, avatar, created_at FROM users WHERE id = ?').get(id);
   }
 
   static getAll() {
     const db = this.getDb();
-    return db.prepare('SELECT id, username, email, role, avatar, created_at FROM users').all();
+    return db.prepare('SELECT id, username, email, role, must_change_password, avatar, created_at FROM users').all();
   }
 
   static update(id, data, allowRoleChange = false) {
@@ -75,6 +75,10 @@ class UserService {
       }
       fields.push('role = ?');
       values.push(data.role);
+    }
+    if (data.must_change_password !== undefined) {
+      fields.push('must_change_password = ?');
+      values.push(data.must_change_password ? 1 : 0);
     }
     if (data.avatar) {
       fields.push('avatar = ?');
@@ -101,7 +105,7 @@ class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    db.prepare('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, id);
+    db.prepare('UPDATE users SET password = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(hashedPassword, id);
 
     this.logActivity(id, 'password_change', 'user', id, 'Password changed');
     return true;

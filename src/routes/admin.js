@@ -71,6 +71,37 @@ router.put('/users/:id', (req, res) => {
   }
 });
 
+router.post('/users', async (req, res) => {
+  try {
+    const { username, email, password, role, must_change_password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    if (typeof username !== 'string' || username.length < 3 || username.length > 32) {
+      return res.status(400).json({ error: 'Username must be 3-32 characters' });
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, dots, underscores and hyphens' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const roleVal = role === 'admin' || role === 'user' ? role : 'user';
+    const { user } = await UserService.register(username, email, password, roleVal);
+    if (must_change_password) {
+      UserService.update(user.id, { must_change_password: 1 }, false);
+    }
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post('/users/:id/reset-password', async (req, res) => {
   try {
     const { newPassword } = req.body;
@@ -109,6 +140,50 @@ router.get('/servers', (req, res) => {
     });
 
     res.json(servers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/servers/:id/start', async (req, res) => {
+  try {
+    const updated = await ServerService.startServer(parseInt(req.params.id), req.user.id);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/servers/:id/stop', async (req, res) => {
+  try {
+    const updated = await ServerService.stopServer(parseInt(req.params.id), req.user.id);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/servers/:id/restart', async (req, res) => {
+  try {
+    const updated = await ServerService.restartServer(parseInt(req.params.id), req.user.id);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/servers/:id', (req, res) => {
+  try {
+    const server = ServerService.deleteServer(parseInt(req.params.id), req.user.id);
+    res.json({ message: 'Server deleted', server });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/templates', (req, res) => {
+  try {
+    res.json(ServerService.getAllTemplates());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
