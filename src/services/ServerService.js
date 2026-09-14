@@ -385,15 +385,29 @@ class ServerService {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
+    // PaperMC sunset api.papermc.io/v2 in favor of the Fill downloads service.
+    // GET {base}/versions/{version}/builds returns a list of builds; pick the
+    // latest STABLE channel and grab its "server:default" download URL.
     return new Promise((resolve, reject) => {
-      const apiUrl = `${apiBase}/versions/${version}/builds/latest`;
-      https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/1.0' } }, (res) => {
+      const apiUrl = `${apiBase.replace(/\/+$/, '')}/versions/${encodeURIComponent(version)}/builds`;
+      https.get(apiUrl, { headers: { 'User-Agent': 'NetherPanel/4.0 (https://github.com/Rishiahuja11/netherpanel)' } }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           try {
-            const build = JSON.parse(data);
-            const dl = build.downloads && build.downloads['server:default'];
+            const parsed = JSON.parse(data);
+            if (parsed && parsed.ok === false) {
+              throw new Error(parsed.message || `No builds available for ${label} ${version}`);
+            }
+            if (!Array.isArray(parsed)) {
+              throw new Error(`Unexpected response from ${label} API for version ${version}`);
+            }
+            const build = parsed.find(b => b.channel === 'STABLE' && b.downloads && b.downloads['server:default'])
+              || parsed.find(b => b.downloads && b.downloads['server:default']);
+            if (!build) {
+              throw new Error(`No download found for ${label} version ${version}`);
+            }
+            const dl = build.downloads['server:default'];
             if (!dl || !dl.url) {
               throw new Error(`No download found for ${label} version ${version}`);
             }
