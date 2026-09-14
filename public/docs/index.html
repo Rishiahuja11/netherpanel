@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetherPanel Docs — Minecraft server panel for Termux</title>
+<meta name="description" content="NetherPanel — a modern Minecraft server management panel for Termux. Full documentation: install, servers, users, admin, configuration and more.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<!-- ======= Navbar ======= -->
+<header class="docs-nav">
+  <div class="docs-nav-inner">
+    <a class="docs-logo" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+        <rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/>
+        <path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/>
+        <path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/>
+      </svg>
+      <span class="docs-logo-name">NetherPanel</span>
+      <span class="docs-logo-tag">Docs</span>
+    </a>
+    <nav class="docs-nav-links">
+      <a href="getting-started.html">Getting Started</a>
+      <a href="installation.html">Install</a>
+      <a href="first-server.html">First Server</a>
+      <a href="configuration.html">Configuration</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <div class="docs-nav-actions">
+      <a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a>
+      <a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a>
+    </div>
+    <button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button>
+  </div>
+</header>
+
+<!-- ======= Hero ======= -->
+<section class="hero">
+  <span class="hero-badge"><i data-lucide="server"></i> v4.0 · Your servers, running right on your phone</span>
+  <h1>A Minecraft control panel,<br><span class="grad">right inside Termux.</span></h1>
+  <p class="sub">Spin up Java and Bedrock Minecraft servers on Android with a clean web dashboard — no Docker, no domain, no cloud. Manage servers, files, backups, plugins, schedules and users from <b>IP:port</b>.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="getting-started.html"><i data-lucide="rocket"></i>Getting Started</a>
+    <a class="btn btn-outline" href="installation.html"><i data-lucide="download"></i>Install Now</a>
+    <a class="btn btn-youtube" href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>Rishiahuja1</a>
+  </div>
+  <p class="hero-meta">MIT licensed · <a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener">github.com/Rishiahuja11/netherpanel</a> · last updated v4.0</p>
+</section>
+
+<!-- ======= YouTube showcase ======= -->
+<section class="yt-showcase">
+  <span class="yt-badge">Featured short · Rishiahuja1</span>
+  <div class="yt-embed" id="yt-embed"></div>
+  <div class="yt-meta">
+    <a class="btn btn-youtube" id="yt-sub-btn" href="#"><i data-lucide="youtube"></i><span>Subscribe</span></a>
+    <p id="yt-subs">171 subscribers · @Rishiahuja1</p>
+    <p>Catch the NetherPanel overview — setup, server creation and tips in one short.</p>
+  </div>
+</section>
+
+<div class="docs-layout">
+
+  <!-- ======= Sidebar ======= -->
+  <aside class="docs-sidebar">
+    <nav class="docs-tree" id="docs-tree">
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Basics</p>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="installation.html">Installation</a>
+        <a href="first-server.html">First Server</a>
+      </div>
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Guides</p>
+        <a href="server-management.html">Server Management</a>
+        <a href="users-permissions.html">Users &amp; Permissions</a>
+        <a href="admin.html">Admin Panel</a>
+        <a href="configuration.html">Configuration</a>
+      </div>
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Reference</p>
+        <a href="troubleshooting.html">Troubleshooting</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ======= Main content ======= -->
+  <main class="docs-content">
+
+    <h2 id="what-is">What is NetherPanel?</h2>
+    <p class="lede">NetherPanel is a self-hosted Minecraft server management panel built for <strong>Termux on Android</strong>. It runs natively in your terminal, manages real server processes, and gives you a full Pterodactyl-style web UI — without Docker or a domain.</p>
+
+    <p>Worlds, configs, plugins and logs live on your device under <code>data/servers/</code>. Every server is reachable at your local IP&nbsp;(e.g. <code>192.168.1.x:25565</code>), and the panel itself at <code>http://localhost:3000</code>.</p>
+
+    <div class="callout success">
+      <i data-lucide="zap"></i>
+      <p><strong>Why so light?</strong> Unlike Pterodactyl, there's no Docker, containers or wings daemon. Java servers spawn as real processes inside a proot-distro Ubuntu container; Bedrock servers run natively. Setup takes about two minutes.</p>
+    </div>
+
+    <h2 id="features">Everything included</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Native Termux</h3>
+        <p>Runs directly in Termux — no Docker, no FQDN, no cloud. Reachable on IP:port out of the box.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Real-time console</h3>
+        <p>xterm.js terminal with live output, history and command input — send server commands instantly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>File manager</h3>
+        <p>Browse, edit, upload and delete server files right in the browser.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Backups</h3>
+        <p>Create, download, and restore full server backups from the web UI.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Mod manager</h3>
+        <p>Search and install plugins/mods from Modrinth, Hangar and Poggit. Loader auto-detected per server.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Crash detection</h3>
+        <p>Automatic crash analysis, reporting and auto-restart for your servers.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Schedules</h3>
+        <p>Cron-style task scheduling — automated commands and power actions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Users &amp; RBAC</h3>
+        <p>Registration, role-based access control, sub-user permissions and API tokens.</p>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon"><strong>›</strong></div>
+        <h3>Monitoring</h3>
+        <p>Memory, CPU and disk usage per server with live resource widgets.</p>
+      </div>
+    </div>
+
+    <h2 id="volumes">Supported software</h2>
+    <div class="docs-table-wrap">
+      <table class="docs-table">
+        <thead>
+          <tr><th>Family</th><th>Software</th><th>How it runs</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Java Edition</strong></td><td>Vanilla, Paper, Spigot, Purpur, Folia, Fabric, Forge, NeoForge, Quilt</td><td>proot-distro Ubuntu + Java 25</td></tr>
+          <tr><td><strong>Bedrock · PHP</strong></td><td>PocketMine-MP</td><td>Prebuilt ARM64 PHP runtime (auto-downloaded)</td></tr>
+          <tr><td><strong>Bedrock · Java</strong></td><td>Nukkit, PowerNukkit</td><td>proot-distro Ubuntu Java</td></tr>
+          <tr><td><strong>Bedrock · Official</strong></td><td>Bedrock Dedicated Server</td><td>x86_64 only — shows a clear hint on ARM</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="start">Ready to jump in?</h2>
+    <div class="quick-links">
+      <a class="quick-link" href="getting-started.html"><i data-lucide="rocket"></i><span>Getting Started<small>The 2-minute overview</small></span></a>
+      <a class="quick-link" href="installation.html"><i data-lucide="download"></i><span>Installation<small>Termux, Linux &amp; Windows</small></span></a>
+      <a class="quick-link" href="first-server.html"><i data-lucide="plus-circle"></i><span>Create a Server<small>Java or Bedrock in a few clicks</small></span></a>
+      <a class="quick-link" href="server-management.html"><i data-lucide="terminal"></i><span>Server Management<small>Console, files, backups, mods, schedules</small></span></a>
+      <a class="quick-link" href="users-permissions.html"><i data-lucide="users"></i><span>Users &amp; Permissions<small>Accounts, roles, API tokens</small></span></a>
+      <a class="quick-link" href="admin.html"><i data-lucide="shield"></i><span>Admin Panel<small>Manage users, servers &amp; settings</small></span></a>
+      <a class="quick-link" href="configuration.html"><i data-lucide="settings"></i><span>Configuration<small>Env vars &amp; database settings</small></span></a>
+      <a class="quick-link" href="showcase.html"><i data-lucide="eye"></i><span>Public Status<small>Share your status page</small></span></a>
+      <a class="quick-link" href="troubleshooting.html"><i data-lucide="bug"></i><span>Troubleshooting<small>Fix the common gotchas</small></span></a>
+      <a class="quick-link" href="faq.html"><i data-lucide="help-circle"></i><span>FAQ<small>Questions people ask</small></span></a>
+    </div>
+
+    <div class="callout warning">
+      <i data-lucide="alert-triangle"></i>
+      <p>Hosting servers on your phone: expect more strain on weak CPUs, and keep the device plugged in when running public servers. LAN play on your local Wi-Fi is what NetherPanel does best.</p>
+    </div>
+
+  </main>
+</div>
+
+<!-- ======= Footer ======= -->
+<footer class="docs-footer">
+  <div class="docs-footer-inner">
+    <p>NetherPanel — MIT License · made by <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener">Rishiahuja1</a></p>
+    <div class="docs-footer-links">
+      <a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a>
+      <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a>
+      <a href="mailto:ahujarishi741@gmail.com"><i data-lucide="mail"></i>ahujarishi741@gmail.com</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ======= Mobile nav overlay ======= -->
+<div class="docs-mobile-nav">
+  <div class="docs-mobile-nav-panel">
+    <button class="close-nav" aria-label="Close menu"><i data-lucide="x"></i></button>
+    <nav class="docs-tree" id="docs-tree">
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Basics</p>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="installation.html">Installation</a>
+        <a href="first-server.html">First Server</a>
+      </div>
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Guides</p>
+        <a href="server-management.html">Server Management</a>
+        <a href="users-permissions.html">Users &amp; Permissions</a>
+        <a href="admin.html">Admin Panel</a>
+        <a href="configuration.html">Configuration</a>
+      </div>
+      <div class="docs-tree-section">
+        <p class="docs-tree-title">Reference</p>
+        <a href="troubleshooting.html">Troubleshooting</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+
+</body>
+</html>

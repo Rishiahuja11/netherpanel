@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Status &amp; Share Pages — NetherPanel Docs</title>
+<meta name="description" content="Show off your servers on the public status page and share individual servers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width="1.4" fill="none"/></svg>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / Public Status</p>
+<h1>Public Status &amp; Share Pages</h1>
+<p class="lede">Show the world what's running — without giving away any login access.</p>
+
+<h2 id="status">The public status page</h2>
+<p>NetherPanel ships two read-only, public pages that need no authentication:</p>
+<ul>
+  <li><strong>/status</strong> — a clean overview of every server, live player counts, MOTD, version and RAM usage.</li>
+  <li><strong>/status/:slug</strong> — raw JSON for one server (great for bots or embed scripts).</li>
+</ul>
+<p>You can use the status page as a public homepage for your hosting setup:</p>
+<div class="docs-table-wrap">
+  <table class="docs-table">
+    <thead><tr><th>URL</th><th>What it shows</th></tr></thead>
+    <tbody>
+      <tr><td><code>http://IP:3000/status</code></td><td>Friendly HTML dashboard for all servers</td></tr>
+      <tr><td><code>http://IP:3000/api/status</code></td><td>JSON for all servers (API)</td></tr>
+      <tr><td><code>http://IP:3000/api/status/my-server</code></td><td>JSON for a single server by slug</td></tr>
+      <tr><td><code>http://IP:3000/s/my-server</code></td><td>Shareable HTML card for a single server</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="share">Sharing a server</h2>
+<p>Every server gets a short share link based on its subdomain/slug. Send it to a friend and they see a live preview card with:</p>
+<ul>
+  <li>Server name, game type, version and MOTD</li>
+  <li>Online player count and max players</li>
+  <li>Ping latency and RAM usage</li>
+  <li>Direct connect address (<code>IP:port</code>)</li>
+</ul>
+
+<h2 id="integrate">Integrating the status JSON</h2>
+<p>Because <code>/api/status</code> is unauthenticated JSON, you can point a bot, dashboard or embed at it:</p>
+<div class="code-block"><div class="code-block-head"><span>json — example</span></div><pre><code>{
+  "panel_name": "NetherPanel",
+  "updated_at": "2026-09-14T12:00:00.000Z",
+  "servers": [
+    {
+      "name": "Survival",
+      "slug": "survival",
+      "status": "running",
+      "address": "192.168.1.42:25565",
+      "online_players": 9,
+      "max_players": 20,
+      "query_latency": 12
+    }
+  ]
+}</code></pre></div>
+
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p>The slugs shown here come from the server's <strong>subdomain</strong> you set at creation time. Pick something short and shareable.</p>
+</div>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel — MIT License · made by <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener">Rishiahuja1</a></p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a><a href="mailto:ahujarishi741@gmail.com"><i data-lucide="mail"></i>ahujarishi741@gmail.com</a></div></div></footer>
+
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav" aria-label="Close menu"><i data-lucide="x"></i></button><nav class="docs-tree" id="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+
+</body>
+</html>

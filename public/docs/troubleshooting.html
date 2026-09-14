@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Troubleshooting — NetherPanel Docs</title>
+<meta name="description" content="Fix common NetherPanel issues: Java, Node, ports, bedrock on ARM and more.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width="1.4" fill="none"/></svg>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / Troubleshooting</p>
+<h1>Troubleshooting</h1>
+<p class="lede">The most common NetherPanel issues, and how to fix them.</p>
+
+<h2 id="java-not-found">Java not found</h2>
+<p>Using Termux, Java servers need the <code>ubuntu</code> proot-distro with Java 25 installed:</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>proot-distro install ubuntu
+proot-distro login ubuntu -- apt update && apt install -y openjdk-25</code></pre></div>
+<p>If the panel itself needs Java on the host (not usually the case):</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>pkg install openjdk-25</code></pre></div>
+
+<h2 id="node-not-found">Node.js not found</h2>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>pkg install nodejs</code></pre></div>
+<p>Then re-run <code>bash setup.sh</code> to install npm dependencies.</p>
+
+<h2 id="port-in-use">Port already in use</h2>
+<p>Set <code>PORT</code> to something free and restart:</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>PORT=8080 npm start</code></pre></div>
+<p>To stop the running panel first: <code>bash stop.sh</code> (or the recorded pid-file stop in <code>start.sh</code>).</p>
+
+<h2 id="bedrock-arm">Bedrock Dedicated Server on ARM devices</h2>
+<p>The official Bedrock Dedicated Server only supports x86_64 CPUs. On ARM phones the panel shows a clear error. Solution: pick <strong>PocketMine-MP</strong> or <strong>Nukkit/PowerNukkit</strong> instead — both run great on devices.</p>
+
+<h2 id="pmmphp">PocketMine needs its PHP runtime</h2>
+<p>PocketMine-MP uses PMMP's prebuilt Android ARM64 PHP runtime, auto-downloaded to <code>data/pmmpphp/</code> on first use. If the download fails (bad network), delete the folder and start the server again.</p>
+
+<h2 id="server-wont-start">Server won't start</h2>
+<ol>
+  <li>Check the <strong>console</strong> tab for the exact error — most failures print a Java exception or a download message.</li>
+  <li>Confirm the software jar downloaded fully (check <code>data/servers/&lt;server&gt;/</code> for a truncated <code>.jar</code> file).</li>
+  <li>Try <strong>Restart</strong>, then <strong>Kill</strong> + <strong>Start</strong> if it's stuck.</li>
+  <li>Watch device memory — a server can silently die on OOM. Reduce RAM allocation.</li>
+</ol>
+
+<h2 id="slow">First boot is slow</h2>
+<p>Normal. The panel downloads the server jar and (for Fabric/Forge) may install loaders. On mobile connections this can take a few minutes. Subsequent boots are fast.</p>
+
+<h2 id="reset-password">Forgot an account password</h2>
+<p>Admins can reset a user's password from the admin dashboard. As the root operator you can also create a fresh admin:</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>node create-admin.js mynewadmin strongpass123</code></pre></div>
+
+<p>Still stuck? Open an <a href="https://github.com/Rishiahuja11/netherpanel/issues" target="_blank" rel="noopener">issue on GitHub</a> or email <a href="mailto:ahujarishi741@gmail.com">ahujarishi741@gmail.com</a>.</p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel — MIT License · made by <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener">Rishiahuja1</a></p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a><a href="mailto:ahujarishi741@gmail.com"><i data-lucide="mail"></i>ahujarishi741@gmail.com</a></div></div></footer>
+
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav" aria-label="Close menu"><i data-lucide="x"></i></button><nav class="docs-tree" id="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+
+</body>
+</html>

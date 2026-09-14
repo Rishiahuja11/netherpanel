@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — NetherPanel Docs</title>
+<meta name="description" content="The NetherPanel admin dashboard: manage users, servers, settings, templates and quotas.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width="1.4" fill="none"/></svg>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / Admin Panel</p>
+<h1>Admin Panel</h1>
+<p class="lede">The admin dashboard (shield icon in the top nav) gives admins full control over users, servers and panel settings — no database queries needed.</p>
+
+<h2 id="access">Accessing the admin panel</h2>
+<ol>
+  <li>Log in as an admin user (the default <code>admin</code> account or any user created with the admin role).</li>
+  <li>A shield icon appears in the top nav bar — click it, or go to <code>/admin.html</code> directly.</li>
+</ol>
+<p>Non-admin users see no shield icon and <code>/admin.html</code> returns 403.</p>
+
+<h2 id="overview">Overview tab</h2>
+<p>The first screen shows live stats: total users, total servers, total admins. No data to read — it updates on every page load from the database.</p>
+
+<h2 id="users">Users tab</h2>
+<p>Full CRUD on user accounts:</p>
+<ul>
+  <li><strong>Add User</strong> — create accounts for friends or teammates; optionally enable <em>must change password</em> so they pick one on first login</li>
+  <li><strong>Edit</strong> — change username or role (user ↔ admin)</li>
+  <li><strong>Reset Password</strong> — set a temporary password</li>
+  <li><strong>Delete</strong> — remove an account (irreversible)</li>
+</ul>
+
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p>To create an admin from the terminal instead: <code>node create-admin.js &lt;user&gt; &lt;pass&gt; [email]</code></p>
+</div>
+
+<h2 id="servers">Servers tab</h2>
+<p>See all servers across all users, with quick-start/stop/restart controls and a one-click delete button. Useful for handling abuse or crashed servers without asking the owner to do it.</p>
+<div class="callout danger">
+  <i data-lucide="alert-octagon"></i>
+  <p>Server deletion is permanent. Files, backups and logs are removed immediately.</p>
+</div>
+
+<h2 id="settings">Settings tab</h2>
+<p>Adjust panel-wide defaults:</p>
+<div class="docs-table-wrap">
+  <table class="docs-table">
+    <thead><tr><th>Setting</th><th>Default</th><th>What it controls</th></tr></thead>
+    <tbody>
+      <tr><td><code>panel_name</code></td><td>NetherPanel</td><td>Name shown in the dashboard header and status pages</td></tr>
+      <tr><td><code>default_ram</code></td><td>1024</td><td>Default RAM (MB) when creating a new server</td></tr>
+      <tr><td><code>default_ram_max</code></td><td>2048</td><td>Max RAM (MB) cap in the server wizard</td></tr>
+      <tr><td><code>registration_enabled</code></td><td>true</td><td>Whether new users can self-register via the login page</td></tr>
+      <tr><td><code>max_servers_per_user</code></td><td>5</td><td>Cap on servers each user can create</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="templates">Egg templates</h2>
+<p>NetherPanel ships with 8 built-in templates covering the most common server types:</p>
+<div class="docs-table-wrap">
+  <table class="docs-table">
+    <thead><tr><th>Template</th><th>Type</th></tr></thead>
+    <tbody>
+      <tr><td>Vanilla</td><td>Java — official Mojang jar</td></tr>
+      <tr><td>Paper</td><td>Java — optimized Spigot fork</td></tr>
+      <tr><td>Fabric</td><td>Java — lightweight mod loader</td></tr>
+      <tr><td>Forge</td><td>Java — popular modding platform</td></tr>
+      <tr><td>NeoForge</td><td>Java — community-driven Forge fork</td></tr>
+      <tr><td>PocketMine-MP</td><td>Bedrock — PHP-based, runs natively on Termux</td></tr>
+      <tr><td>Nukkit (PowerNukkit)</td><td>Bedrock — Java-based, runs via proot</td></tr>
+      <tr><td>Bedrock Dedicated Server</td><td>Bedrock — official Mojang binary (x86_64 only)</td></tr>
+    </tbody>
+  </table>
+</div>
+<p>Templates provide default download URLs, start commands and java arguments. They cannot be edited from the UI but can be extended by adding entries in <code>src/database.js</code>.</p>
+
+<p>Next: <a href="configuration.html">Configuration &amp; environment →</a></p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel — MIT License · made by <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener">Rishiahuja1</a></p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a><a href="mailto:ahujarishi741@gmail.com"><i data-lucide="mail"></i>ahujarishi741@gmail.com</a></div></div></footer>
+
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav" aria-label="Close menu"><i data-lucide="x"></i></button><nav class="docs-tree" id="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+
+</body>
+</html>

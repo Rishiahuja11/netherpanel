@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installation — NetherPanel Docs</title>
+<meta name="description" content="Install NetherPanel on Termux (Android), Linux or Windows.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / Installation</p>
+<h1>Installation</h1>
+<p class="lede">NetherPanel runs natively on Termux (Android). You can also install it on Linux or Windows. Every platform follows the same clone → setup → start flow.</p>
+
+<h2 id="termux">Termux (Android) — recommended</h2>
+
+<h3>1. Install Termux</h3>
+<p>Download from <strong>F-Droid</strong> (recommended) or the <a href="https://github.com/termux/termux-app/releases" target="_blank" rel="noopener">GitHub releases page</a>. Avoid the Play Store build — it is outdated.</p>
+
+<h3>2. Clone and setup</h3>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>pkg update && pkg upgrade -y
+pkg install git -y
+
+git clone https://github.com/Rishiahuja11/netherpanel.git
+cd netherpanel
+bash setup.sh</code></pre></div>
+
+<p>The setup script will install Node.js, proot-distro, the Ubuntu distribution and Java 25 inside it, plus all npm dependencies.</p>
+
+<h3>3. Start</h3>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>bash start.sh</code></pre></div>
+
+<p>Open <code>http://localhost:3000</code> in your phone's browser. Default credentials: <code>admin</code> / <code>admin123</code>.</p>
+
+<h3>proot-distro provisioning (manual)</h3>
+<p>If you ever need to recreate the Ubuntu environment:</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>proot-distro install ubuntu
+proot-distro login ubuntu -- bash -c "apt update && apt install -y openjdk-25"</code></pre></div>
+
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p>Java servers <em>must</em> run inside proot Ubuntu. PocketMine-MP runs natively — no proot needed for Bedrock PHP servers.</p>
+</div>
+
+<h2 id="linux">Linux (Debian/Ubuntu)</h2>
+<p>If your device runs a full Linux distribution (e.g. a VPS or WSL), the same steps work:</p>
+<div class="code-block"><div class="code-block-head"><span>bash</span></div><pre><code>sudo apt update && sudo apt install -y git nodejs npm
+git clone https://github.com/Rishiahuja11/netherpanel.git
+cd netherpanel
+bash setup.sh
+bash start.sh</code></pre></div>
+
+<p>Node.js 18+ is recommended. If you need proot-distro for Java servers, install it separately — the setup script handles this on Termux but not necessarily on desktop Linux.</p>
+
+<h2 id="windows">Windows (WSL)</h2>
+<ol>
+  <li>Enable WSL 2 and install an Ubuntu distribution from the Microsoft Store.</li>
+  <li>Open your WSL terminal and install Node.js: <code>sudo apt install -y nodejs npm</code></li>
+  <li>Clone and run setup as above.</li>
+  <li>The panel is accessible at <code>http://localhost:3000</code> from Windows.</li>
+</ol>
+
+<h2 id="after-install">After install</h2>
+<div class="docs-table-wrap">
+  <table class="docs-table">
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>bash setup.sh</code></td><td>Install all dependencies (idempotent — safe to re-run)</td></tr>
+    <tr><td><code>bash start.sh</code></td><td>Start the panel on port 3000</td></tr>
+    <tr><td><code>node create-admin.js &lt;user&gt; &lt;pass&gt; [email]</code></td><td>Create an admin user</td></tr>
+  </tbody>
+  </table>
+</div>
+
+<div class="callout warning">
+  <i data-lucide="alert-triangle"></i>
+  <p>The <code>admin</code> / <code>admin123</code> account is seeded automatically on first launch. Change the password immediately after logging in.</p>
+</div>
+
+<p>Next step: <a href="first-server.html">Create your first server →</a></p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel — MIT License · made by <a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener">Rishiahuja1</a></p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a><a href="mailto:ahujarishi741@gmail.com"><i data-lucide="mail"></i>ahujarishi741@gmail.com</a></div></div></footer>
+
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav" aria-label="Close menu"><i data-lucide="x"></i></button><nav class="docs-tree" id="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">Guides</p><a href="server-management.html">Server Management</a><a href="users-permissions.html">Users &amp; Permissions</a><a href="admin.html">Admin Panel</a><a href="configuration.html">Configuration</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+
+</body>
+</html>
