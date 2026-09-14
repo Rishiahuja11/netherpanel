@@ -289,6 +289,18 @@ async function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS server_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      server_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT DEFAULT 'member',
+      permissions TEXT DEFAULT 'view',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (server_id, user_id),
+      FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS server_templates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -307,6 +319,12 @@ async function initDatabase() {
   // Migrations - add columns that may not exist
   try { db.db.run('ALTER TABLE servers ADD COLUMN startup_cmd TEXT'); } catch (e) {}
   try { db.db.run('ALTER TABLE schedules ADD COLUMN user_id INTEGER'); } catch (e) {}
+
+  // Seed owner access rows for existing servers (first-run migration for server_users)
+  db.exec(`
+    INSERT OR IGNORE INTO server_users (server_id, user_id, role, permissions)
+    SELECT id, user_id, 'owner', 'all' FROM servers;
+  `);
 
   const defaultSettings = [
     { key: 'panel_name', value: 'NetherPanel', category: 'general' },

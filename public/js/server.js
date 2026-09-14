@@ -62,9 +62,172 @@ const NetherServer = {
           if (emailEl) emailEl.textContent = user.email || '';
         }
       }
+
+      this.applyPermissions(server);
+      this.refreshAccessTab();
     } catch (err) {
       console.error('Failed to load server info:', err);
     }
+  },
+
+  applyPermissions(server) {
+    const role = server.access_role;
+    const perms = Array.isArray(server.access_permissions) ? server.access_permissions : [];
+    const hasAll = role === 'owner' || role === 'admin' || perms.includes('all');
+
+    const can = (p) => hasAll || (role === 'member' && perms.includes(p));
+
+    const tabPerms = { players: 'players', files: 'files', mods: 'mods', logs: 'console', backups: 'backups', stats: 'view', access: 'access', settings: 'config', console: 'console' };
+    document.querySelectorAll('.server-tab').forEach(tab => {
+      const p = tabPerms[tab.dataset.tab];
+      if (can(p)) tab.style.display = ''; else tab.style.display = 'none';
+    });
+
+    document.querySelectorAll('.power-btn').forEach(btn => {
+      btn.style.display = can('power') ? '' : 'none';
+    });
+
+    if (!can('console')) {
+      const ci = document.getElementById('console-input');
+      if (ci) ci.disabled = true;
+    }
+
+
+  },
+
+  async refreshAccessTab() {
+    const role = this.serverData ? this.serverData.access_role : null;
+    const hasAccess = role === 'owner' || role === 'admin' || (Array.isArray(this.serverData && this.serverData.access_permissions) && this.serverData.access_permissions.includes('access'));
+    const tab = document.getElementById('tab-access-nav');
+    if (tab) tab.style.display = hasAccess ? '' : 'none';
+    if (hasAccess) {
+      await this.loadAccessList();
+    }
+  },
+
+  async loadAccessList() {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/access`, {
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to load access list');
+      const users = await res.json();
+      const container = document.getElementById('access-list');
+      if (!container) return;
+
+      if (!users.length) {
+        container.innerHTML = '<div class="mods-empty-state"><i data-lucide="user-plus"></i><p>No users have access</p><span>Grant access to share this server</span></div>';
+        this.refreshIcons();
+        return;
+      }
+
+      container.innerHTML = users.map(u => {
+        const isOwner = u.role === 'owner';
+        const permLabels = [
+          ['console', 'Console'], ['files', 'Files'], ['config', 'Config'],
+          ['power', 'Power'], ['backups', 'Backups'], ['schedules', 'Tasks'],
+          ['mods', 'Mods'], ['players', 'Players'], ['access', 'Access']
+        ];
+        const chips = (isOwner || u.permissions === 'all')
+          ? '<span class="access-chip">All</span>'
+          : String(u.permissions || '').split(',').filter(Boolean)
+            .map(p => `<span class="access-chip">${p}</span>`).join('');
+        return `
+          <div class="access-user">
+            <div class="access-user-avatar">${(u.username || '?').slice(0, 2).toUpperCase()}</div>
+            <div class="access-user-info">
+              <div class="access-user-name">${u.username}${isOwner ? ' <span class="access-owner-tag">Owner</span>' : ''}</div>
+              <div class="access-user-meta">${u.email || ''}</div>
+              <div class="access-user-perms">${chips}</div>
+            </div>
+            ${!isOwner ? `
+            <div class="access-user-actions">
+              <select class="form-select-sm" data-role-select="${u.id}" onchange="NetherServer.updateAccessRole(${u.id}, this.value)">
+                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                <option value="member" ${u.role === 'member' ? 'selected' : ''}>Member</option>
+              </select>
+              ${permLabels.map(([key, label]) => {
+                const granted = u.permissions === 'all' || String(u.permissions || '').split(',').includes(key);
+                return `<label class="perm-toggle"><input type="checkbox" ${granted ? 'checked' : ''} data-perm="${key}" data-user="${u.id}" onchange="NetherServer.updateAccessPerms(${u.id})"><span>${label}</span></label>`;
+              }).join('')}
+              <button class="btn-sm btn-danger" onclick="NetherServer.revokeAccess(${u.id})" title="Revoke access"><i data-lucide="user-x"></i></button>
+            </div>` : ''}
+          </div>`;
+      }).join('');
+      this.refreshIcons();
+    } catch (err) {
+      console.error('Failed to load access list:', err);
+    }
+  },
+
+  async grantAccess() {
+    const username = document.getElementById('access-username').value.trim();
+    if (!username) return this.showToast('Error', 'Enter a username to grant access', 'error');
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/access`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, role: 'member', permissions: ['view', 'console', 'power'] })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to grant access');
+      document.getElementById('access-username').value = '';
+      this.showToast('Access', data.message || 'Access granted', 'success');
+      await this.loadAccessList();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  async updateAccessRole(userId, role) {
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/access/${userId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Update failed');
+      this.showToast('Access', 'Role updated');
+      await this.loadAccessList();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  async updateAccessPerms(userId) {
+    const checkboxes = document.querySelectorAll(`input[data-user="${userId}"]`);
+    const permissions = ['view'];
+    checkboxes.forEach(cb => { if (cb.checked) permissions.push(cb.dataset.perm); });
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/access/${userId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${this.authToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'member', permissions })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Update failed');
+      await this.loadAccessList();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  async revokeAccess(userId) {
+    if (!window.confirm('Revoke this user\'s access?')) return;
+    try {
+      const res = await fetch(`/api/servers/${this.serverId}/access/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${this.authToken}` }
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to revoke');
+      this.showToast('Access', 'Access revoked');
+      await this.loadAccessList();
+    } catch (err) {
+      this.showToast('Error', err.message, 'error');
+    }
+  },
+
+  refreshIcons() {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   },
 
   initLucideIcons() {

@@ -51,6 +51,45 @@ function tokenScopeGuard(req, res, next) {
 
 router.use(tokenScopeGuard);
 
+const SERVER_PERMISSIONS = ['view', 'console', 'files', 'config', 'power', 'backups', 'schedules', 'mods', 'players', 'access'];
+
+function loadServer(req, res, next) {
+  const server = ServerService.getServer(parseInt(req.params.id));
+  if (!server) {
+    return res.status(404).json({ error: 'Server not found' });
+  }
+  res.locals.server = server;
+  next();
+}
+
+function requireServerAccess(required = []) {
+  return (req, res, next) => {
+    if (req.user.role === 'admin') return next();
+    const server = res.locals.server;
+    if (server.user_id === req.user.id) return next();
+    const access = ServerService.getServerAccess(server.id, req.user.id);
+    if (!access) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    if (!ServerService.permissionGranted({ role: access.role, permissions: access.permissions }, required)) {
+      return res.status(403).json({ error: 'You do not have permission to perform this action' });
+    }
+    next();
+  };
+}
+
+function requireAccessManager(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  const server = res.locals.server;
+  const access = server.user_id === req.user.id
+    ? { role: 'owner' }
+    : ServerService.getServerAccess(server.id, req.user.id);
+  if (access && (access.role === 'owner' || access.role === 'admin' || (access.permissions || []).includes('access'))) {
+    return next();
+  }
+  return res.status(403).json({ error: 'Only the server owner, an admin, or a user with the access permission can manage access' });
+}
+
 router.get('/', (req, res) => {
   try {
     const servers = ServerService.getUserServers(req.user.id);
@@ -144,18 +183,24 @@ router.get('/system/info', async (req, res) => {
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', loadServer, requireServerAccess(['view']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     server.is_running = ServerService.isRunning(server.id);
+    if (req.user.role === 'admin') {
+      server.access_role = 'admin';
+      server.access_permissions = ['all'];
+    } else if (server.user_id === req.user.id) {
+      server.access_role = 'owner';
+      server.access_permissions = ['all'];
+    } else {
+      const access = ServerService.getServerAccess(server.id, req.user.id);
+      if (access) {
+        server.access_role = access.role;
+        server.access_permissions = access.permissions;
+      }
+    }
     res.json(server);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -187,16 +232,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', loadServer, requireServerAccess(['config']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const updated = ServerService.updateServer(server.id, req.body);
     res.json(updated);
@@ -205,16 +243,9 @@ router.put('/:id', (req, res) => {
   }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', loadServer, requireServerAccess(['config']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     ServerService.deleteServer(server.id, req.user.id);
     res.json({ message: 'Server deleted' });
@@ -223,16 +254,9 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-router.post('/:id/start', async (req, res) => {
+router.post('/:id/start', loadServer, requireServerAccess(['power']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const updated = await ServerService.startServer(server.id, req.user.id);
     res.json(updated);
@@ -241,16 +265,9 @@ router.post('/:id/start', async (req, res) => {
   }
 });
 
-router.post('/:id/stop', async (req, res) => {
+router.post('/:id/stop', loadServer, requireServerAccess(['power']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const updated = await ServerService.stopServer(server.id, req.user.id);
     res.json(updated);
@@ -259,16 +276,9 @@ router.post('/:id/stop', async (req, res) => {
   }
 });
 
-router.post('/:id/restart', async (req, res) => {
+router.post('/:id/restart', loadServer, requireServerAccess(['power']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const updated = await ServerService.restartServer(server.id, req.user.id);
     res.json(updated);
@@ -277,16 +287,9 @@ router.post('/:id/restart', async (req, res) => {
   }
 });
 
-router.post('/:id/kill', (req, res) => {
+router.post('/:id/kill', loadServer, requireServerAccess(['power']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const updated = ServerService.killServer(server.id, req.user.id);
     res.json(updated);
@@ -295,16 +298,9 @@ router.post('/:id/kill', (req, res) => {
   }
 });
 
-router.get('/:id/console', (req, res) => {
+router.get('/:id/console', loadServer, requireServerAccess(['console']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const consoleOutput = ServerService.getConsole(server.id);
     res.json(consoleOutput);
@@ -313,16 +309,9 @@ router.get('/:id/console', (req, res) => {
   }
 });
 
-router.post('/:id/command', (req, res) => {
+router.post('/:id/command', loadServer, requireServerAccess(['console']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { command } = req.body;
     if (!command) {
@@ -336,16 +325,9 @@ router.post('/:id/command', (req, res) => {
   }
 });
 
-router.get('/:id/files', (req, res) => {
+router.get('/:id/files', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const subPath = req.query.path || '';
     const files = ServerService.getFiles(server.id, subPath);
@@ -355,16 +337,9 @@ router.get('/:id/files', (req, res) => {
   }
 });
 
-router.get('/:id/files/read', (req, res) => {
+router.get('/:id/files/read', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const filePath = req.query.path;
     if (!filePath) {
@@ -378,16 +353,9 @@ router.get('/:id/files/read', (req, res) => {
   }
 });
 
-router.put('/:id/files/write', (req, res) => {
+router.put('/:id/files/write', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { path: filePath, content } = req.body;
     if (!filePath || content === undefined) {
@@ -401,16 +369,9 @@ router.put('/:id/files/write', (req, res) => {
   }
 });
 
-router.delete('/:id/files', (req, res) => {
+router.delete('/:id/files', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const filePath = req.body.path || req.query.path;
     if (!filePath) {
@@ -424,16 +385,9 @@ router.delete('/:id/files', (req, res) => {
   }
 });
 
-router.put('/:id/files/rename', (req, res) => {
+router.put('/:id/files/rename', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { oldPath, newPath } = req.body;
     if (!oldPath || !newPath) {
@@ -447,16 +401,9 @@ router.put('/:id/files/rename', (req, res) => {
   }
 });
 
-router.post('/:id/files/mkdir', (req, res) => {
+router.post('/:id/files/mkdir', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { path: dirPath } = req.body;
     if (!dirPath) {
@@ -470,11 +417,9 @@ router.post('/:id/files/mkdir', (req, res) => {
   }
 });
 
-router.get('/:id/properties', (req, res) => {
+router.get('/:id/properties', loadServer, requireServerAccess(['config']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const fs = require('fs');
     const path = require('path');
@@ -495,11 +440,9 @@ router.get('/:id/properties', (req, res) => {
   }
 });
 
-router.put('/:id/properties', (req, res) => {
+router.put('/:id/properties', loadServer, requireServerAccess(['config']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const fs = require('fs');
     const pathMod = require('path');
@@ -543,16 +486,9 @@ router.put('/:id/properties', (req, res) => {
   }
 });
 
-router.get('/:id/backups', (req, res) => {
+router.get('/:id/backups', loadServer, requireServerAccess(['backups']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const backups = BackupService.listBackups(server.id);
     res.json(backups);
@@ -561,16 +497,9 @@ router.get('/:id/backups', (req, res) => {
   }
 });
 
-router.post('/:id/backups', async (req, res) => {
+router.post('/:id/backups', loadServer, requireServerAccess(['backups']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { name } = req.body;
     const backup = await BackupService.createBackup(server.id, name, req.user.id);
@@ -580,16 +509,9 @@ router.post('/:id/backups', async (req, res) => {
   }
 });
 
-router.delete('/:id/backups/:backupId', (req, res) => {
+router.delete('/:id/backups/:backupId', loadServer, requireServerAccess(['backups']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     BackupService.deleteBackup(parseInt(req.params.backupId), req.user.id, server.id);
     res.json({ message: 'Backup deleted' });
@@ -598,16 +520,9 @@ router.delete('/:id/backups/:backupId', (req, res) => {
   }
 });
 
-router.post('/:id/backups/:backupId/restore', async (req, res) => {
+router.post('/:id/backups/:backupId/restore', loadServer, requireServerAccess(['backups']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const backup = await BackupService.restoreBackup(parseInt(req.params.backupId), req.user.id, server.id);
     res.json({ message: 'Backup restored', backup });
@@ -616,11 +531,9 @@ router.post('/:id/backups/:backupId/restore', async (req, res) => {
   }
 });
 
-router.get('/:id/backups/:backupId/download', (req, res) => {
+router.get('/:id/backups/:backupId/download', loadServer, requireServerAccess(['backups']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const db = getDb();
     const backup = db.prepare('SELECT * FROM backups WHERE id = ? AND server_id = ?').get(parseInt(req.params.backupId), server.id);
@@ -636,11 +549,9 @@ router.get('/:id/backups/:backupId/download', (req, res) => {
   }
 });
 
-router.get('/:id/download', (req, res) => {
+router.get('/:id/download', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const archiver = require('archiver');
     const serverDir = ServerService.getServerDir(server.id);
@@ -662,9 +573,7 @@ router.get('/:id/download', (req, res) => {
 
 router.post('/:id/restore-upload', upload.single('file'), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const AdmZip = require('adm-zip');
@@ -698,9 +607,7 @@ router.post('/:id/restore-upload', upload.single('file'), async (req, res) => {
 
 router.post('/:id/files/upload', upload.array('files', 10), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const subPath = req.body.path || '';
     const serverDir = ServerService.getServerDir(server.id);
@@ -728,11 +635,9 @@ router.post('/:id/files/upload', upload.array('files', 10), (req, res) => {
   }
 });
 
-router.get('/:id/files/download', (req, res) => {
+router.get('/:id/files/download', loadServer, requireServerAccess(['files']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
 
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: 'File path is required' });
@@ -751,16 +656,9 @@ router.get('/:id/files/download', (req, res) => {
   }
 });
 
-router.get('/:id/schedules', (req, res) => {
+router.get('/:id/schedules', loadServer, requireServerAccess(['schedules']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const schedules = ScheduleService.getSchedules(server.id);
     res.json(schedules);
@@ -769,16 +667,9 @@ router.get('/:id/schedules', (req, res) => {
   }
 });
 
-router.post('/:id/schedules', (req, res) => {
+router.post('/:id/schedules', loadServer, requireServerAccess(['schedules']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { name, cron_expression, action, command } = req.body;
 
@@ -801,16 +692,9 @@ router.post('/:id/schedules', (req, res) => {
   }
 });
 
-router.put('/:id/schedules/:scheduleId', (req, res) => {
+router.put('/:id/schedules/:scheduleId', loadServer, requireServerAccess(['schedules']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const schedule = ScheduleService.updateSchedule(parseInt(req.params.scheduleId), req.body, server.id);
     res.json(schedule);
@@ -819,16 +703,9 @@ router.put('/:id/schedules/:scheduleId', (req, res) => {
   }
 });
 
-router.delete('/:id/schedules/:scheduleId', (req, res) => {
+router.delete('/:id/schedules/:scheduleId', loadServer, requireServerAccess(['schedules']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     ScheduleService.deleteSchedule(parseInt(req.params.scheduleId), req.user.id, server.id);
     res.json({ message: 'Schedule deleted' });
@@ -837,16 +714,9 @@ router.delete('/:id/schedules/:scheduleId', (req, res) => {
   }
 });
 
-router.post('/:id/schedules/:scheduleId/run', async (req, res) => {
+router.post('/:id/schedules/:scheduleId/run', loadServer, requireServerAccess(['schedules']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const result = await ScheduleService.runScheduleNow(parseInt(req.params.scheduleId), req.user.id, server.id);
     res.json(result);
@@ -855,16 +725,9 @@ router.post('/:id/schedules/:scheduleId/run', async (req, res) => {
   }
 });
 
-router.get('/:id/mods', (req, res) => {
+router.get('/:id/mods', loadServer, requireServerAccess(['mods']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const mods = ModService.listMods(server.id);
     res.json(mods);
@@ -873,16 +736,9 @@ router.get('/:id/mods', (req, res) => {
   }
 });
 
-router.get('/:id/mods/search', async (req, res) => {
+router.get('/:id/mods/search', loadServer, requireServerAccess(['mods']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { q, limit } = req.query;
     const results = await ModService.searchForServer(q || '', server.server_type, parseInt(limit) || 20);
@@ -892,16 +748,9 @@ router.get('/:id/mods/search', async (req, res) => {
   }
 });
 
-router.post('/:id/mods/install', async (req, res) => {
+router.post('/:id/mods/install', loadServer, requireServerAccess(['mods']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { mod_id, version_id, source, name } = req.body;
     if (!mod_id) {
@@ -915,16 +764,9 @@ router.post('/:id/mods/install', async (req, res) => {
   }
 });
 
-router.delete('/:id/mods/:modId', async (req, res) => {
+router.delete('/:id/mods/:modId', loadServer, requireServerAccess(['mods']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     await ModService.removeMod(parseInt(req.params.modId), req.user.id, server.id);
     res.json({ message: 'Mod removed' });
@@ -933,16 +775,9 @@ router.delete('/:id/mods/:modId', async (req, res) => {
   }
 });
 
-router.put('/:id/mods/:modId/toggle', (req, res) => {
+router.put('/:id/mods/:modId/toggle', loadServer, requireServerAccess(['mods']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { enabled } = req.body;
     const mod = ModService.toggleMod(parseInt(req.params.modId), enabled, req.user.id, server.id);
@@ -952,16 +787,9 @@ router.put('/:id/mods/:modId/toggle', (req, res) => {
   }
 });
 
-router.get('/:id/crashes', (req, res) => {
+router.get('/:id/crashes', loadServer, requireServerAccess(['view']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const crashes = CrashService.getCrashes(server.id);
     res.json(crashes);
@@ -970,16 +798,9 @@ router.get('/:id/crashes', (req, res) => {
   }
 });
 
-router.get('/:id/crashes/:crashId', (req, res) => {
+router.get('/:id/crashes/:crashId', loadServer, requireServerAccess(['view']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const analysis = CrashService.analyzeCrash(parseInt(req.params.crashId), server.id);
     res.json(analysis);
@@ -990,16 +811,9 @@ router.get('/:id/crashes/:crashId', (req, res) => {
 
 // Player Management Routes
 
-router.get('/:id/players/whitelist', async (req, res) => {
+router.get('/:id/players/whitelist', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const whitelist = await PlayerService.getWhitelist(server.id);
     res.json({ players: whitelist });
@@ -1008,16 +822,9 @@ router.get('/:id/players/whitelist', async (req, res) => {
   }
 });
 
-router.post('/:id/players/whitelist', async (req, res) => {
+router.post('/:id/players/whitelist', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name } = req.body;
     const playerName = player_name || player;
@@ -1032,16 +839,9 @@ router.post('/:id/players/whitelist', async (req, res) => {
   }
 });
 
-router.delete('/:id/players/whitelist', async (req, res) => {
+router.delete('/:id/players/whitelist', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name } = req.body;
     const playerName = player_name || player;
@@ -1056,16 +856,9 @@ router.delete('/:id/players/whitelist', async (req, res) => {
   }
 });
 
-router.get('/:id/players/ops', async (req, res) => {
+router.get('/:id/players/ops', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const ops = await PlayerService.getOps(server.id);
     res.json({ ops: ops });
@@ -1074,16 +867,9 @@ router.get('/:id/players/ops', async (req, res) => {
   }
 });
 
-router.post('/:id/players/ops', async (req, res) => {
+router.post('/:id/players/ops', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name, level } = req.body;
     const playerName = player_name || player;
@@ -1098,16 +884,9 @@ router.post('/:id/players/ops', async (req, res) => {
   }
 });
 
-router.delete('/:id/players/ops', async (req, res) => {
+router.delete('/:id/players/ops', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name } = req.body;
     const playerName = player_name || player;
@@ -1122,16 +901,9 @@ router.delete('/:id/players/ops', async (req, res) => {
   }
 });
 
-router.get('/:id/players/bans', async (req, res) => {
+router.get('/:id/players/bans', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const bans = await PlayerService.getBannedPlayers(server.id);
     res.json({ bans: bans });
@@ -1140,16 +912,9 @@ router.get('/:id/players/bans', async (req, res) => {
   }
 });
 
-router.post('/:id/players/bans', async (req, res) => {
+router.post('/:id/players/bans', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name, reason } = req.body;
     const playerName = player_name || player;
@@ -1164,16 +929,9 @@ router.post('/:id/players/bans', async (req, res) => {
   }
 });
 
-router.delete('/:id/players/bans', async (req, res) => {
+router.delete('/:id/players/bans', loadServer, requireServerAccess(['players']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const { player, player_name } = req.body;
     const playerName = player_name || player;
@@ -1188,11 +946,9 @@ router.delete('/:id/players/bans', async (req, res) => {
   }
 });
 
-router.get('/:id/resources', async (req, res) => {
+router.get('/:id/resources', loadServer, requireServerAccess(['view']), async (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) return res.status(404).json({ error: 'Server not found' });
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    const server = res.locals.server;
     
     const resources = await SystemInfoService.getServerResources(server.id);
     res.json(resources);
@@ -1203,16 +959,9 @@ router.get('/:id/resources', async (req, res) => {
 
 // Server Logs Route
 
-router.get('/:id/logs', (req, res) => {
+router.get('/:id/logs', loadServer, requireServerAccess(['console']), (req, res) => {
   try {
-    const server = ServerService.getServer(parseInt(req.params.id));
-    if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
-    }
-
-    if (server.user_id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const server = res.locals.server;
 
     const lines = parseInt(req.query.lines) || 200;
     const content = ServerService.readFile(server.id, 'logs/latest.log');
@@ -1221,6 +970,76 @@ router.get('/:id/logs', (req, res) => {
     res.json({ content: tail, total_lines: allLines.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/access', loadServer, requireAccessManager, (req, res) => {
+  try {
+    res.json(ServerService.getAccessList(res.locals.server.id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/access', loadServer, requireAccessManager, (req, res) => {
+  try {
+    const { username, email, userId, role = 'member', permissions = ['view'] } = req.body;
+    if (!SERVER_PERMISSIONS.length) return res.status(400).json({ error: 'Invalid permissions' });
+
+    const db = getDb();
+    let target = null;
+    if (userId) {
+      target = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
+    } else if (username) {
+      target = db.prepare('SELECT id, username FROM users WHERE LOWER(username) = LOWER(?)').get(username);
+    } else if (email) {
+      target = db.prepare('SELECT id, username FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+    }
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if ((target.id === req.user.id || res.locals.server.user_id === target.id) && role === 'owner') {
+      return res.status(400).json({ error: 'Cannot grant owner role this way' });
+    }
+
+    const validRole = ['owner', 'admin', 'member'].includes(role) ? role : 'member';
+    const validPerms = Array.isArray(permissions)
+      ? permissions.filter(p => SERVER_PERMISSIONS.includes(p))
+      : permissions === 'all' ? ['all'] : String(permissions).split(',').map(p => p.trim()).filter(p => SERVER_PERMISSIONS.includes(p));
+
+    const entry = ServerService.grantAccess(res.locals.server.id, target.id, validRole, validPerms);
+    res.status(201).json({ message: `Access granted to ${target.username}`, entry });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.put('/:id/access/:userId', loadServer, requireAccessManager, (req, res) => {
+  try {
+    const { role, permissions } = req.body;
+    if (role && !['admin', 'member'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be admin or member' });
+    }
+    let validPerms;
+    if (permissions !== undefined) {
+      validPerms = Array.isArray(permissions)
+        ? ['all', ...SERVER_PERMISSIONS].filter(p => permissions.includes(p))
+        : permissions === 'all' ? ['all'] : String(permissions).split(',').map(p => p.trim()).filter(p => SERVER_PERMISSIONS.includes(p));
+    }
+    const entry = ServerService.updateAccess(res.locals.server.id, parseInt(req.params.userId), {
+      role,
+      permissions: validPerms
+    });
+    res.json({ message: 'Access updated', entry });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/:id/access/:userId', loadServer, requireAccessManager, (req, res) => {
+  try {
+    ServerService.revokeAccess(res.locals.server.id, parseInt(req.params.userId));
+    res.json({ message: 'Access revoked' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

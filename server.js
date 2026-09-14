@@ -132,7 +132,7 @@ async function startServer() {
         return socket.emit('error', { error: 'Server not found' });
       }
 
-      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+      if (socket.userRole !== 'admin' && !ServerService.canAccess(serverId, socket.userId, ['console'])) {
         return socket.emit('error', { error: 'Access denied' });
       }
 
@@ -164,7 +164,7 @@ async function startServer() {
         return socket.emit('error', { error: 'Server not found' });
       }
 
-      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+      if (socket.userRole !== 'admin' && !ServerService.canAccess(serverId, socket.userId, ['console'])) {
         return socket.emit('error', { error: 'Access denied' });
       }
 
@@ -186,7 +186,7 @@ async function startServer() {
         return socket.emit('error', { error: 'Server not found' });
       }
 
-      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+      if (socket.userRole !== 'admin' && !ServerService.canAccess(serverId, socket.userId, ['power'])) {
         return socket.emit('error', { error: 'Access denied' });
       }
 
@@ -208,7 +208,7 @@ async function startServer() {
         return socket.emit('error', { error: 'Server not found' });
       }
 
-      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+      if (socket.userRole !== 'admin' && !ServerService.canAccess(serverId, socket.userId, ['power'])) {
         return socket.emit('error', { error: 'Access denied' });
       }
 
@@ -230,7 +230,7 @@ async function startServer() {
         return socket.emit('error', { error: 'Server not found' });
       }
 
-      if (server.user_id !== socket.userId && socket.userRole !== 'admin') {
+      if (socket.userRole !== 'admin' && !ServerService.canAccess(serverId, socket.userId, ['power'])) {
         return socket.emit('error', { error: 'Access denied' });
       }
 

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#030305">
   <script>try{var t=localStorage.getItem('netherpanel_theme');if(t&&t!=='jtg')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -82,6 +82,7 @@
       <button class="server-tab" data-tab="logs"><i data-lucide="scroll-text"></i><span>Logs</span></button>
       <button class="server-tab" data-tab="backups"><i data-lucide="database"></i><span>Backups</span></button>
       <button class="server-tab" data-tab="stats"><i data-lucide="activity"></i><span>Stats</span></button>
+      <button class="server-tab" data-tab="access" style="display:none" id="tab-access-nav"><i data-lucide="user-plus"></i><span>Access</span></button>
       <button class="server-tab" data-tab="settings"><i data-lucide="settings"></i><span>Settings</span></button>
     </div>
   </div>
@@ -373,10 +374,27 @@
         </div>
       </div>
     </div>
+  <!-- Access Tab -->
+    <div class="server-tab-content" id="tab-access">
+      <div class="access-layout">
+        <div class="access-header">
+          <div>
+            <h3>Server Access</h3>
+            <p class="form-hint">Grant other users access to this server with granular permissions.</p>
+          </div>
+        </div>
+        <div class="access-grant">
+          <input type="text" class="form-input" id="access-username" placeholder="Username to grant access..." style="max-width:240px">
+          <button class="btn-primary" style="width:auto;padding:0.5rem 1rem;font-size:0.82rem" onclick="NetherServer.grantAccess()"><i data-lucide="user-plus"></i> Grant Access</button>
+        </div>
+        <div class="access-list" id="access-list"><div class="mods-loading"><div class="spinner"></div><span>Loading...</span></div></div>
+      </div>
+    </div>
+
   </main>
 
   <div class="toast-container" id="toast-container"></div>
   <script src="js/notifications.js?v=1"></script>
-  <script src="js/server.js?v=10"></script>
+  <script src="js/server.js?v=11"></script>
 </body>
 </html>

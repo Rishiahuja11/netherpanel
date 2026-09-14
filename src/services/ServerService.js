@@ -158,6 +158,9 @@ class ServerService {
 
     db.prepare('UPDATE servers SET path = ? WHERE id = ?').run(serverDir, serverId);
 
+    db.prepare("INSERT OR IGNORE INTO server_users (server_id, user_id, role, permissions) VALUES (?, ?, 'owner', 'all')")
+      .run(serverId, userId);
+
     await this.downloadServerSoftware(serverId, serverType, gameType, version, serverDir);
 
     const eulaContent = `eula=true\n`;
@@ -537,7 +540,103 @@ class ServerService {
 
   static getUserServers(userId) {
     const db = this.getDb();
-    return db.prepare('SELECT * FROM servers WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(s => this.enrichServer(s));
+    return db.prepare(`
+      SELECT s.*, su.role AS access_role, su.permissions AS access_permissions
+      FROM servers s
+      LEFT JOIN server_users su ON su.server_id = s.id AND su.user_id = ?
+      WHERE s.user_id = ? OR su.user_id = ?
+      ORDER BY s.created_at DESC
+    `).all(userId, userId, userId).map(s => this.enrichServer(s));
+  }
+
+  static getServerAccess(serverId, userId) {
+    if (userId === undefined || userId === null) return null;
+    const db = this.getDb();
+    const row = db.prepare('SELECT role, permissions FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+    if (!row) return null;
+    return {
+      role: row.role,
+      permissions: String(row.permissions || 'view').split(',').map(p => p.trim()).filter(Boolean)
+    };
+  }
+
+  static permissionGranted(access, required = []) {
+    if (!access) return false;
+    if (access.role === 'owner' || access.role === 'admin') return true;
+    if (access.permissions.includes('all')) return true;
+    return required.every(p => access.permissions.includes(p));
+  }
+
+  static canAccess(serverId, userId, required = []) {
+    const db = this.getDb();
+    const owner = db.prepare('SELECT user_id FROM servers WHERE id = ?').get(serverId);
+    if (!owner) return false;
+    if (owner.user_id === userId) return true;
+    return this.permissionGranted(this.getServerAccess(serverId, userId), required);
+  }
+
+  static getAccessList(serverId) {
+    const db = this.getDb();
+    return db.prepare(`
+      SELECT u.id, u.username, u.email, u.avatar, su.role, su.permissions, su.created_at AS granted_at
+      FROM server_users su
+      JOIN users u ON u.id = su.user_id
+      WHERE su.server_id = ?
+      ORDER BY (su.role = 'owner') DESC, su.created_at ASC
+    `).all(serverId);
+  }
+
+  static grantAccess(serverId, userId, role = 'member', permissions = ['view']) {
+    const db = this.getDb();
+    const server = this.getServer(serverId);
+    if (!server) throw new Error('Server not found');
+    if (!userId) throw new Error('User not found');
+
+    const existing = db.prepare('SELECT id, role FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+    if (existing) {
+      if (existing.role === 'owner') throw new Error('The server owner cannot be modified');
+      db.prepare('UPDATE server_users SET role = ?, permissions = ? WHERE server_id = ? AND user_id = ?')
+        .run(role, this.serializePermissions(permissions), serverId, userId);
+    } else {
+      db.prepare('INSERT INTO server_users (server_id, user_id, role, permissions) VALUES (?, ?, ?, ?)')
+        .run(serverId, userId, role, this.serializePermissions(permissions));
+    }
+    return db.prepare('SELECT * FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+  }
+
+  static updateAccess(serverId, userId, data = {}) {
+    const db = this.getDb();
+    const existing = db.prepare('SELECT role FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+    if (!existing) throw new Error('Access entry not found');
+    if (existing.role === 'owner') throw new Error('The server owner cannot be modified');
+
+    const role = data.role && data.role !== 'owner' ? data.role : existing.role;
+    const permissions = data.permissions !== undefined ? this.serializePermissions(data.permissions) : null;
+    if (permissions !== null) {
+      db.prepare('UPDATE server_users SET role = ?, permissions = ? WHERE server_id = ? AND user_id = ?')
+        .run(role, permissions, serverId, userId);
+    } else {
+      db.prepare('UPDATE server_users SET role = ? WHERE server_id = ? AND user_id = ?').run(role, serverId, userId);
+    }
+    return db.prepare('SELECT * FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+  }
+
+  static revokeAccess(serverId, userId) {
+    const db = this.getDb();
+    const existing = db.prepare('SELECT role FROM server_users WHERE server_id = ? AND user_id = ?').get(serverId, userId);
+    if (!existing) throw new Error('Access entry not found');
+    if (existing.role === 'owner') throw new Error('The server owner cannot be removed');
+    db.prepare('DELETE FROM server_users WHERE server_id = ? AND user_id = ?').run(serverId, userId);
+    return { message: 'Access revoked' };
+  }
+
+  static serializePermissions(permissions) {
+    if (permissions === 'all') return 'all';
+    const list = Array.isArray(permissions) ? permissions : String(permissions || 'view').split(',').map(s => s.trim()).filter(Boolean);
+    const allowed = ['view', 'console', 'files', 'config', 'power', 'backups', 'schedules', 'mods', 'players', 'access'];
+    const unique = [...new Set(list.filter(p => allowed.includes(p)))];
+    if (!unique.length) return 'view';
+    return unique.join(',');
   }
 
   static computeRamLimits(server, globalRam) {

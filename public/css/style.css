@@ -3047,3 +3047,22 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 .share-cell { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.75rem; background: var(--bg-tertiary); border-radius: var(--radius-sm); font-size: 0.8rem; }
 .share-cell span { color: var(--text-faint); font-size: 0.7rem; }
 .share-cell b { color: var(--text-primary); }
+
+/* Access tab */
+.access-layout { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.access-header { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); }
+.access-header h3 { margin: 0 0 0.2rem; font-size: 1.05rem; }
+.access-grant { display: flex; gap: 0.5rem; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.access-list { display: flex; flex-direction: column; }
+.access-user { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.access-user:last-child { border-bottom: none; }
+.access-user-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dim)); display: flex; align-items: center; justify-content: center; font-weight: 600; color: #fff; flex-shrink: 0; }
+.access-user-info { flex: 1; min-width: 160px; }
+.access-user-name { font-weight: 600; font-size: 0.9rem; }
+.access-owner-tag { font-size: 0.68rem; background: var(--primary-dim); color: var(--primary); padding: 0.1rem 0.4rem; border-radius: var(--radius-sm); margin-left: 0.3rem; }
+.access-user-meta { font-size: 0.75rem; color: var(--text-muted); }
+.access-user-perms { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.access-chip { font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-muted); }
+.access-user-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; max-width: 100%; }
+.perm-toggle { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.22rem 0.5rem; }
+.perm-toggle input { accent-color: var(--primary); }
