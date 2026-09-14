@@ -2,10 +2,10 @@ const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.NETHERPANEL_DATA_DIR || path.join(__dirname, '..', 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const DB_PATH = path.join(DATA_DIR, 'netherpanel.db');
+const DB_PATH = process.env.NETHERPANEL_DB || path.join(DATA_DIR, 'netherpanel.db');
 
 let db = null;
 
@@ -336,6 +336,7 @@ async function initDatabase() {
     { key: 'backup_retention_days', value: '30', category: 'backup' },
     { key: 'resource_ram_limit', value: '0', category: 'resource' },
     { key: 'resource_cpu_limit', value: '', category: 'resource' },
+    { key: 'ram_per_user', value: '0', category: 'limits' },
   ];
 
   for (const setting of defaultSettings) {

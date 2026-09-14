@@ -146,11 +146,15 @@ class ServerService {
       throw new Error(`Maximum server limit (${maxServers}) reached`);
     }
 
+    const minRam = parseInt(ramMin, 10);
+    const maxRam = parseInt(ramMax, 10);
+    this.validateResourceLimits(minRam, maxRam, userId, db);
+
     const actualPort = this.allocateRandomPort(gameType);
 
     const result = db.prepare(
       'INSERT INTO servers (user_id, name, slug, version, server_type, game_type, port, ram_min, ram_max, path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(userId, name, slug, version, serverType, gameType, actualPort, ramMin, ramMax, '');
+    ).run(userId, name, slug, version, serverType, gameType, actualPort, minRam, maxRam, '');
 
     const serverId = result.lastInsertRowid;
     const serverDir = this.getServerDir(serverId);
@@ -649,6 +653,64 @@ class ServerService {
     return { max, min };
   }
 
+  static systemRamMb() {
+    return Math.floor(os.totalmem() / 1024 / 1024);
+  }
+
+  static getRunningRam() {
+    const db = this.getDb();
+    return db.prepare("SELECT ram_max FROM servers WHERE status = 'running'").all()
+      .reduce((acc, r) => acc + (parseInt(r.ram_max, 10) || 0), 0);
+  }
+
+  static getUserAllocatedRam(userId) {
+    const db = this.getDb();
+    return db.prepare('SELECT ram_max FROM servers WHERE user_id = ?').all(userId)
+      .reduce((acc, r) => acc + (parseInt(r.ram_max, 10) || 0), 0);
+  }
+
+  static getSettingInt(db, key, fallback = 0) {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+    const parsed = parseInt(row?.value, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  static validateResourceLimits(minRam, maxRam, userId, db) {
+    const sysRam = this.systemRamMb();
+    if (!Number.isFinite(minRam) || minRam < 256) {
+      throw new Error('RAM minimum must be at least 256 MB');
+    }
+    if (!Number.isFinite(maxRam) || maxRam < minRam) {
+      throw new Error('RAM maximum must be greater than or equal to the minimum');
+    }
+    const hardCap = Math.max(512, sysRam - 512);
+    if (maxRam > hardCap) {
+      throw new Error(`RAM maximum (${maxRam} MB) exceeds the device's usable memory (${hardCap} MB)`);
+    }
+
+    const perUserRam = this.getSettingInt(db, 'ram_per_user', 0);
+    if (perUserRam > 0) {
+      if (maxRam > perUserRam) {
+        throw new Error(`RAM maximum (${maxRam} MB) exceeds your per-user quota (${perUserRam} MB)`);
+      }
+      const allocated = this.getUserAllocatedRam(userId) + maxRam;
+      if (allocated > perUserRam) {
+        throw new Error(`Creating this server would use ${allocated} MB, exceeding your RAM quota of ${perUserRam} MB`);
+      }
+    }
+  }
+
+  static assertRamBudget(ramMax) {
+    const globalRam = SettingsService.getRamLimit();
+    const runningRam = this.getRunningRam();
+    const budget = globalRam > 0 ? globalRam : Math.max(1024, this.systemRamMb() - 1024);
+    if (runningRam + ramMax > budget) {
+      throw new Error(
+        `Cannot start server: needs ${ramMax} MB but only ${Math.max(0, budget - runningRam)} MB of the ${budget} MB RAM budget is free`
+      );
+    }
+  }
+
   static buildCpuPrefix(cpuLimit) {
     const raw = String(cpuLimit || '').trim();
     if (!raw) return '';
@@ -702,6 +764,8 @@ class ServerService {
     const globalRam = SettingsService.getRamLimit();
     const cpuPrefix = this.buildCpuPrefix(SettingsService.getCpuLimit());
     const { max: ramMax, min: ramMin } = this.computeRamLimits(server, globalRam);
+
+    this.assertRamBudget(ramMax);
 
     consoleBuffers.set(serverId, []);
 

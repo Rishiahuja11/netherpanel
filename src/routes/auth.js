@@ -3,8 +3,11 @@ const router = express.Router();
 const UserService = require('../services/UserService');
 const SettingsService = require('../services/SettingsService');
 const { authenticateToken } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/security');
 
-router.post('/register', async (req, res) => {
+const authRateLimit = rateLimit({ windowMs: 10 * 60 * 1000, max: 15, message: 'Too many login/registration attempts. Try again later.' });
+
+router.post('/register', authRateLimit, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -12,12 +15,24 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    if (username.length < 3 || username.length > 32) {
+    if (typeof username !== 'string' || username.length < 3 || username.length > 32) {
       return res.status(400).json({ error: 'Username must be 3-32 characters' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, dots, underscores and hyphens' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    if (email !== undefined && email !== null && email !== '' && typeof email === 'string' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    if (email && email.length > 100) {
+      return res.status(400).json({ error: 'Email too long' });
     }
 
     if (!SettingsService.getBool('allow_registrations', true)) {
@@ -31,7 +46,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimit, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -71,8 +86,8 @@ router.put('/me/password', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Current and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
     }
 
     await UserService.changePassword(req.user.id, currentPassword, newPassword);

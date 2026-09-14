@@ -215,6 +215,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Server name is required' });
     }
 
+    if (typeof name !== 'string' || name.length < 3 || name.length > 32) {
+      return res.status(400).json({ error: 'Server name must be 3-32 characters' });
+    }
+
     const server = await ServerService.createServer(req.user.id, {
       name,
       version,

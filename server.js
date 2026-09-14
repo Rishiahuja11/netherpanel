@@ -38,6 +38,9 @@ async function startServer() {
     }
   });
 
+  const { securityHeaders } = require('./src/middleware/security');
+  app.use(securityHeaders());
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
