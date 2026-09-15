@@ -90,7 +90,7 @@ class PlatformService {
     return `cd '${cwd}' && ${command}`;
   }
 
-  static serverSpawnSpec({ serverDir, jarPath, exePath, phpBin, pharName, ramMax, ramMin, cpuLimit, javaArgs = [], kind }) {
+  static serverSpawnSpec({ serverDir, jarPath, exePath, phpBin, pharName, ramMax, ramMin, cpuLimit, javaArgs = [], startupArgs = null, kind }) {
     const affinity = this.cpuAffinityArgs(cpuLimit);
     const proot = this.isProotAvailable();
 
@@ -99,7 +99,9 @@ class PlatformService {
       let inner;
       switch (kind) {
         case 'java':
-          inner = `${prefix}${JAVA_PATH} ${javaArgs.join(' ')} -jar server.jar nogui`;
+          inner = startupArgs
+            ? `${prefix}${JAVA_PATH} ${javaArgs.join(' ')} ${startupArgs.join(' ')}`
+            : `${prefix}${JAVA_PATH} ${javaArgs.join(' ')} -jar server.jar nogui`;
           break;
         case 'bedrock-agent':
           inner = `cd '${serverDir}' && ${exePath}`;
@@ -132,7 +134,7 @@ class PlatformService {
       default:
         return {
           cmd: 'java',
-          args: [...affinity, ...javaArgs, '-jar', 'server.jar', 'nogui'],
+          args: [...affinity, ...javaArgs, ...(startupArgs ? startupArgs : ['-jar', 'server.jar', 'nogui'])],
           cwd: serverDir
         };
     }

@@ -202,7 +202,14 @@ class ServerService {
     db.prepare("INSERT OR IGNORE INTO server_users (server_id, user_id, role, permissions) VALUES (?, ?, 'owner', 'all')")
       .run(serverId, userId);
 
-    await this.downloadServerSoftware(serverId, serverType, gameType, version, serverDir);
+    try {
+      await this.downloadServerSoftware(serverId, serverType, gameType, version, serverDir);
+    } catch (err) {
+      try { fs.rmSync(serverDir, { recursive: true, force: true }); } catch (e) {}
+      db.prepare('DELETE FROM server_users WHERE server_id = ?').run(serverId);
+      db.prepare('DELETE FROM servers WHERE id = ?').run(serverId);
+      throw err;
+    }
 
     const eulaContent = `eula=true\n`;
     fs.writeFileSync(path.join(serverDir, 'eula.txt'), eulaContent);
@@ -247,7 +254,7 @@ class ServerService {
       case 'forge':
         return this.downloadForgeServer(version, serverDir);
       case 'neoforge':
-        return this.downloadNeoForgeServer(version, serverDir);
+        return this.downloadNeoForgeServer(serverId, version, serverDir);
       case 'quilt':
         return this.downloadQuiltServer(version, serverDir);
       case 'spigot':
@@ -282,11 +289,38 @@ class ServerService {
     });
   }
 
+  static async resolveForgeBuild(minecraftVersion) {
+    return new Promise((resolveP, rejectP) => {
+      const fetchPromos = (url) => {
+        https.get(url, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 308) {
+            fetchPromos(res.headers.location);
+            return;
+          }
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            try {
+              const json = JSON.parse(data);
+              const promos = json.promos || {};
+              const build = promos[`${minecraftVersion}-recommended`] || promos[`${minecraftVersion}-latest`];
+              if (!build) return rejectP(new Error(`No Forge build found for Minecraft ${minecraftVersion}`));
+              resolveP(build);
+            } catch (err) { rejectP(err); }
+          });
+        }).on('error', rejectP);
+      };
+      fetchPromos('https://files.minecraftforge.net/maven/net/minecraftforge/forge/promotions_slim.json');
+    });
+  }
+
   static async downloadForgeServer(version, serverDir) {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
-    const installerUrl = `https://maven.minecraftforge.net/net/minecraftforge/forge/${version}-${version}/forge-${version}-${version}-installer.jar`;
+    const forgeBuild = await this.resolveForgeBuild(version);
+    const spec = `${version}-${forgeBuild}`;
+    const installerUrl = `https://maven.minecraftforge.net/net/minecraftforge/forge/${spec}/forge-${spec}-installer.jar`;
     const installerPath = path.join(serverDir, 'forge-installer.jar');
 
     await this.downloadFileTo(installerUrl, installerPath);
@@ -303,7 +337,7 @@ class ServerService {
     return jarPath;
   }
 
-  static async downloadNeoForgeServer(version, serverDir) {
+  static async downloadNeoForgeServer(serverId, version, serverDir) {
     const jarPath = path.join(serverDir, 'server.jar');
     if (fs.existsSync(jarPath)) return jarPath;
 
@@ -316,6 +350,11 @@ class ServerService {
       await PlatformService.runJavaInstaller(serverDir, ['-jar', 'neoforge-installer.jar', '--installServer']);
     } catch (err) {
       throw new Error(`NeoForge installer failed: ${err.message}`);
+    }
+    const argsFile = `libraries/net/neoforged/neoforge/${version}/unix_args.txt`;
+    if (fs.existsSync(path.join(serverDir, argsFile))) {
+      this.getDb().prepare('UPDATE servers SET startup_cmd = ? WHERE id = ?')
+        .run(`@${argsFile}`, serverId);
     }
     const neoJar = fs.readdirSync(serverDir).find(f => f.startsWith('neoforge-') && f.endsWith('.jar') && !f.includes('installer'));
     if (neoJar) {
@@ -339,10 +378,16 @@ class ServerService {
           try {
             const loaders = JSON.parse(data);
             if (!loaders.length) return reject(new Error('No Quilt loader found for ' + version));
-            const latest = loaders[0];
-            const loaderVer = latest.loader.version;
-            const url = `https://meta.quiltmc.org/v3/versions/loader/${version}/${loaderVer}/server/jar`;
-            this.downloadFileTo(url, jarPath).then(() => resolve(jarPath)).catch(reject);
+            const tries = loaders.slice(0, 5);
+            const tryNext = (i) => {
+              if (i >= tries.length) {
+                return reject(new Error(`Quilt has no server build available for Minecraft ${version} yet. Please choose a different Minecraft version.`));
+              }
+              const loaderVer = tries[i].loader.version;
+              const url = `https://meta.quiltmc.org/v3/versions/loader/${version}/${loaderVer}/server/jar`;
+              this.downloadFileTo(url, jarPath).then(() => resolve(jarPath)).catch(() => tryNext(i + 1));
+            };
+            tryNext(0);
           } catch (e) { reject(e); }
         });
       }).on('error', reject);
@@ -768,6 +813,11 @@ class ServerService {
     return String(raw).split(/\s+/).filter(t => /^-[A-Za-z0-9_.:+=%@-]+$/.test(t));
   }
 
+  static sanitizeStartupArgs(raw) {
+    if (!raw) return null;
+    return String(raw).split(/\s+/).filter(t => /^[@\/A-Za-z0-9_.:+=%-]+$/.test(t));
+  }
+
   static async startServer(serverId, userId, opts = {}) {
     const db = this.getDb();
     const server = this.getServer(serverId);
@@ -846,7 +896,8 @@ class ServerService {
       }
     } else {
       const jarPath = path.join(serverDir, 'server.jar');
-      if (!fs.existsSync(jarPath)) {
+      const startupCmd = server.startup_cmd && server.startup_cmd.trim() ? server.startup_cmd.trim() : null;
+      if (!startupCmd && !fs.existsSync(jarPath)) {
         throw new Error('Server jar not found. Please reinstall server.');
       }
       if (!javaPresent()) {
@@ -859,7 +910,8 @@ class ServerService {
         javaArgs = `${javaArgs} -Xmx${ramMax}M -Xms${ramMin}M`.trim();
       }
       const args = this.sanitizeJavaArgs(javaArgs);
-      child = spawnSpec({ serverDir, cpuLimit, kind: 'java', javaArgs: args });
+      const startupArgs = startupCmd ? this.sanitizeStartupArgs(startupCmd) : null;
+      child = spawnSpec({ serverDir, cpuLimit, kind: 'java', javaArgs: args, startupArgs });
     }
 
     serverProcesses.set(serverId, child);
@@ -1005,6 +1057,13 @@ class ServerService {
 
     if (data.java_args !== undefined && !this.validateJavaArgs(data.java_args)) {
       throw new Error('java_args contains invalid characters. Only JVM flags like -Xmx2G, -Dkey=value, -XX:+UseG1GC are allowed.');
+    }
+
+    if (data.startup_cmd !== undefined && data.startup_cmd !== null && data.startup_cmd.trim() !== '') {
+      const cleaned = String(data.startup_cmd).split(/\s+/).filter(t => !/^[@\/A-Za-z0-9_.:+=%-]+$/.test(t));
+      if (cleaned.length > 0) {
+        throw new Error('startup_cmd contains invalid characters. Use only paths, flags and @argfile tokens.');
+      }
     }
 
     const fields = [];
