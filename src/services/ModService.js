@@ -14,7 +14,7 @@ class ModService {
     return getDb();
   }
 
-  static async searchMods(query, limit = 20, index = 'relevance', projectType = null) {
+  static async searchMods(query, limit = 20, index = 'relevance', projectType = null, loaders = null) {
     return new Promise((resolve, reject) => {
       const params = new URLSearchParams({
         query: query || '',
@@ -23,7 +23,9 @@ class ModService {
       });
 
       const facets = [];
-      if (projectType) {
+      if (loaders && loaders.length > 0) {
+        facets.push(loaders.map(l => `loaders:${l}`));
+      } else if (projectType) {
         facets.push([`project_type:${projectType}`]);
       }
 
@@ -148,6 +150,18 @@ class ModService {
   static async searchForServer(query, serverType, limit = 20) {
     const server = { server_type: serverType };
     const source = this.getSearchSourceType(server);
+    const loaders = this.getCompatibleLoaders(server);
+
+    if (['vanilla', 'bedrock'].includes(server.server_type)) {
+      return {
+        hits: [],
+        offset: 0,
+        limit,
+        total_hits: 0,
+        source: 'none',
+        message: 'This server type does not support mods or plugins.'
+      };
+    }
 
     switch (source) {
       case 'hangar':
@@ -155,7 +169,9 @@ class ModService {
       case 'poggit':
         return this.searchPoggit(query, limit);
       default:
-        return this.searchMods(query, limit, 'relevance', this.isPluginServer(server) ? 'plugin' : 'mod');
+        return loaders
+          ? this.searchMods(query, limit, 'relevance', null, loaders)
+          : this.searchMods(query, limit, 'relevance', 'mod');
     }
   }
 
@@ -348,6 +364,10 @@ class ModService {
   }
 
   static async installModrinthMod(server, modId, versionId, userId) {
+    if (!this.isModrinthCompatible(server) && !this.isPluginServer(server)) {
+      throw new Error(`${server.server_type} does not support downloading mods or plugins.`);
+    }
+
     const serverDir = ServerService.getServerDir(server.id);
     const modFolder = this.getModFolder(server);
     const modsDir = path.join(serverDir, modFolder);
@@ -357,14 +377,28 @@ class ModService {
     }
 
     const isPlugin = this.isPluginServer(server);
-    const loader = isPlugin ? null : this.getServerLoader(server);
-    const versions = await this.getModVersions(modId, null, loader);
+    let loader = isPlugin ? null : this.getServerLoader(server);
+    let versions = await this.getModVersions(modId, null, loader);
+
+    if (isPlugin) {
+      const compatible = this.getCompatibleLoaders(server);
+      if (!compatible) {
+        throw new Error('This server type does not support Modrinth plugin downloads.');
+      }
+      let filtered = this.filterVersionsByLoaders(versions, compatible);
+      if (!filtered.length) {
+        const all = await this.getModVersions(modId, null, null);
+        filtered = this.filterVersionsByLoaders(all, compatible);
+      }
+      versions = filtered;
+    }
+
     const version = versionId
       ? versions.find(v => v.id === versionId)
       : versions[0];
 
     if (!version) {
-      throw new Error('No compatible version found');
+      throw new Error(`No version of this plugin is compatible with ${server.server_type}.`);
     }
 
     const primaryFile = version.files.find(f => f.primary) || version.files[0];
@@ -539,6 +573,21 @@ class ModService {
 
   static isPoggitCompatible(server) {
     return ['pocketmine'].includes(server.server_type);
+  }
+
+  static getCompatibleLoaders(server) {
+    if (server.server_type === 'nukkit' || server.server_type === 'powernukkit') {
+      return ['nukkit', 'nukkitx'];
+    }
+    if (['paper', 'spigot', 'purpur', 'folia', 'bukkit'].includes(server.server_type)) {
+      return ['paper', 'spigot', 'purpur', 'folia', 'bukkit'];
+    }
+    return null;
+  }
+
+  static filterVersionsByLoaders(versions, loaders) {
+    const set = new Set(loaders);
+    return versions.filter(v => (v.loaders || []).some(l => set.has(l)));
   }
 
   static getModFolder(server) {
