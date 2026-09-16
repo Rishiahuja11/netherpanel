@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mods &amp; Plugins — NetherPanel Docs</title>
+<meta name="description" content="Install, manage and configure mods and plugins for your Minecraft servers. Supports Modrinth, Hangar and Poggit.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / <a href="#">User Guide</a> / Mods &amp; Plugins</p>
+<h1>Mods &amp; Plugins</h1>
+<p class="lede">Search, install and manage mods (for Forge/Fabric/NeoForge) and plugins (for Paper/Spigot/Purpur/Folia/PocketMine) directly from the panel. NetherPanel pulls from Modrinth, Hangar and Poggit.</p>
+
+<h2 id="overview">Overview</h2>
+<p>NetherPanel integrates with three major plugin/mod repositories:</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<thead><tr><th>Source</th><th>Content</th><th>Server types</th></tr></thead>
+<tbody>
+<tr><td><strong>Hangar</strong></td><td>Paper/Spigot/Purpur/Folia plugins</td><td>Paper, Spigot, Purpur, Folia</td></tr>
+<tr><td><strong>Modrinth</strong></td><td>Mods (Forge, Fabric, NeoForge, Quilt) and plugins</td><td>Forge, Fabric, NeoForge, Quilt, Paper, Spigot, Purpur, Folia</td></tr>
+<tr><td><strong>Poggit</strong></td><td>PocketMine-MP phar plugins</td><td>PocketMine</td></tr>
+</tbody></table></div>
+
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p>Each server type automatically searches its primary source. You can also force a specific source in the install dialog.</p>
+</div>
+
+<h2 id="supported-types">Server Type Compatibility</h2>
+<div class="docs-table-wrap"><table class="docs-table">
+<thead><tr><th>Server type</th><th>Primary source</th><th>Mod/Plugin folder</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><strong>Paper</strong></td><td>Hangar</td><td><code>plugins/</code></td><td>Bukkit plugins; Modrinth also works</td></tr>
+<tr><td><strong>Spigot</strong></td><td>Hangar</td><td><code>plugins/</code></td><td>Bukkit plugins</td></tr>
+<tr><td><strong>Purpur</strong></td><td>Hangar</td><td><code>plugins/</code></td><td>Bukkit plugins (Purpur is Paper-based)</td></tr>
+<tr><td><strong>Folia</strong></td><td>Hangar</td><td><code>plugins/</code></td><td>Threaded plugins; many Paper plugins work</td></tr>
+<tr><td><strong>Forge</strong></td><td>Modrinth</td><td><code>mods/</code></td><td>Forge mods only</td></tr>
+<tr><td><strong>Fabric</strong></td><td>Modrinth</td><td><code>mods/</code></td><td>Fabric mods only</td></tr>
+<tr><td><strong>NeoForge</strong></td><td>Modrinth</td><td><code>mods/</code></td><td>NeoForge mods only</td></tr>
+<tr><td><strong>Quilt</strong></td><td>Modrinth</td><td><code>mods/</code></td><td>Quilt mods (if Quilt server can be provisioned)</td></tr>
+<tr><td><strong>PocketMine</strong></td><td>Poggit</td><td><code>plugins/</code></td><td>Phar plugins (PHP)</td></tr>
+<tr><td><strong>Nukkit</strong></td><td>Modrinth</td><td><code>plugins/</code></td><td>Limited — few Nukkit plugins on Modrinth</td></tr>
+<tr><td><strong>Vanilla</strong></td><td>—</td><td>—</td><td>No plugin/mod support</td></tr>
+<tr><td><strong>Bedrock</strong></td><td>—</td><td>—</td><td>No plugin/mod support</td></tr>
+</tbody></table></div>
+
+<h2 id="searching">Searching for Mods &amp; Plugins</h2>
+<ol>
+  <li>Open your server in the panel and click <strong>Mods &amp; Plugins</strong> in the sidebar.</li>
+  <li>Type a search query (e.g. "EssentialsX", "Spark", "WorldEdit").</li>
+  <li>Results come from the appropriate source for your server type.</li>
+  <li>Click a result to see its description, versions and supported Minecraft versions.</li>
+</ol>
+
+<h2 id="installing">Installing a Mod or Plugin</h2>
+<ol>
+  <li>Find the mod/plugin you want in the search results.</li>
+  <li>Select a version (the panel defaults to the latest compatible version).</li>
+  <li>Click <strong>Install</strong>.</li>
+  <li>The file is downloaded to your server's <code>plugins/</code> or <code>mods/</code> directory.</li>
+  <li>Restart or reload your server to load the new mod/plugin.</li>
+</ol>
+
+<div class="callout warning">
+  <i data-lucide="alert-triangle"></i>
+  <p>Always restart your server after installing or removing mods/plugins. Hot-reloading is not supported by most server software.</p>
+</div>
+
+<h2 id="managing">Managing Installed Mods &amp; Plugins</h2>
+<p>The mods/plugins list shows all installed items with their status:</p>
+<ul>
+  <li><strong>Toggle on/off</strong> — disables a plugin by renaming the file to <code>.disabled</code>. Re-enable to restore it.</li>
+  <li><strong>Remove</strong> — deletes the file from disk and removes the database record.</li>
+  <li><strong>Version info</strong> — shows the installed version number.</li>
+</ul>
+
+<h2 id="loader-filtering">Loader-Aware Downloads</h2>
+<p>NetherPanel automatically filters mod versions by loader. When you install a mod on a Forge server, only Forge-compatible versions are shown. The same applies to Fabric, NeoForge and other loaders.</p>
+
+<p>For plugin servers (Paper, Spigot, etc.), only versions with compatible loaders (<code>paper</code>, <code>spigot</code>, <code>folia</code>, <code>bukkit</code>) are selected. This prevents accidentally installing an incompatible mod version.</p>
+
+<h2 id="source-selection">Forcing a Source</h2>
+<p>By default, each server type uses its primary source. You can override this in the install dialog by selecting a different source:</p>
+<ul>
+  <li><strong>Hangar</strong> — Paper/Spigot plugins hosted on hangar.papermc.io</li>
+  <li><strong>Modrinth</strong> — Mods and plugins from modrinth.com</li>
+  <li><strong>Poggit</strong> — PocketMine plugins from poggit.pmmp.io</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3>No results found</h3>
+<ul>
+  <li>Try a different search query (e.g. "essentials" instead of "essentialsx").</li>
+  <li>Check that your server type supports the source you're searching.</li>
+  <li>Some mods/plugins may have been removed from the repository.</li>
+</ul>
+
+<h3>Install failed</h3>
+<ul>
+  <li>Ensure your server has enough disk space.</li>
+  <li>Check that the version you selected matches your server's Minecraft version.</li>
+  <li>For mod servers, ensure the loader (Forge, Fabric, etc.) matches.</li>
+</ul>
+
+<h3>Mod/plugin not loading after install</h3>
+<ul>
+  <li>Restart your server (stop then start, not just reload).</li>
+  <li>Check the server console for error messages.</li>
+  <li>Verify the mod/plugin version is compatible with your server version.</li>
+  <li>Some plugins require additional dependencies — check the plugin's documentation.</li>
+</ul>
+
+<h2 id="api">API Reference</h2>
+<p>See <a href="api-reference.html#mods">API Reference — Mods &amp; Plugins</a> for the REST API endpoints.</p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel v4.0 &mdash; MIT License</p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a></div></div></footer>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav"><i data-lucide="x"></i></button><nav class="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div><div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+</body>
+</html>

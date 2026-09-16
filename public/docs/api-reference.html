@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Reference — NetherPanel Docs</title>
+<meta name="description" content="Complete REST API reference for NetherPanel. Authenticate, manage servers, mods, files, backups and schedules.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / Reference / API Reference</p>
+<h1>API Reference</h1>
+<p class="lede">NetherPanel provides a REST API for all operations. Authenticate with a JWT token and pass it in the <code>Authorization</code> header.</p>
+
+<h2 id="base">Base URL</h2>
+<div class="code-block"><div class="code-block-head"><span>url</span></div><pre><code>http://localhost:3000/api</code></pre></div>
+<p>All endpoints are prefixed with <code>/api</code>. Responses are JSON.</p>
+
+<h2 id="authentication">Authentication</h2>
+<h3 id="login">POST /api/auth/login</h3>
+<p>Returns a JWT token for API access.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}</code></pre></div>
+<div class="code-block"><div class="code-block-head"><span>response 200</span></div><pre><code>{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "role": "admin"
+  }
+}</code></pre></div>
+
+<h3 id="register">POST /api/auth/register</h3>
+<p>Create a new user account (if registration is enabled).</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>POST /api/auth/register
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "email": "alice@example.com",
+  "password": "securepass123"
+}</code></pre></div>
+
+<h3 id="me">GET /api/auth/me</h3>
+<p>Returns the authenticated user's profile.</p>
+<div class="code-block"><div class="code-block-head"><span>header</span></div><pre><code>Authorization: Bearer &lt;token&gt;</code></pre></div>
+
+<h2 id="servers">Servers</h2>
+
+<h3 id="list-servers">GET /api/servers</h3>
+<p>List all servers the authenticated user has access to.</p>
+<div class="code-block"><div class="code-block-head"><span>response 200</span></div><pre><code>[
+  {
+    "id": 1,
+    "name": "My Server",
+    "server_type": "paper",
+    "version": "26.2",
+    "status": "running",
+    "port": 25565,
+    "ram_min": 512,
+    "ram_max": 1024,
+    "subdomain": "myserver",
+    "address": "myserver:25565"
+  }
+]</code></pre></div>
+
+<h3 id="create-server">POST /api/servers</h3>
+<p>Create a new server. Downloads the server software automatically.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>POST /api/servers
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "name": "My Paper Server",
+  "version": "26.2",
+  "server_type": "paper",
+  "game_type": "java",
+  "ram_min": 512,
+  "ram_max": 1024,
+  "subdomain": "myserver",
+  "java_args": "",
+  "template_id": null
+}</code></pre></div>
+
+<h3 id="get-server">GET /api/servers/:id</h3>
+<p>Get detailed information about a specific server.</p>
+
+<h3 id="update-server">PUT /api/servers/:id</h3>
+<p>Update server settings (name, version, RAM, java_args, startup_cmd, subdomain).</p>
+
+<h3 id="delete-server">DELETE /api/servers/:id</h3>
+<p>Permanently delete a server and all its files. Requires owner or admin role.</p>
+
+<h3 id="start-server">POST /api/servers/:id/start</h3>
+<p>Start the server. Returns <code>{"status": "running"}</code>.</p>
+
+<h3 id="stop-server">POST /api/servers/:id/stop</h3>
+<p>Gracefully stop the server. Returns <code>{"status": "stopped"}</code>.</p>
+
+<h3 id="restart-server">POST /api/servers/:id/restart</h3>
+<p>Restart the server (stop then start).</p>
+
+<h3 id="kill-server">POST /api/servers/:id/kill</h3>
+<p>Force-kill the server process immediately.</p>
+
+<h3 id="console">GET /api/servers/:id/console</h3>
+<p>Returns the last 200 lines of console output.</p>
+<div class="code-block"><div class="code-block-head"><span>response 200</span></div><pre><code>[
+  { "line": "[12:34:56] [Server thread/INFO]: Done (1.234s)!" },
+  { "line": "[12:34:56] [Server thread/INFO]: For help, type 'help'" }
+]</code></pre></div>
+
+<h3 id="send-command">POST /api/servers/:id/command</h3>
+<p>Send a command to the server console.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "command": "say Hello World" }</code></pre></div>
+
+<h3 id="versions">GET /api/servers/versions?software=:type</h3>
+<p>List available versions for a server type. Returns an array of version strings.</p>
+<div class="code-block"><div class="code-block-head"><span>example</span></div><pre><code>GET /api/servers/versions?software=paper
+
+["26.2", "26.1.2", "26.1.1", "26.1", "26.0.2", ...]</code></pre></div>
+
+<h2 id="files">Files</h2>
+
+<h3 id="list-files">GET /api/servers/:id/files?path=</h3>
+<p>List files and directories at the given path (relative to server root). Use empty string for root.</p>
+<div class="code-block"><div class="code-block-head"><span>response 200</span></div><pre><code>[
+  { "name": "server.properties", "isDirectory": false, "size": 1234 },
+  { "name": "world", "isDirectory": true, "size": 0 },
+  { "name": "plugins", "isDirectory": true, "size": 0 }
+]</code></pre></div>
+
+<h3 id="read-file">GET /api/servers/:id/files/read?path=:file</h3>
+<p>Read a file's contents. Max 5MB.</p>
+
+<h3 id="write-file">PUT /api/servers/:id/files/write</h3>
+<p>Write content to a file. Creates parent directories if needed.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "path": "server.properties", "content": "server-port=25565\n..." }</code></pre></div>
+
+<h3 id="delete-file">DELETE /api/servers/:id/files</h3>
+<p>Delete a file or directory.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "path": "old-world" }</code></pre></div>
+
+<h3 id="rename-file">PUT /api/servers/:id/files/rename</h3>
+<p>Rename or move a file.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "oldPath": "old-name.txt", "newPath": "new-name.txt" }</code></pre></div>
+
+<h3 id="mkdir">POST /api/servers/:id/files/mkdir</h3>
+<p>Create a directory.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "path": "new-folder" }</code></pre></div>
+
+<h3 id="upload-file">POST /api/servers/:id/files/upload</h3>
+<p>Upload files via multipart form. Field name: <code>files</code>. Max 10 files per request.</p>
+
+<h3 id="download-file">GET /api/servers/:id/files/download?path=:file</h3>
+<p>Download a file as a binary stream.</p>
+
+<h2 id="mods">Mods &amp; Plugins</h2>
+
+<h3 id="list-mods">GET /api/servers/:id/mods</h3>
+<p>List all installed mods/plugins for a server.</p>
+
+<h3 id="search-mods">GET /api/servers/:id/mods/search?q=:query&amp;limit=20</h3>
+<p>Search for mods/plugins. Source is determined by server type (Hangar, Modrinth, or Poggit).</p>
+<div class="code-block"><div class="code-block-head"><span>response 200</span></div><pre><code>{
+  "source": "hangar",
+  "total_hits": 302,
+  "hits": [
+    {
+      "id": "EssentialsX_Selectors",
+      "title": "EssentialsX_Selectors",
+      "description": "...",
+      "author": "DogLoverPink",
+      "downloads": 12345
+    }
+  ]
+}</code></pre></div>
+
+<h3 id="install-mod">POST /api/servers/:id/mods/install</h3>
+<p>Install a mod/plugin from the repository.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{
+  "mod_id": "EssentialsX_Selectors",
+  "version_id": null,
+  "source": "hangar",
+  "name": "EssentialsX_Selectors"
+}</code></pre></div>
+<p>For Modrinth installs, <code>source</code> is <code>"modrinth"</code> and <code>mod_id</code> is the Modrinth project ID.</p>
+
+<h3 id="remove-mod">DELETE /api/servers/:id/mods/:modId</h3>
+<p>Remove a mod/plugin (deletes file and database record).</p>
+
+<h3 id="toggle-mod">PUT /api/servers/:id/mods/:modId/toggle</h3>
+<p>Enable or disable a mod/plugin by renaming the file to <code>.disabled</code>.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "enabled": false }</code></pre></div>
+
+<h2 id="backups">Backups</h2>
+
+<h3 id="list-backups">GET /api/servers/:id/backups</h3>
+<p>List all backups for a server.</p>
+
+<h3 id="create-backup">POST /api/servers/:id/backups</h3>
+<p>Create a new backup.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{ "name": "pre-update-backup" }</code></pre></div>
+
+<h3 id="restore-backup">POST /api/servers/:id/backups/:backupId/restore</h3>
+<p>Restore a backup. Overwrites all current server files.</p>
+
+<h3 id="delete-backup">DELETE /api/servers/:id/backups/:backupId</h3>
+<p>Delete a backup permanently.</p>
+
+<h3 id="download-backup">GET /api/servers/:id/backups/:backupId/download</h3>
+<p>Download a backup file.</p>
+
+<h2 id="schedules">Schedules</h2>
+
+<h3 id="list-schedules">GET /api/servers/:id/schedules</h3>
+<p>List all schedules for a server.</p>
+
+<h3 id="create-schedule">POST /api/servers/:id/schedules</h3>
+<p>Create a new schedule.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{
+  "name": "Nightly Restart",
+  "cron_expression": "0 3 * * *",
+  "action": "restart",
+  "command": null
+}</code></pre></div>
+<p>Actions: <code>restart</code>, <code>stop</code>, <code>start</code>, <code>backup</code>, <code>command</code>.</p>
+
+<h3 id="update-schedule">PUT /api/servers/:id/schedules/:scheduleId</h3>
+<p>Update a schedule's settings.</p>
+
+<h3 id="delete-schedule">DELETE /api/servers/:id/schedules/:scheduleId</h3>
+<p>Delete a schedule.</p>
+
+<h3 id="run-schedule">POST /api/servers/:id/schedules/:scheduleId/run</h3>
+<p>Manually trigger a schedule immediately.</p>
+
+<h2 id="access">Access Control</h2>
+
+<h3 id="list-access">GET /api/servers/:id/access</h3>
+<p>List all users with access to a server.</p>
+
+<h3 id="grant-access">POST /api/servers/:id/access</h3>
+<p>Grant a user access to a server.</p>
+<div class="code-block"><div class="code-block-head"><span>request</span></div><pre><code>{
+  "userId": 2,
+  "role": "member",
+  "permissions": ["view", "console", "files"]
+}</code></pre></div>
+<p>Roles: <code>owner</code>, <code>admin</code>, <code>member</code>.</p>
+<p>Permissions: <code>view</code>, <code>console</code>, <code>files</code>, <code>config</code>, <code>power</code>, <code>backups</code>, <code>schedules</code>, <code>mods</code>, <code>players</code>, <code>access</code>.</p>
+
+<h3 id="update-access">PUT /api/servers/:id/access/:userId</h3>
+<p>Update a user's role or permissions.</p>
+
+<h3 id="revoke-access">DELETE /api/servers/:id/access/:userId</h3>
+<p>Revoke a user's access to a server.</p>
+
+<h2 id="players">Player Management</h2>
+
+<h3 id="list-whitelist">GET /api/servers/:id/players/whitelist</h3>
+<h3 id="add-whitelist">POST /api/servers/:id/players/whitelist</h3>
+<h3 id="remove-whitelist">DELETE /api/servers/:id/players/whitelist</h3>
+<h3 id="list-ops">GET /api/servers/:id/players/ops</h3>
+<h3 id="add-ops">POST /api/servers/:id/players/ops</h3>
+<h3 id="remove-ops">DELETE /api/servers/:id/players/ops</h3>
+<h3 id="list-bans">GET /api/servers/:id/players/bans</h3>
+<h3 id="add-bans">POST /api/servers/:id/players/bans</h3>
+<h3 id="remove-bans">DELETE /api/servers/:id/players/bans</h3>
+
+<h2 id="admin">Admin Endpoints</h2>
+<p>All admin endpoints require the <code>admin</code> role.</p>
+
+<h3 id="admin-settings">GET /api/admin/settings</h3>
+<p>List all panel settings.</p>
+
+<h3 id="admin-update-settings">PUT /api/admin/settings</h3>
+<p>Update panel settings.</p>
+
+<h3 id="admin-users">GET /api/admin/users</h3>
+<p>List all users.</p>
+
+<h2 id="errors">Error Responses</h2>
+<p>All errors return a JSON object with an <code>error</code> field:</p>
+<div class="code-block"><div class="code-block-head"><span>error response</span></div><pre><code>{
+  "error": "Server not found"
+}</code></pre></div>
+<div class="docs-table-wrap"><table class="docs-table">
+<thead><tr><th>HTTP Status</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>400</code></td><td>Bad request — invalid JSON, missing fields, or validation error</td></tr>
+<tr><td><code>401</code></td><td>Unauthorized — missing or invalid token</td></tr>
+<tr><td><code>403</code></td><td>Forbidden — insufficient permissions</td></tr>
+<tr><td><code>404</code></td><td>Not found — server, file or endpoint doesn't exist</td></tr>
+<tr><td><code>500</code></td><td>Internal server error</td></tr>
+</tbody></table></div>
+
+<h2 id="rate-limits">Rate Limits</h2>
+<p>Authentication endpoints (login, register) are rate-limited to 15 requests per 10-minute window. Other endpoints have no explicit rate limits.</p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel v4.0 &mdash; MIT License</p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a></div></div></footer>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav"><i data-lucide="x"></i></button><nav class="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div><div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+</body>
+</html>

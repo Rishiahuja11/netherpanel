@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Manager — NetherPanel Docs</title>
+<meta name="description" content="Browse, edit, upload and download server files from the NetherPanel web interface.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / <a href="#">User Guide</a> / File Manager</p>
+<h1>File Manager</h1>
+<p class="lede">Browse, edit, upload and download files in your server directory directly from the web interface.</p>
+
+<h2 id="browsing">Browsing Files</h2>
+<p>Click <strong>Files</strong> in the server sidebar to open the file manager. You'll see the server's root directory with all files and folders.</p>
+<ul>
+  <li><strong>Directories</strong> are shown with a folder icon and can be clicked to navigate into them.</li>
+  <li><strong>Files</strong> show their size and last modified date.</li>
+  <li>Use the <strong>breadcrumb</strong> path at the top to navigate back to parent directories.</li>
+</ul>
+
+<h2 id="editing">Editing Files</h2>
+<p>Click any text file (e.g. <code>server.properties</code>, <code>bukkit.yml</code>) to open it in the built-in editor.</p>
+<ul>
+  <li>Make your changes in the text editor.</li>
+  <li>Click <strong>Save</strong> to write the changes back to disk.</li>
+  <li>Max file size for editing: 5MB.</li>
+</ul>
+
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p>Binary files (jars, phars, images) cannot be edited in the web editor. Download them, modify locally, and re-upload.</p>
+</div>
+
+<h2 id="uploading">Uploading Files</h2>
+<ol>
+  <li>Navigate to the directory where you want to upload.</li>
+  <li>Click the <strong>Upload</strong> button.</li>
+  <li>Select one or more files from your device (max 10 files per upload).</li>
+  <li>Files are uploaded to the current directory.</li>
+</ol>
+
+<h2 id="downloading">Downloading Files</h2>
+<ol>
+  <li>Click the <strong>Download</strong> button next to any file.</li>
+  <li>The file downloads to your device's download folder.</li>
+</ol>
+
+<h2 id="creating">Creating Files &amp; Directories</h2>
+<ul>
+  <li><strong>New Directory</strong> — click the <strong>New Folder</strong> button and enter a name.</li>
+  <li><strong>New File</strong> — create a file by writing content in the editor and saving with a new path.</li>
+</ul>
+
+<h2 id="deleting">Deleting Files</h2>
+<p>Select a file or directory and click <strong>Delete</strong>. Confirm the action in the dialog. This permanently removes the file from disk.</p>
+
+<h2 id="renaming">Renaming / Moving</h2>
+<p>Use the rename action to change a file's name or move it to a different directory within the server.</p>
+
+<h2 id="common-files">Common Server Files</h2>
+<div class="docs-table-wrap"><table class="docs-table">
+<thead><tr><th>File</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>server.properties</code></td><td>Main server configuration (port, gamemode, etc.)</td></tr>
+<tr><td><code>bukkit.yml</code></td><td>Paper/Spigot plugin configuration</td></tr>
+<tr><td><code>spigot.yml</code></td><td>Spigot-specific settings</td></tr>
+<tr><td><code>papercfg/paper-global.yml</code></td><td>Paper global configuration</td></tr>
+<tr><td><code>eula.txt</code></td><td>Minecraft EULA acceptance (must be <code>true</code>)</td></tr>
+<tr><td><code>ops.json</code></td><td>Server operators list</td></tr>
+<tr><td><code>whitelist.json</code></td><td>Player whitelist</td></tr>
+<tr><td><code>plugins/</code></td><td>Plugin jar files (Paper/Spigot/PocketMine)</td></tr>
+<tr><td><code>mods/</code></td><td>Mod files (Forge/Fabric/NeoForge)</td></tr>
+<tr><td><code>world/</code></td><td>Default world data</td></tr>
+</tbody></table></div>
+
+<h2 id="api">API Reference</h2>
+<p>See <a href="api-reference.html#files">API Reference — Files</a> for the REST API endpoints.</p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel v4.0 &mdash; MIT License</p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a></div></div></footer>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav"><i data-lucide="x"></i></button><nav class="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div><div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+</body>
+</html>

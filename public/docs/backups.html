@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backups — NetherPanel Docs</title>
+<meta name="description" content="Create, restore and manage server backups in NetherPanel.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / <a href="#">User Guide</a> / Backups</p>
+<h1>Backups</h1>
+<p class="lede">Create point-in-time backups of your server files and restore them when needed. Backups capture your entire server directory including worlds, plugins, configuration and mods.</p>
+
+<h2 id="creating">Creating a Backup</h2>
+<ol>
+  <li>Open your server in the panel.</li>
+  <li>Click <strong>Backups</strong> in the sidebar.</li>
+  <li>Click <strong>Create Backup</strong>.</li>
+  <li>Enter a name for the backup (e.g. "before-update", "world-reset").</li>
+  <li>Click <strong>Create</strong>.</li>
+</ol>
+<p>The backup process runs in the background. A progress indicator shows the status. Large servers may take a few minutes.</p>
+
+<h2 id="listing">Viewing Backups</h2>
+<p>The backups list shows all available backups with:</p>
+<ul>
+  <li><strong>Name</strong> — your descriptive name for the backup.</li>
+  <li><strong>Size</strong> — compressed file size.</li>
+  <li><strong>Created</strong> — timestamp of when the backup was made.</li>
+  <li><strong>Actions</strong> — download, restore or delete.</li>
+</ul>
+
+<h2 id="restoring">Restoring a Backup</h2>
+<div class="callout warning">
+  <i data-lucide="alert-triangle"></i>
+  <p>Restoring a backup <strong>overwrites</strong> all current server files. The server is stopped before restoration and must be started manually afterwards.</p>
+</div>
+<ol>
+  <li>Find the backup you want to restore in the list.</li>
+  <li>Click <strong>Restore</strong>.</li>
+  <li>Confirm the action in the dialog.</li>
+  <li>Wait for the restoration to complete.</li>
+  <li>Start your server.</li>
+</ol>
+
+<h2 id="downloading">Downloading a Backup</h2>
+<p>You can download any backup as a compressed file to your device:</p>
+<ol>
+  <li>Click the <strong>Download</strong> button next to the backup.</li>
+  <li>The file downloads to your device's download folder.</li>
+  <li>Extract with any zip utility (7-Zip, WinRAR, etc.).</li>
+</ol>
+
+<h2 id="retention">Backup Retention</h2>
+<p>The admin can configure how many days backups are kept. After this period, old backups are automatically deleted. The default retention is 30 days.</p>
+<p>Configure this in <strong>Admin → Settings → Backup retention days</strong>.</p>
+
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+  <li><strong>Backup before updates</strong> — always back up before updating server software or mods/plugins.</li>
+  <li><strong>Name descriptively</strong> — use names like "pre-1.21-update" or "clean-world" for easy identification.</li>
+  <li><strong>Download important backups</strong> — keep off-device copies of critical backups.</li>
+  <li><strong>Test restores</strong> — occasionally restore a backup to verify it works.</li>
+  <li><strong>Monitor disk space</strong> — backups consume storage; delete old ones you no longer need.</li>
+</ul>
+
+<h2 id="api">API Reference</h2>
+<p>See <a href="api-reference.html#backups">API Reference — Backups</a> for the REST API endpoints.</p>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel v4.0 &mdash; MIT License</p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a></div></div></footer>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav"><i data-lucide="x"></i></button><nav class="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div><div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+</body>
+</html>

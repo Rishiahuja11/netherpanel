@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Types — NetherPanel Docs</title>
+<meta name="description" content="Supported Minecraft server software and their compatibility with NetherPanel features.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='20' height='20' rx='6' fill='%230a0a0d'/%3E%3Cpath d='M12 4l6 4v8l-6 4-6-4V8l6-4z' fill='none' stroke='%2338bdf8' stroke-width='1.6'/%3E%3Cpath d='M12 12L6 8m6 4l6-4m-6 4v8' stroke='%23a78bfa' stroke-width='1.4' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/docs.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="js/docs.js" defer></script>
+</head>
+<body>
+
+<header class="docs-nav"><div class="docs-nav-inner"><a class="docs-logo" href="index.html"><svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#lg)" opacity=".12"/><path d="M12 3l7 4.5v9L12 21l-7-4.5v-9L12 3z" stroke="url(#lg)" stroke-width="1.6" fill="none"/><path d="M12 12l-7-4.5M12 12l7-4.5M12 12v9" stroke="url(#lg)" stroke-width="1.3" fill="none"/></svg><span class="docs-logo-name">NetherPanel</span><span class="docs-logo-tag">Docs</span></a><nav class="docs-nav-links"><a href="getting-started.html">Getting Started</a><a href="installation.html">Install</a><a href="first-server.html">First Server</a><a href="configuration.html">Configuration</a><a href="faq.html">FAQ</a></nav><div class="docs-nav-actions"><a class="btn btn-outline" href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a class="btn btn-primary" id="btn-open-panel" href="/login.html"><i data-lucide="external-link"></i>Open Panel</a></div><button class="docs-nav-toggle" id="docs-nav-toggle" aria-label="Open menu"><i data-lucide="menu"></i></button></div></header>
+
+<div class="docs-layout">
+<aside class="docs-sidebar"><nav class="docs-tree" id="docs-tree">
+  <div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div>
+  <div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div>
+</nav></aside>
+
+<main class="docs-content">
+<p class="breadcrumb"><a href="index.html">Docs</a> / <a href="#">Admin</a> / Server Types</p>
+<h1>Server Types</h1>
+<p class="lede">NetherPanel supports 13 Minecraft server software variants across Java and Bedrock editions. Each type is tested with the latest available version.</p>
+
+<h2 id="java">Java Edition Servers</h2>
+<p>Java servers run inside proot-distro Ubuntu on Termux. All Java servers require the <code>java</code> binary inside the proot environment.</p>
+
+<h3 id="vanilla">Vanilla</h3>
+<p>The official Minecraft server from Mojang. No mod/plugin support.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>vanilla</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>None</td></tr>
+<tr><td><strong>Download source</strong></td><td>Mojang official</td></tr>
+</tbody></table></div>
+
+<h3 id="paper">Paper</h3>
+<p>High-performance Spigot fork with bug fixes and optimizations. Excellent plugin compatibility.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>paper</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Bukkit plugins via Hangar / Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>PaperMC Fill API v3</td></tr>
+</tbody></table></div>
+
+<h3 id="spigot">Spigot</h3>
+<p>Modified CraftBukkit with performance improvements and plugin API. Downloads the Paper compatibility jar.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>spigot</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Bukkit plugins via Hangar</td></tr>
+<tr><td><strong>Download source</strong></td><td>PaperMC (Spigot-compatible build)</td></tr>
+</tbody></table></div>
+
+<h3 id="purpur">Purpur</h3>
+<p>Paper fork with additional configuration options and gameplay tweaks. Full Paper plugin compatibility.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>purpur</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Bukkit plugins via Hangar</td></tr>
+<tr><td><strong>Download source</strong></td><td>PurpurMC API</td></tr>
+</tbody></table></div>
+
+<h3 id="folia">Folia</h3>
+<p>Paper's multithreaded scheduler. Plugins must be Folia-compatible for full support.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>folia</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Folia/Paper plugins via Hangar / Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>PaperMC Fill API v3</td></tr>
+</tbody></table></div>
+
+<h3 id="forge">Forge</h3>
+<p>The most popular mod loader. Supports thousands of mods for Minecraft.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>forge</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2 (build 65.1.x)</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Forge mods via Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>Minecraft Forge Maven</td></tr>
+</tbody></table></div>
+<p>The panel resolves the correct Forge build number automatically from the <code>promotions_slim.json</code> manifest.</p>
+
+<h3 id="neoforge">NeoForge</h3>
+<p>Community-driven fork of Forge with modernized codebase. Uses a launcher-based startup.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>neoforge</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2.0.88</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>NeoForge mods via Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>NeoForge Maven</td></tr>
+</tbody></table></div>
+<p>NeoForge uses a <code>@unix_args.txt</code> launcher instead of a standalone server jar. NetherPanel handles this automatically via the <code>startup_cmd</code> mechanism.</p>
+
+<h3 id="fabric">Fabric</h3>
+<p>Lightweight, modern mod loader with fast updates for new Minecraft versions.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>fabric</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Fabric mods via Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>Fabric Meta API</td></tr>
+</tbody></table></div>
+
+<h3 id="quilt">Quilt</h3>
+<p>Fork of Fabric with additional features. Server jar availability varies by version.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>quilt</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Java</td></tr>
+<tr><td><strong>Latest version</strong></td><td>26.2</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Quilt mods via Modrinth</td></tr>
+<tr><td><strong>Download source</strong></td><td>Quilt Meta API</td></tr>
+<tr><td><strong>Status</strong></td><td>Server jar may not be available for all versions</td></tr>
+</tbody></table></div>
+
+<h2 id="bedrock">Bedrock Edition Servers</h2>
+
+<h3 id="bedrock-official">Bedrock Dedicated Server (Official)</h3>
+<p>Mojang's official Bedrock server. Only runs on x86_64 — ARM64 devices are blocked with a helpful message.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>bedrock</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Bedrock</td></tr>
+<tr><td><strong>Latest version</strong></td><td>1.26.45</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>None</td></tr>
+<tr><td><strong>Platform</strong></td><td>x86_64 only (ARM64 blocked)</td></tr>
+<tr><td><strong>Download source</strong></td><td>Minecraft official mirror</td></tr>
+</tbody></table></div>
+
+<h3 id="pocketmine">PocketMine-MP</h3>
+<p>PHP-based Bedrock server with plugin support. Runs natively on Termux (no proot needed).</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>pocketmine</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Bedrock</td></tr>
+<tr><td><strong>Latest version</strong></td><td>latest (auto-updating)</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Phar plugins via Poggit</td></tr>
+<tr><td><strong>Download source</strong></td><td>PocketMine GitHub + PHP binaries</td></tr>
+</tbody></table></div>
+
+<h3 id="nukkit">Nukkit (PowerNukkitX)</h3>
+<p>Java-based Bedrock server. NetherPanel installs PowerNukkitX, a maintained fork.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>nukkit</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Bedrock</td></tr>
+<tr><td><strong>Latest version</strong></td><td>3.0.4</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>Limited (Modrinth has few Nukkit plugins)</td></tr>
+<tr><td><strong>Download source</strong></td><td>CloudburstMC / PowerNukkitX</td></tr>
+</tbody></table></div>
+
+<h3 id="powernukkit">PowerNukkit (Legacy)</h3>
+<p>Legacy Nukkit fork with world-encoding fixes. Requires interactive language selection on first run.</p>
+<div class="docs-table-wrap"><table class="docs-table">
+<tbody>
+<tr><td><strong>Type</strong></td><td><code>powernukkit</code></td></tr>
+<tr><td><strong>Game</strong></td><td>Bedrock</td></tr>
+<tr><td><strong>Latest version</strong></td><td>v1.5.2.1-PN</td></tr>
+<tr><td><strong>Mods/Plugins</strong></td><td>None (interactive wizard blocks headless use)</td></tr>
+<tr><td><strong>Status</strong></td><td>Use <code>nukkit</code> type instead (PowerNukkitX)</td></tr>
+</tbody></table></div>
+
+<h2 id="feature-matrix">Feature Matrix</h2>
+<div class="docs-table-wrap"><table class="docs-table">
+<thead><tr><th>Feature</th><th>Java (Paper/Folia/Spigot/Purpur)</th><th>Java (Forge/Fabric/NeoForge)</th><th>Bedrock (PocketMine/Nukkit)</th></tr></thead>
+<tbody>
+<tr><td>Create &amp; start</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Console</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>File manager</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Mods / Plugins</td><td>Hangar + Modrinth</td><td>Modrinth</td><td>Poggit (PocketMine) / Modrinth (Nukkit)</td></tr>
+<tr><td>Backups</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Schedules</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Sub-users</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Config editor</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+</tbody></table></div>
+
+<h2 id="choosing">Choosing a Server Type</h2>
+<div class="callout info">
+  <i data-lucide="info"></i>
+  <p><strong>Not sure which to pick?</strong> Paper is the best all-around choice for most Java servers. It has excellent performance, plugin support, and is the most widely tested. For modded gameplay, choose Forge or Fabric based on the mods you want.</p>
+</div>
+<ul>
+  <li><strong>Vanilla</strong> — vanilla gameplay, no plugins, simplest setup</li>
+  <li><strong>Paper</strong> — best performance + plugin support (recommended for most users)</li>
+  <li><strong>Spigot</strong> — classic plugin server, slightly older than Paper</li>
+  <li><strong>Purpur</strong> — Paper + extra configuration options</li>
+  <li><strong>Folia</strong> — multithreaded, for advanced plugin developers</li>
+  <li><strong>Forge</strong> — largest mod ecosystem</li>
+  <li><strong>Fabric</strong> — lightweight, fast updates for new Minecraft versions</li>
+  <li><strong>NeoForge</strong> — modern Forge fork with active development</li>
+  <li><strong>PocketMine</strong> — Bedrock plugins (PHP-based)</li>
+  <li><strong>Nukkit</strong> — Bedrock plugins (Java-based, PowerNukkitX)</li>
+</ul>
+
+</main>
+</div>
+
+<footer class="docs-footer"><div class="docs-footer-inner"><p>NetherPanel v4.0 &mdash; MIT License</p><div class="docs-footer-links"><a href="https://github.com/Rishiahuja11/netherpanel" target="_blank" rel="noopener"><i data-lucide="github"></i>GitHub</a><a href="https://www.youtube.com/@Rishiahuja1" target="_blank" rel="noopener"><i data-lucide="youtube"></i>YouTube</a></div></div></footer>
+<button class="to-top" aria-label="Back to top"><i data-lucide="arrow-up"></i></button>
+<div class="docs-mobile-nav"><div class="docs-mobile-nav-panel"><button class="close-nav"><i data-lucide="x"></i></button><nav class="docs-tree"><div class="docs-tree-section"><p class="docs-tree-title">Basics</p><a href="getting-started.html">Getting Started</a><a href="installation.html">Installation</a><a href="first-server.html">First Server</a></div><div class="docs-tree-section"><p class="docs-tree-title">User Guide</p><a href="server-management.html">Server Management</a><a href="file-manager.html">File Manager</a><a href="mods-plugins.html">Mods &amp; Plugins</a><a href="backups.html">Backups</a><a href="schedules.html">Schedules</a><a href="access-control.html">Access Control</a></div><div class="docs-tree-section"><p class="docs-tree-title">Admin</p><a href="admin.html">Settings</a><a href="users-permissions.html">Users</a><a href="server-types.html">Server Types</a></div><div class="docs-tree-section"><p class="docs-tree-title">Reference</p><a href="api-reference.html">API Reference</a><a href="troubleshooting.html">Troubleshooting</a><a href="faq.html">FAQ</a></div></nav></div></div>
+</body>
+</html>
