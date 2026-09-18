@@ -93,7 +93,12 @@ function optionalAuth(req, res, next) {
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
     } catch (err) {
-      // Token invalid, continue without user
+      const api = authenticateApiToken(token, next);
+      if (api) {
+        req.user = api.user;
+        req.tokenScopes = api.tokenScopes;
+        req.isApiToken = true;
+      }
     }
   }
   next();

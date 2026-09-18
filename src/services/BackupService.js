@@ -180,11 +180,9 @@ class BackupService {
     const retentionDays = SettingsService.getInt('backup_retention_days', 30);
     if (retentionDays <= 0) return 0;
 
-    const cutoffExpr = `datetime('now', '-' || ${retentionDays} || ' days')`;
-
     const oldBackups = db.prepare(
-      `SELECT * FROM backups WHERE server_id = ? AND created_at < ${cutoffExpr}`
-    ).all(serverId);
+      `SELECT * FROM backups WHERE server_id = ? AND created_at < datetime('now', '-' || ? || ' days')`
+    ).all(serverId, retentionDays);
 
     for (const backup of oldBackups) {
       const backupDir = this.getBackupDir(serverId);
@@ -195,8 +193,8 @@ class BackupService {
     }
 
     db.prepare(
-      `DELETE FROM backups WHERE server_id = ? AND created_at < ${cutoffExpr}`
-    ).run(serverId);
+      `DELETE FROM backups WHERE server_id = ? AND created_at < datetime('now', '-' || ? || ' days')`
+    ).run(serverId, retentionDays);
 
     return oldBackups.length;
   }

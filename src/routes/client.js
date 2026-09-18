@@ -9,13 +9,17 @@ const { optionalAuth } = require('../middleware/auth');
 router.use(optionalAuth);
 
 router.get('/', (req, res) => {
-  const db = getDb();
-  const panelName = db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel';
-  res.json({
-    name: panelName,
-    version: '1.0.0',
-    status: 'online'
-  });
+  try {
+    const db = getDb();
+    const panelName = db.prepare("SELECT value FROM settings WHERE key = 'panel_name'").get()?.value || 'NetherPanel';
+    res.json({
+      name: panelName,
+      version: '1.0.0',
+      status: 'online'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/config', (req, res) => {
@@ -120,13 +124,14 @@ router.get('/health', (req, res) => {
   try {
     const db = getDb();
     const dbHealthy = db.prepare('SELECT 1').get() ? true : false;
-    res.json({
+    const statusCode = dbHealthy ? 200 : 503;
+    res.status(statusCode).json({
       status: dbHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       database: dbHealthy ? 'connected' : 'disconnected'
     });
   } catch (err) {
-    res.json({
+    res.status(503).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       database: 'disconnected',

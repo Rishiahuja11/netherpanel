@@ -994,7 +994,7 @@ router.get('/:id/logs', loadServer, requireServerAccess(['console']), (req, res)
   try {
     const server = res.locals.server;
 
-    const lines = parseInt(req.query.lines) || 200;
+    const lines = Math.min(parseInt(req.query.lines) || 200, 2000);
     const content = ServerService.readFile(server.id, 'logs/latest.log');
     const allLines = content.split('\n');
     const tail = allLines.slice(-lines).join('\n');
@@ -1015,7 +1015,6 @@ router.get('/:id/access', loadServer, requireAccessManager, (req, res) => {
 router.post('/:id/access', loadServer, requireAccessManager, (req, res) => {
   try {
     const { username, email, userId, role = 'member', permissions = ['view'] } = req.body;
-    if (!SERVER_PERMISSIONS.length) return res.status(400).json({ error: 'Invalid permissions' });
 
     const db = getDb();
     let target = null;

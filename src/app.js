@@ -71,6 +71,14 @@ async function createApp() {
     res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
   });
 
+  app.use((err, req, res, _next) => {
+    if (err.type === 'entity.parse.failed') {
+      return res.status(400).json({ error: 'Invalid JSON in request body' });
+    }
+    console.error('Unhandled error:', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+  });
+
   const ServerService = require('./services/ServerService');
   ServerService.setIo(io);
   const NotificationService = require('./services/NotificationService');

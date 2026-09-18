@@ -161,8 +161,8 @@ const NetherAuth = {
           return;
         }
 
-        if (password.length < 6) {
-          NetherAuth.showToast('Error', 'Password must be at least 6 characters', 'error');
+        if (password.length < 8) {
+          NetherAuth.showToast('Error', 'Password must be at least 8 characters', 'error');
           return;
         }
 
